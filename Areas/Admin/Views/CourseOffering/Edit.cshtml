@@ -1,0 +1,177 @@
+﻿@model ExamInvigilationManagement.Application.DTOs.Admin.CourseOffering.CourseOfferingDto
+@using ExamInvigilationManagement.ViewModel
+
+@{
+    ViewData["Title"] = "Cập nhật học phần mở";
+}
+
+<form asp-area="Admin" asp-action="Edit" method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="form-page">
+        @await Html.PartialAsync("_FormHeader", "Cập nhật học phần mở")
+
+        <div class="form-card">
+            <input type="hidden" asp-for="Id" />
+
+            <div class="form-group mb-3">
+                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+           {
+               Label = "Môn học",
+               InputId = "subjectInput",
+               HiddenId = "subjectId",
+               HiddenName = "SubjectId",
+               MenuId = "subjectDropdown",
+               Placeholder = "Chọn môn học...",
+               InputClass = "input-modern",
+               ShowButton = false,
+               InitialValue = Model.SubjectId,
+               InitialText = Model.SubjectName
+           })
+                <span asp-validation-for="SubjectId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+           {
+               Label = "Giảng viên",
+               InputId = "userInput",
+               HiddenId = "userId",
+               HiddenName = "UserId",
+               MenuId = "userDropdown",
+               Placeholder = "Chọn giảng viên...",
+               InputClass = "input-modern",
+               ShowButton = false,
+               InitialValue = Model.UserId?.ToString(),
+               InitialText = Model.UserName
+           })
+                <span asp-validation-for="UserId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+           {
+               Label = "Năm học",
+               InputId = "yearInput",
+               HiddenId = "yearId",
+               HiddenName = "AcademyYearId",
+               MenuId = "yearDropdown",
+               Placeholder = "Chọn năm học...",
+               InputClass = "input-modern",
+               ShowButton = false,
+               InitialValue = Model.AcademyYearId?.ToString(),
+               InitialText = Model.AcademicYearName
+           })
+                <span asp-validation-for="AcademyYearId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+           {
+               Label = "Học kỳ",
+               InputId = "semesterInput",
+               HiddenId = "semesterId",
+               HiddenName = "SemesterId",
+               MenuId = "semesterDropdown",
+               Placeholder = "Chọn học kỳ...",
+               InputClass = "input-modern",
+               ShowButton = false,
+               InitialValue = Model.SemesterId?.ToString(),
+               InitialText = Model.SemesterName
+           })
+                <span asp-validation-for="SemesterId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label class="form-label">Lớp học phần</label>
+                <input asp-for="ClassName" class="input-modern" />
+                <span asp-validation-for="ClassName" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label class="form-label">Nhóm</label>
+                <input asp-for="GroupNumber" class="input-modern" />
+                <span asp-validation-for="GroupNumber" class="text-danger"></span>
+            </div>
+
+            @await Html.PartialAsync("_FormFooter")
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+    <script>
+        $(function () {
+            AdminLookup.create({
+                key: 'co-subject-edit',
+                input: '#subjectInput',
+                hidden: '#subjectId',
+                menu: '#subjectDropdown',
+                url: '@Url.Action("Search", "Subject", new { area = "Admin" })',
+                valueField: 'id',
+                textField: 'name',
+                initialValue: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SubjectId ?? "")),
+                initialText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SubjectName ?? ""))
+            });
+
+            AdminLookup.create({
+                key: 'co-user-edit',
+                input: '#userInput',
+                hidden: '#userId',
+                menu: '#userDropdown',
+                url: '@Url.Action("SearchLecturer", "User", new { area = "Admin" })',
+                valueField: 'id',
+                textField: 'fullName',
+                initialValue: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserId?.ToString() ?? "")),
+                initialText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserName ?? ""))
+            });
+
+            AdminLookup.create({
+                key: 'co-year-edit',
+                input: '#yearInput',
+                hidden: '#yearId',
+                menu: '#yearDropdown',
+                url: '@Url.Action("Search", "AcademyYear", new { area = "Admin" })',
+                valueField: 'id',
+                textField: 'name',
+                initialValue: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AcademyYearId?.ToString() ?? "")),
+                initialText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AcademicYearName ?? "")),
+                onSelect: function () {
+                    $('#semesterId').val('');
+                    $('#semesterInput').val('');
+
+                    const semesterLookup = AdminLookup.get('co-semester-edit');
+                    if (semesterLookup) {
+                        semesterLookup.clear();
+                    }
+                }
+            });
+
+            AdminLookup.create({
+                key: 'co-semester-edit',
+                input: '#semesterInput',
+                hidden: '#semesterId',
+                menu: '#semesterDropdown',
+                url: '@Url.Action("GetByYear", "Semester", new { area = "Admin" })',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return {
+                        academyYearId: $('#yearId').val()
+                    };
+                },
+                valueField: 'id',
+                textField: 'name',
+                initialValue: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SemesterId?.ToString() ?? "")),
+                initialText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SemesterName ?? "")),
+                beforeSearch: function () {
+                    if (!$('#yearId').val()) {
+                        AppNotify.show('warning', 'Vui lòng chọn năm học trước.');
+                        return false;
+                    }
+                    return true;
+                }
+            });
+        });
+    </script>
+}

@@ -1,0 +1,257 @@
+﻿@{
+    var showFacultyFilter = ViewBag.ShowFacultyFilter as bool? ?? false;
+    var showUserFilter = ViewBag.ShowUserFilter as bool? ?? false;
+    var showStatusFilter = ViewBag.ShowStatusFilter as bool? ?? false;
+    var initialStatus = ViewBag.InitialStatus as string;
+}
+
+<div class="exam-search-compact">
+    <div class="exam-search-main">
+
+        @if (showFacultyFilter)
+        {
+            <div class="lookup-modern position-relative search-field search-field-wide">
+                <label class="form-label mb-1">Khoa</label>
+                <input id="facultyInput" class="input-modern" placeholder="Chọn khoa..." autocomplete="off" />
+                <div id="facultyDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="facultyId" />
+            </div>
+        }
+
+        <div class="lookup-modern position-relative search-field search-field-wide">
+            <label class="form-label mb-1">Môn học</label>
+            <input id="subjectInput" class="input-modern" placeholder="Chọn môn học..." autocomplete="off" />
+            <div id="subjectDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+            <input type="hidden" id="subjectId" />
+        </div>
+
+        <div class="lookup-modern position-relative search-field">
+            <label class="form-label mb-1">Năm học</label>
+            <input id="yearInput" class="input-modern" placeholder="Chọn năm học..." autocomplete="off" />
+            <div id="yearDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+            <input type="hidden" id="yearId" />
+        </div>
+
+        <div class="lookup-modern position-relative search-field">
+            <label class="form-label mb-1">Học kỳ</label>
+            <input id="semesterInput" class="input-modern" placeholder="Chọn học kỳ..." autocomplete="off" />
+            <div id="semesterDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+            <input type="hidden" id="semesterId" />
+        </div>
+
+        @if (showStatusFilter)
+        {
+            <div class="search-field">
+                <label class="form-label mb-1">Trạng thái</label>
+                <select id="status" class="select-modern crud-filter" style="width:100%;">
+                    <option value="">-- Tất cả --</option>
+                    <option value="Chờ phân công" selected="@(initialStatus == "Chờ phân công")">Chờ phân công</option>
+                    <option value="Thiếu giám thị" selected="@(initialStatus == "Thiếu giám thị")">Thiếu giám thị</option>
+                    <option value="Chờ duyệt" selected="@(initialStatus == "Chờ duyệt")">Chờ duyệt</option>
+                    <option value="Đã duyệt" selected="@(initialStatus == "Đã duyệt")">Đã duyệt</option>
+                    <option value="Từ chối duyệt" selected="@(initialStatus == "Từ chối duyệt")">Từ chối duyệt</option>
+                </select>
+            </div>
+        }
+
+        <div class="search-field search-page-size">
+            <label class="form-label mb-1 d-block">Số dòng</label>
+            <select id="pageSize" class="select-modern">
+                <option value="5">5 / trang</option>
+                <option value="10">10 / trang</option>
+                <option value="20">20 / trang</option>
+                <option value="50">50 / trang</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="exam-search-tools">
+        <button class="btn btn-sm exam-advanced-toggle collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#examAdvancedFilters" aria-expanded="false" aria-controls="examAdvancedFilters">
+            <i class="bi bi-sliders"></i>
+            Bộ lọc nâng cao
+            <i class="bi bi-chevron-down toggle-chevron"></i>
+        </button>
+    </div>
+
+    <div class="collapse" id="examAdvancedFilters">
+        <div class="exam-search-advanced">
+
+            @if (showUserFilter)
+            {
+                <div class="lookup-modern position-relative search-field search-field-wide">
+                    <label class="form-label mb-1">Người dạy</label>
+                    <input id="userInput" class="input-modern" placeholder="Chọn giảng viên..." autocomplete="off" />
+                    <div id="userDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                    <input type="hidden" id="userId" />
+                </div>
+            }
+
+            <div class="lookup-modern position-relative search-field">
+                <label class="form-label mb-1">Đợt thi</label>
+                <input id="periodInput" class="input-modern" placeholder="Chọn đợt thi..." autocomplete="off" />
+                <div id="periodDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="periodId" />
+            </div>
+
+            <div class="lookup-modern position-relative search-field">
+                <label class="form-label mb-1">Buổi thi</label>
+                <input id="sessionInput" class="input-modern" placeholder="Chọn buổi thi..." autocomplete="off" />
+                <div id="sessionDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="sessionId" />
+            </div>
+
+            <div class="lookup-modern position-relative search-field">
+                <label class="form-label mb-1">Ca thi</label>
+                <input id="slotInput" class="input-modern" placeholder="Chọn ca thi..." autocomplete="off" />
+                <div id="slotDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="slotId" />
+            </div>
+
+            <div class="lookup-modern position-relative search-field">
+                <label class="form-label mb-1">Lớp học phần</label>
+                <input id="className" class="input-modern crud-filter" placeholder="Nhập lớp học phần..." />
+            </div>
+
+            <div class="lookup-modern position-relative search-field search-field-compact">
+                <label class="form-label mb-1">Nhóm</label>
+                <input id="groupNumber" class="input-modern crud-filter" placeholder="Nhập nhóm..." />
+            </div>
+
+            <div class="lookup-modern position-relative search-field">
+                <label class="form-label mb-1">Giảng đường</label>
+                <input id="buildingInput" class="input-modern" placeholder="Chọn giảng đường..." autocomplete="off" />
+                <div id="buildingDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="buildingId" />
+            </div>
+
+            <div class="lookup-modern position-relative search-field">
+                <label class="form-label mb-1">Phòng thi</label>
+                <input id="roomInput" class="input-modern" placeholder="Chọn phòng thi..." autocomplete="off" />
+                <div id="roomDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="roomId" />
+            </div>
+
+            <div class="lookup-modern position-relative search-field search-field-compact">
+                <label class="form-label mb-1">Từ ngày</label>
+                <input type="date" id="fromDate" class="input-modern crud-filter" />
+            </div>
+
+            <div class="lookup-modern position-relative search-field search-field-compact">
+                <label class="form-label mb-1">Đến ngày</label>
+                <input type="date" id="toDate" class="input-modern crud-filter" />
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .exam-search-compact {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .exam-search-main,
+    .exam-search-advanced {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 8px;
+        align-items: end;
+    }
+
+    .exam-search-compact .form-label {
+        font-size: 11px;
+        font-weight: 700;
+        color: #475569;
+        line-height: 1.1;
+    }
+
+    .exam-search-compact .input-modern,
+    .exam-search-compact .select-modern {
+        min-height: 34px;
+        height: 34px;
+        border-radius: 10px;
+        font-size: 13px;
+        padding: 7px 10px;
+        width: 100%;
+    }
+
+    .exam-search-compact .search-field {
+        min-width: 0;
+    }
+
+    .exam-search-compact .search-field-wide {
+        grid-column: span 2;
+    }
+
+    .exam-search-compact .search-field-compact {
+        min-width: 130px;
+    }
+
+    .exam-search-compact .search-page-size {
+        justify-self: end;
+        min-width: 112px;
+    }
+
+    .exam-search-tools {
+        display: flex;
+        justify-content: flex-end;
+        margin-top: -2px;
+    }
+
+    .exam-advanced-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: #4f46e5;
+        border: 1px solid rgba(79, 70, 229, 0.14);
+        background: rgba(255,255,255,0.72);
+        border-radius: 999px;
+        font-weight: 700;
+        padding: 6px 11px;
+    }
+
+    .exam-advanced-toggle .toggle-chevron {
+        transition: transform .18s ease;
+    }
+
+    .exam-advanced-toggle:not(.collapsed) .toggle-chevron {
+        transform: rotate(180deg);
+    }
+
+    #examAdvancedFilters .exam-search-advanced {
+        padding-top: 4px;
+    }
+
+    @@media (max-width: 992px) {
+        .exam-search-main,
+        .exam-search-advanced {
+            grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+        }
+
+        .exam-search-compact .search-field-wide {
+            grid-column: span 1;
+        }
+
+        .exam-search-compact .search-page-size {
+            justify-self: stretch;
+        }
+    }
+
+    @@media (max-width: 576px) {
+        .exam-search-main,
+        .exam-search-advanced {
+            grid-template-columns: 1fr;
+        }
+
+        .exam-search-tools {
+            justify-content: stretch;
+        }
+
+        .exam-advanced-toggle {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+</style>

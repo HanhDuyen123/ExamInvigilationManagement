@@ -1,0 +1,47 @@
+@model ExamInvigilationManagement.Application.DTOs.InvigilatorSubstitution.InvigilatorSubstitutionDetailDto
+
+@{
+    ViewData["Title"] = "Chi tiết đề xuất thay thế";
+}
+
+<div class="form-page wide">
+    <div class="form-header mb-4">
+        <div><h3 class="title-gradient">Chi tiết đề xuất thay thế</h3><div class="subtitle">Đối chiếu lịch thi, người từ chối và người được đề xuất</div></div>
+        <a asp-action="Index" class="btn-back"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="form-card h-100">
+                <h5 class="mb-3">Thông tin lịch thi</h5>
+                <div class="row g-3">
+                    <div class="col-md-3"><label class="form-label">Mã môn</label><input class="input-modern" readonly value="@Model.SubjectId" /></div>
+                    <div class="col-md-9"><label class="form-label">Môn học</label><input class="input-modern" readonly value="@Model.SubjectName" /></div>
+                    <div class="col-md-4"><label class="form-label">Lớp/Nhóm</label><input class="input-modern" readonly value="@Model.ClassName / @Model.GroupNumber" /></div>
+                    <div class="col-md-4"><label class="form-label">Ngày thi</label><input class="input-modern" readonly value="@Model.ExamDate.ToString("dd/MM/yyyy")" /></div>
+                    <div class="col-md-4"><label class="form-label">Ca thi</label><input class="input-modern" readonly value="@Model.SlotName (@Model.TimeStart.ToString("HH\\:mm"))" /></div>
+                    <div class="col-md-4"><label class="form-label">Phòng</label><input class="input-modern" readonly value="@Model.RoomDisplay" /></div>
+                    <div class="col-md-4"><label class="form-label">Vị trí</label><input class="input-modern" readonly value="GT @Model.PositionNo" /></div>
+                    <div class="col-md-4"><label class="form-label">Trạng thái lịch</label><input class="input-modern" readonly value="@Model.ScheduleStatus" /></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5">
+            <div class="form-card h-100">
+                <h5 class="mb-3">Đề xuất</h5>
+                <div class="mb-3"><label class="form-label">Người từ chối</label><input class="input-modern" readonly value="@Model.RequestUserName (@Model.RequestUserAccount)" /></div>
+                <div class="mb-3"><label class="form-label">Lý do từ chối</label><textarea class="input-modern" rows="2" readonly>@(Model.ResponseNote ?? "Không có ghi chú")</textarea></div>
+                <div class="mb-3"><label class="form-label">Người thay thế được đề xuất</label><input class="input-modern" readonly value="@Model.SubstituteUserName (@Model.SubstituteUserAccount)" /></div>
+                <div class="mb-3"><label class="form-label">Đánh giá điều kiện</label><div class="alert @(Model.CanApprove ? "alert-success" : "alert-warning") mb-0">@Model.ApproveReason<br />@if (Model.SubstituteEvaluation != null) { <span>Tải kỳ: <strong>@Model.SubstituteEvaluation.CurrentLoad</strong> | Ca trong ngày: <strong>@Model.SubstituteEvaluation.SameDayLoad</strong></span> }</div></div>
+                <div class="mb-3"><label class="form-label">Trạng thái đề xuất</label><div><span class="badge rounded-pill @(Model.Status == "Đã duyệt" ? "bg-success" : Model.Status == "Từ chối duyệt" ? "bg-danger" : "bg-warning text-dark")">@Model.Status</span></div></div>
+                @if (Model.Status == "Đã đề xuất")
+                {
+                    <div class="d-flex flex-wrap gap-2 mt-4">
+                        <form asp-action="Approve" asp-route-id="@Model.SubstitutionId" method="post">@Html.AntiForgeryToken()<button class="btn-submit" type="submit" @(Model.CanApprove ? "" : "disabled")><i class="bi bi-check2-circle"></i> Duyệt thay thế</button></form>
+                        <form asp-action="Reject" asp-route-id="@Model.SubstitutionId" method="post">@Html.AntiForgeryToken()<button class="btn btn-danger rounded-3 px-4" type="submit"><i class="bi bi-x-circle"></i> Từ chối</button></form>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>

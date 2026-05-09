@@ -1,0 +1,91 @@
+@model ExamInvigilationManagement.Application.DTOs.Notification.NotificationIndexPageDto
+
+<div class="notification-search d-grid gap-3">
+    <div class="row g-3 align-items-end">
+        <div class="col-lg-3 col-md-6">
+            <label class="form-label">Từ khóa</label>
+            <input id="keyword" value="@Model.Search.Keyword" class="input-modern notification-filter"
+                   placeholder="Tiêu đề, nội dung, loại thông báo..." />
+        </div>
+
+        @if (Model.IsAdmin)
+        {
+            <div class="col-lg-3 col-md-6">
+                @await Html.PartialAsync("_LookupField", new ExamInvigilationManagement.ViewModel.LookupFieldViewModel
+                {
+                    Label = "Người nhận",
+                    InputId = "recipientInput",
+                    HiddenId = "recipientId",
+                    HiddenName = "RecipientId",
+                    MenuId = "recipientDropdown",
+                    Placeholder = "Chọn người nhận...",
+                    InputClass = "input-modern",
+                    InitialValue = Model.Search.RecipientId?.ToString() ?? ""
+                })
+            </div>
+        }
+
+        <div class="col-lg-3 col-md-6">
+            @await Html.PartialAsync("_LookupField", new ExamInvigilationManagement.ViewModel.LookupFieldViewModel
+            {
+                Label = "Người gửi",
+                InputId = "senderInput",
+                HiddenId = "senderId",
+                HiddenName = "SenderId",
+                MenuId = "senderDropdown",
+                Placeholder = "Chọn người gửi...",
+                InputClass = "input-modern",
+                InitialValue = Model.Search.SenderId?.ToString() ?? ""
+            })
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <label class="form-label">Phân loại</label>
+            <select id="type" class="select-modern notification-filter w-100">
+                @foreach (var opt in Model.TypeOptions)
+                {
+                    <option value="@opt.Value" selected="@(string.Equals(Model.Search.Type, opt.Value, StringComparison.OrdinalIgnoreCase))">
+                        @opt.Label
+                    </option>
+                }
+            </select>
+        </div>
+    </div>
+
+    <div class="row g-3 align-items-end">
+        <div class="col-lg-2 col-md-6">
+            <label class="form-label">Trạng thái</label>
+            <select id="isRead" class="select-modern notification-filter w-100">
+                <option value="">Tất cả</option>
+                <option value="false" selected="@(Model.Search.IsRead == false)">Chưa đọc</option>
+                <option value="true" selected="@(Model.Search.IsRead == true)">Đã đọc</option>
+            </select>
+        </div>
+
+        <div class="col-lg-2 col-md-6">
+            <label class="form-label">Từ ngày gửi</label>
+            <input type="date" id="fromDate" value="@Model.Search.FromDate?.ToString("yyyy-MM-dd")" class="input-modern notification-filter" />
+        </div>
+
+        <div class="col-lg-2 col-md-6">
+            <label class="form-label">Đến ngày gửi</label>
+            <input type="date" id="toDate" value="@Model.Search.ToDate?.ToString("yyyy-MM-dd")" class="input-modern notification-filter" />
+        </div>
+
+        <div class="col-lg-2 col-md-6 ms-auto">
+            <label class="form-label">Số dòng / trang</label>
+            <select id="pageSize" class="select-modern w-100">
+                <option value="5">5 / trang</option>
+                <option value="10" selected="@(Model.PageSize == 10)">10 / trang</option>
+                <option value="20" selected="@(Model.PageSize == 20)">20 / trang</option>
+                <option value="50" selected="@(Model.PageSize == 50)">50 / trang</option>
+            </select>
+        </div>
+
+        <div class="col-lg-2 col-md-12 d-flex gap-2 filter-action-cell">
+            <a href="@Url.Action("Index", "Notification")" class="btn btn-outline-secondary crud-clear-filters">
+                Xóa lọc
+            </a>
+        </div>
+    </div>
+</div>

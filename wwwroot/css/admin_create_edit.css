@@ -1,0 +1,457 @@
+﻿/* ===== FORM PAGE ===== */
+.form-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* HEADER */
+.form-header {
+    width: 100%;
+    max-width: 700px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* BACK BUTTON */
+.btn-back {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: #f1f5f9;
+    text-decoration: none;
+    color: #475569;
+    transition: all 0.2s;
+}
+
+    .btn-back:hover {
+        background: #e2e8f0;
+        transform: translateX(-2px);
+    }
+
+/* FORM CARD */
+.form-card {
+    width: 100%;
+    max-width: 700px;
+    padding: 30px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255,255,255,0.4);
+    box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+}
+
+/* FORM GROUP */
+.form-group {
+    margin-bottom: 20px;
+}
+
+    .form-group label {
+        display: block;
+        font-size: 13px;
+        color: #64748b;
+        margin-bottom: 6px;
+    }
+
+/* INPUT */
+.input-modern {
+    width: 100%;
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: none;
+    background: #f1f5f9;
+    transition: all 0.25s;
+}
+
+    .input-modern:focus {
+        background: white;
+        box-shadow: 0 0 0 3px rgba(99,102,241,0.2);
+        outline: none;
+    }
+
+/* ACTIONS */
+.form-actions {
+    margin-top: 25px;
+}
+
+/* SUBMIT BUTTON */
+.btn-submit {
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    padding: 10px 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 10px 25px rgba(99,102,241,0.25);
+    transition: all 0.25s;
+}
+
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 35px rgba(99,102,241,0.35);
+    }
+
+/* EDIT VARIANT */
+.title-gradient {
+    background: linear-gradient(90deg, #0ea5e9, #6366f1);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.btn-submit.edit {
+    background: linear-gradient(135deg, #0ea5e9, #6366f1);
+}
+/* ===== WIDE MODE FOR COMPLEX TREE PAGES ===== */
+.form-page.wide {
+    width: 100%;
+    max-width: none;
+    align-items: stretch;
+}
+
+    .form-page.wide .form-header,
+    .form-page.wide .validation-panel,
+    .form-page.wide .form-card {
+        max-width: none;
+        width: 100%;
+    }
+
+/* ===== ACADEMY BOARD ===== */
+.academy-board {
+    padding: 5px 8px 8px;
+    background: transparent;
+    border: none;
+    box-shadow: none;
+}
+
+.academy-board-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.academy-year-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.academy-year-subtitle {
+    color: #64748b;
+    font-size: 13px;
+    margin-top: 4px;
+}
+
+.academy-tree {
+    display: grid;
+    gap: 12px;
+}
+
+/* ===== SEMESTER / PERIOD / SESSION CARDS ===== */
+.semester-card {
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(0,0,0,0.05);
+    border-radius: 16px;
+    padding: 12px;
+    box-shadow: 0 8px 20px rgba(15,23,42,0.04);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+    .semester-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 28px rgba(79,70,229,0.10);
+    }
+
+.period-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(260px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.period-card {
+    background: #f8fafc;
+    border: 1px solid rgba(0,0,0,0.04);
+    border-radius: 14px;
+    padding: 10px;
+}
+
+    .period-card.period-full {
+        grid-column: 1 / -1;
+    }
+
+.session-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.session-card {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.05);
+    border-radius: 12px;
+    padding: 10px;
+}
+
+/* ===== SLOT LIST ===== */
+.slot-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.slot-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+    border-radius: 12px;
+    padding: 8px 10px;
+    background: #f8fafc;
+    border: 1px solid rgba(0,0,0,0.04);
+    overflow: hidden;
+}
+
+/* ===== NODE HEADER / ACTIONS ===== */
+.node-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
+}
+
+.node-title {
+    min-width: 0;
+    font-weight: 700;
+    color: #1e293b;
+    font-size: 14px;
+}
+
+.node-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: nowrap;
+    justify-content: flex-end;
+    flex-shrink: 0;
+}
+
+.semester-card:hover .node-actions,
+.period-card:hover .node-actions,
+.session-card:hover .node-actions,
+.slot-row:hover .node-actions {
+    opacity: 1;
+}
+
+/* ===== BUTTONS ===== */
+.btn-node-icon {
+    width: 30px;
+    height: 30px;
+    border: none;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    box-shadow: 0 6px 14px rgba(15,23,42,0.06);
+}
+
+    .btn-node-icon:hover {
+        transform: translateY(-1px) scale(1.03);
+    }
+
+    .btn-node-icon.edit {
+        background: #e0ecff;
+        color: #2563eb;
+    }
+
+    .btn-node-icon.delete {
+        background: #fee2e2;
+        color: #dc2626;
+    }
+
+.btn-node-add {
+    border: 1px dashed rgba(79,70,229,0.30);
+    background: linear-gradient(135deg, rgba(79,70,229,0.08), rgba(99,102,241,0.12));
+    color: #4f46e5;
+    border-radius: 10px;
+    padding: 7px 11px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: all 0.18s ease;
+}
+
+    .btn-node-add:hover {
+        background: linear-gradient(135deg, rgba(79,70,229,0.14), rgba(99,102,241,0.18));
+        transform: translateY(-1px);
+    }
+
+.btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: #f1f5f9;
+    text-decoration: none;
+    color: #475569;
+    transition: all 0.2s;
+}
+
+    .btn-back:hover {
+        background: #e2e8f0;
+        transform: translateX(-2px);
+    }
+
+/* ===== INPUTS ===== */
+.input-modern.compact {
+    width: auto;
+    min-width: 0;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: 10px;
+    font-size: 13px;
+    background: #f8fafc;
+    border: 1px solid #dbe3ef;
+    box-shadow: none;
+    flex: 1 1 auto;
+}
+
+    .input-modern.compact:focus {
+        background: #fff;
+    }
+
+    .input-modern.compact.slot-time {
+        width: 98px;
+        min-width: 98px;
+        flex: 0 0 98px;
+    }
+
+/* ===== FORMS ===== */
+.inline-form,
+.add-form,
+.node-inline,
+.slot-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    gap: 6px;
+    align-items: center;
+    width: 100%;
+    min-width: 0;
+}
+
+.add-form {
+    margin-top: 8px;
+}
+
+.slot-form.add-mode {
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.node-inline input,
+.slot-form input {
+    min-width: 0;
+}
+
+.node-missing {
+    border-style: dashed;
+    opacity: 0.92;
+}
+
+    .node-missing .node-title {
+        color: #64748b;
+    }
+
+@media (max-width: 992px) {
+    .period-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .session-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .node-header {
+        grid-template-columns: 1fr;
+        align-items: start;
+    }
+
+    .node-actions {
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .inline-form,
+    .add-form,
+    .node-inline,
+    .slot-form {
+        grid-template-columns: 1fr;
+    }
+
+    .input-modern.compact,
+    .input-modern.compact.slot-time {
+        width: 100%;
+        min-width: 100%;
+        flex: 1 1 100%;
+    }
+}
+
+/* ===== EXAM SCHEDULE DETAIL ===== */
+.exam-detail-card { max-width: none; }
+.exam-detail-hero {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, rgba(79,70,229,.08), rgba(14,165,233,.06), rgba(255,255,255,.7));
+    border: 1px solid rgba(79,70,229,.10);
+    margin-bottom: 22px;
+}
+.exam-detail-icon {
+    width: 62px;
+    height: 62px;
+    border-radius: 20px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    background: linear-gradient(135deg, #4f46e5, #6366f1);
+    box-shadow: 0 14px 28px rgba(79,70,229,.22);
+    font-size: 26px;
+}
+.exam-detail-kicker { color: #4f46e5; font-weight: 800; font-size: 13px; letter-spacing: .03em; text-transform: uppercase; }
+.exam-detail-hero h4 { margin: 2px 0 4px; font-weight: 800; color: #1e293b; }
+.exam-detail-subtitle { color: #64748b; font-size: 14px; }
+.exam-status-badge { padding: 9px 13px; font-size: 13px; }
+.exam-status-badge.approved { background: #dcfce7; color: #166534; }
+.exam-status-badge.rejected { background: #fee2e2; color: #991b1b; }
+.exam-status-badge.pending { background: #eef2ff; color: #3730a3; }
+.detail-section-title { display: flex; align-items: center; gap: 8px; margin: 18px 0 10px; font-weight: 800; color: #334155; }
+.detail-section-title i { color: #4f46e5; }
+.detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.detail-item,
+.invigilator-card { padding: 14px; border-radius: 16px; background: rgba(248,250,252,.92); border: 1px solid rgba(15,23,42,.06); }
+.detail-item span,
+.invigilator-card span { display: block; color: #64748b; font-size: 12px; margin-bottom: 5px; }
+.detail-item strong,
+.invigilator-card strong { color: #1e293b; font-weight: 750; }
+.invigilator-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+.invigilator-card { display: flex; align-items: center; gap: 12px; }

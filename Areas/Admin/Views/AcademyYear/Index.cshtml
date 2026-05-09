@@ -1,0 +1,31 @@
+﻿@model ExamInvigilationManagement.ViewModel.CrudIndexViewModel
+
+@{
+    ViewData["Title"] = "Quản lý năm học";
+}
+
+@await Html.PartialAsync("_CrudIndex", Model)
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script>
+        $(function () {
+            CrudPage.init({
+                api: '@Url.Action("GetList", "AcademyYear", new { area = "Admin" })',
+                tableId: '#crudTable',
+
+                // ✅ unified filter
+                filterSelector: '.crud-filter',
+
+                pageSize: '#pageSize',
+
+                extraData: function () {
+                    return {
+                        keyword: $('#keyword').val()?.trim(),
+                        semesterType: $('#semesterType').val() || null
+                    };
+                }
+            });
+        });
+    </script>
+}

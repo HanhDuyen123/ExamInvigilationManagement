@@ -1,0 +1,32 @@
+﻿<div class="d-flex flex-wrap align-items-center gap-3">
+
+    <div class="search-modern">
+        <i class="bi bi-hash"></i>
+        <input type="text" id="subjectId" class="crud-filter" placeholder="Mã môn..." />
+    </div>
+
+    <div class="search-modern">
+        <i class="bi bi-book"></i>
+        <input type="text" id="subjectName" class="crud-filter" placeholder="Tên môn..." />
+    </div>
+
+    <div>
+        <input id="credit" type="number" class="input-modern crud-filter" placeholder="Số tín chỉ..." />
+    </div>
+
+    <div class="lookup-modern position-relative" style="width:260px;">
+        <input id="facultyInput" class="input-modern" placeholder="Chọn khoa..." autocomplete="off" />
+        <div id="facultyDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+        <input type="hidden" id="facultyId" />
+    </div>
+
+    <div class="ms-auto">
+        <select id="pageSize" class="select-modern">
+            <option value="5">5 / trang</option>
+            <option value="10">10 / trang</option>
+            <option value="20">20 / trang</option>
+            <option value="50">50 / trang</option>
+        </select>
+    </div>
+
+</div>

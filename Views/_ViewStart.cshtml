@@ -1,0 +1,22 @@
+﻿@{
+    if (User.IsInRole("Admin"))
+    {
+        Layout = "~/Views/Shared/_Layout.cshtml";
+    }
+    else if (User.IsInRole("Giảng viên"))
+    {
+        Layout = "~/Views/Shared/_AcademicLayout.cshtml";
+    }
+    else if (User.IsInRole("Thư ký khoa"))
+    {
+        Layout = "~/Views/Shared/_AcademicLayout.cshtml";
+    }
+    else if (User.IsInRole("Trưởng khoa"))
+    {
+        Layout = "~/Views/Shared/_AcademicLayout.cshtml";
+    }
+    else
+    {
+        Layout = "~/Views/Shared/_Layout.cshtml";
+    }
+}

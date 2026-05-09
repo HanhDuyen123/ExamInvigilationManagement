@@ -1,0 +1,28 @@
+<div class="role-filter-compact">
+    <div class="role-filter-main">
+        <div class="search-field search-field-wide"><label class="form-label mb-1">Tìm nhanh</label><input id="keyword" class="input-modern assignment-filter" placeholder="Mã môn, tên môn, lớp..." /></div>
+        <div class="lookup-modern position-relative search-field search-field-wide"><label class="form-label mb-1">Môn học</label><input id="subjectInput" class="input-modern" placeholder="Chọn môn..." autocomplete="off" /><div id="subjectDropdown" class="dropdown-menu autocomplete-menu w-100"></div><input type="hidden" id="subjectId" /></div>
+        <div class="lookup-modern position-relative search-field"><label class="form-label mb-1">Năm học</label><input id="yearInput" class="input-modern" placeholder="Năm học..." autocomplete="off" /><div id="yearDropdown" class="dropdown-menu autocomplete-menu w-100"></div><input type="hidden" id="yearId" /></div>
+        <div class="lookup-modern position-relative search-field"><label class="form-label mb-1">Học kỳ</label><input id="semesterInput" class="input-modern" placeholder="Học kỳ..." autocomplete="off" /><div id="semesterDropdown" class="dropdown-menu autocomplete-menu w-100"></div><input type="hidden" id="semesterId" /></div>
+        <div class="search-field"><label class="form-label mb-1">Trạng thái</label><select id="status" class="select-modern assignment-filter"><option value="">Tất cả</option><option value="Chưa phản hồi">Chưa phản hồi</option><option value="Xác nhận">Xác nhận</option><option value="Từ chối">Từ chối</option></select></div>
+        <div class="search-field search-page-size"><label class="form-label mb-1">Số dòng</label><select id="pageSize" class="select-modern"><option value="10">10 / trang</option><option value="20">20 / trang</option><option value="50">50 / trang</option></select></div>
+    </div>
+
+    <div class="role-filter-tools">
+        <button class="btn btn-sm role-filter-toggle collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#assignmentAdvancedFilters" aria-expanded="false" aria-controls="assignmentAdvancedFilters">
+            <i class="bi bi-sliders"></i> Bộ lọc nâng cao <i class="bi bi-chevron-down toggle-chevron"></i>
+        </button>
+    </div>
+
+    <div class="collapse" id="assignmentAdvancedFilters">
+        <div class="role-filter-advanced">
+            <div class="lookup-modern position-relative search-field"><label class="form-label mb-1">Giảng đường</label><input id="buildingInput" class="input-modern" placeholder="Chọn giảng đường..." autocomplete="off" /><div id="buildingDropdown" class="dropdown-menu autocomplete-menu w-100"></div><input type="hidden" id="buildingId" /></div>
+            <div class="lookup-modern position-relative search-field"><label class="form-label mb-1">Phòng thi</label><input id="roomInput" class="input-modern" placeholder="Chọn phòng..." autocomplete="off" /><div id="roomDropdown" class="dropdown-menu autocomplete-menu w-100"></div><input type="hidden" id="roomId" /></div>
+            <div class="lookup-modern position-relative search-field"><label class="form-label mb-1">Đợt thi</label><input id="periodInput" class="input-modern" placeholder="Đợt thi..." autocomplete="off" /><div id="periodDropdown" class="dropdown-menu autocomplete-menu w-100"></div><input type="hidden" id="periodId" /></div>
+            <div class="lookup-modern position-relative search-field"><label class="form-label mb-1">Buổi thi</label><input id="sessionInput" class="input-modern" placeholder="Buổi thi..." autocomplete="off" /><div id="sessionDropdown" class="dropdown-menu autocomplete-menu w-100"></div><input type="hidden" id="sessionId" /></div>
+            <div class="lookup-modern position-relative search-field"><label class="form-label mb-1">Ca thi</label><input id="slotInput" class="input-modern" placeholder="Ca thi..." autocomplete="off" /><div id="slotDropdown" class="dropdown-menu autocomplete-menu w-100"></div><input type="hidden" id="slotId" /></div>
+            <div class="search-field"><label class="form-label mb-1">Từ ngày</label><input id="fromDate" type="date" class="input-modern assignment-filter" /></div>
+            <div class="search-field"><label class="form-label mb-1">Đến ngày</label><input id="toDate" type="date" class="input-modern assignment-filter" /></div>
+        </div>
+    </div>
+</div>

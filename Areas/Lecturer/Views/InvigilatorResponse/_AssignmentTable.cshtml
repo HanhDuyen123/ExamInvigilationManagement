@@ -1,0 +1,58 @@
+@using ExamInvigilationManagement.Common
+@model PagedResult<ExamInvigilationManagement.Application.DTOs.InvigilatorResponse.InvigilatorAssignmentItemDto>
+
+<table class="table modern-table schedule-table-compact assignment-table-compact">
+    <colgroup>
+        <col style="width:3%;" />
+        <col style="width:6%;" />
+        <col style="width:14%;" />
+        <col style="width:8%;" />
+        <col style="width:4%;" />
+        <col style="width:6%;" />
+        <col style="width:6%;" />
+        <col style="width:6%;" />
+        <col style="width:5%;" />
+        <col style="width:6%;" />
+        <col style="width:5%;" />
+        <col style="width:6%;" />
+        <col style="width:8%;" />
+        <col style="width:8%;" />
+        <col style="width:5%;" />
+        <col style="width:4%;" />
+    </colgroup>
+    <thead><tr><th><input type="checkbox" id="selectAllAssignments" class="form-check-input" /></th><th>Mã môn</th><th>Môn học</th><th>Lớp</th><th>Nhóm</th><th>Phòng</th><th>Ngày thi</th><th>Năm học</th><th>Học kỳ</th><th>Đợt thi</th><th>Buổi</th><th>Ca thi</th><th>GT1</th><th>GT2</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+    <tbody>
+        @if (Model.Items.Any())
+        {
+            foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td><input type="checkbox" class="form-check-input assignment-checkbox" value="@item.ExamInvigilatorId" /></td>
+                    <td class="cell-code">@item.SubjectId</td><td class="cell-wrap cell-subject">@item.SubjectName</td><td class="cell-wrap">@item.ClassName</td><td class="cell-code">@item.GroupNumber</td><td class="cell-nowrap">@item.RoomDisplay</td><td class="cell-nowrap">@(item.ExamDate?.ToString("dd/MM/yyyy") ?? "-")</td><td class="cell-nowrap">@item.AcademyYearName</td><td class="cell-nowrap">@item.SemesterName</td><td class="cell-nowrap">@item.PeriodName</td><td class="cell-nowrap">@item.SessionName</td><td class="cell-nowrap">@item.SlotName (@item.TimeStart?.ToString("HH\\:mm"))</td><td class="cell-wrap ui-col-person">@(item.Lecturer1Name ?? "-")</td><td class="cell-wrap ui-col-person">@(item.Lecturer2Name ?? "-")</td>
+                    <td><span class="badge rounded-pill @(item.ResponseStatus == "Xác nhận" ? "bg-success" : item.ResponseStatus == "Từ chối" ? "bg-danger" : "bg-secondary")">@item.ResponseStatus</span></td>
+                    <td>
+                        @if (item.ResponseStatus == "Từ chối" && !item.HasSubstitutionProposal)
+                        {
+                            <a href="@Url.Action("Create", "InvigilatorSubstitution", new { area = "Lecturer", examInvigilatorId = item.ExamInvigilatorId })" class="btn btn-sm btn-outline-primary rounded-3">
+                                <i class="bi bi-arrow-left-right"></i> Đề xuất thay thế
+                            </a>
+                        }
+                        else if (item.ResponseStatus == "Từ chối" && item.HasSubstitutionProposal)
+                        {
+                            <span class="badge rounded-pill bg-info text-dark">Đã đề xuất thay thế</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">-</span>
+                        }
+                    </td>
+                </tr>
+            }
+        }
+        else
+        {
+            <tr><td colspan="16" class="text-center py-4">Không có lịch coi thi phù hợp</td></tr>
+        }
+    </tbody>
+</table>
+@await Html.PartialAsync("_Pagination", Model)

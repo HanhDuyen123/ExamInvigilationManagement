@@ -1,0 +1,81 @@
+﻿@model ExamInvigilationManagement.Common.PagedResult<ExamInvigilationManagement.Application.DTOs.Admin.AcademyYear.AcademyYearDto>
+
+@* @await Html.PartialAsync("_Pagination", Model) *@
+
+@{
+    int stt = (Model.Page - 1) * Model.PageSize + 1;
+}
+
+<table class="table modern-table">
+    <thead>
+        <tr>
+            <th class="col-id">STT</th>
+            <th class="col-name">Năm học</th>
+            <th>Cấu trúc</th>
+            <th>Trạng thái</th>
+            <th class="col-action">Action</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                <td class="col-id">@stt</td>
+                <td class="col-name">@item.Name</td>
+                <td>
+                    <div class="structure-summary">
+                        <span>@item.SemesterCount học kỳ</span>
+                        <span>@item.PeriodCount đợt</span>
+                        <span>@item.SessionCount buổi</span>
+                        <span>@item.SlotCount ca</span>
+                    </div>
+                </td>
+                <td>
+                    @if (item.IsComplete)
+                    {
+                        <span class="badge bg-success-subtle text-success">Đủ cấu trúc</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-warning-subtle text-warning">Còn thiếu</span>
+                    }
+                </td>
+                <td class="col-action">
+                    <div class="action-group">
+                        <a asp-area="Admin" asp-controller="AcademyYear" asp-action="Edit" asp-route-id="@item.Id" class="btn-icon edit">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+
+                        <a href="#"
+                           class="btn-icon delete btn-delete"
+                           data-id="@item.Id"
+                           data-name="@(item.Name)">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            stt++;
+        }
+    </tbody>
+</table>
+
+@await Html.PartialAsync("_Pagination", Model)
+
+<style>
+    .structure-summary {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+
+        .structure-summary span {
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: #f1f5f9;
+            color: #334155;
+            font-size: 12px;
+            font-weight: 600;
+        }
+</style>

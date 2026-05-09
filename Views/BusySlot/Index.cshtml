@@ -1,0 +1,203 @@
+﻿@using ExamInvigilationManagement.ViewModel
+@model CrudIndexViewModel
+
+@{
+    ViewData["Title"] = "Busy Slot";
+    var showUserFilter = ViewBag.ShowUserFilter as bool? ?? false;
+}
+
+@await Html.PartialAsync("_CrudIndex", Model)
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+
+    <script>
+        function clearBelow(level) {
+            const map = {
+                semester: ['semester', 'period', 'session', 'slot'],
+                period: ['period', 'session', 'slot'],
+                session: ['session', 'slot'],
+                slot: ['slot']
+            };
+
+            map[level]?.forEach(k => {
+                const lookup = AdminLookup.get(k);
+                if (lookup) lookup.clear();
+            });
+        }
+
+        $(function () {
+            const showUserFilter = @showUserFilter.ToString().ToLower();
+
+            CrudPage.init({
+                api: '@Url.Action("GetList", "BusySlot")',
+                deleteUrl: @User.IsInRole("Giảng viên").ToString().ToLower() ? '@Url.Action("Delete", "BusySlot")/' : '',
+                tableId: '#crudTable',
+                pageSize: '#pageSize',
+                filterSelector: '.crud-filter',
+                deleteName: '#deleteName',
+                extraData: function () {
+                    return {
+                        userId: $('#userId').length ? $('#userId').val() : null,
+                        facultyId: $('#facultyId').length ? $('#facultyId').val() : null,
+                        academyYearId: $('#yearId').val() || null,
+                        semesterId: $('#semesterId').val() || null,
+                        examPeriodId: $('#periodId').val() || null,
+                        examSessionId: $('#sessionId').val() || null,
+                        examSlotId: $('#slotId').val() || null,
+                        fromDate: $('#fromDate').val() || null,
+                        toDate: $('#toDate').val() || null
+                    };
+                }
+            });
+
+            if ($('#userInput').length) {
+                AdminLookup.create({
+                    key: 'busy-user',
+                    input: '#userInput',
+                    hidden: '#userId',
+                    menu: '#userDropdown',
+                    url: '@Url.Action("SearchUsers", "BusySlot")',
+                    valueField: 'id',
+                    textField: 'name',
+                    onSelect: function () { CrudPage.loadData(1); },
+                    onClear: function () { CrudPage.loadData(1); }
+                });
+            }
+
+            AdminLookup.create({
+                key: 'busy-year',
+                input: '#yearInput',
+                hidden: '#yearId',
+                menu: '#yearDropdown',
+                url: '@Url.Action("AcademyYears", "Lookup")',
+                valueField: 'id',
+                textField: 'name',
+                onSelect: function () {
+                    clearBelow('semester');
+                    CrudPage.loadData(1);
+                },
+                onClear: function () { CrudPage.loadData(1); }
+            });
+
+            AdminLookup.create({
+                key: 'busy-semester',
+                input: '#semesterInput',
+                hidden: '#semesterId',
+                menu: '#semesterDropdown',
+                url: '@Url.Action("Semesters", "Lookup")',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return {
+                        academyYearId: $('#yearId').val()
+                    };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    if (!$('#yearId').val()) {
+                        AppNotify.show('warning', 'Vui lòng chọn năm học trước.');
+                        return false;
+                    }
+                    return true;
+                },
+                onSelect: function () {
+                    clearBelow('period');
+                    CrudPage.loadData(1);
+                },
+                onClear: function () { CrudPage.loadData(1); }
+            });
+
+            AdminLookup.create({
+                key: 'busy-period',
+                input: '#periodInput',
+                hidden: '#periodId',
+                menu: '#periodDropdown',
+                url: '@Url.Action("Periods", "Lookup")',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return {
+                        semesterId: $('#semesterId').val()
+                    };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    return !!$('#semesterId').val();
+                },
+                onSelect: function () {
+                    clearBelow('session');
+                    CrudPage.loadData(1);
+                },
+                onClear: function () { CrudPage.loadData(1); }
+            });
+
+            AdminLookup.create({
+                key: 'busy-session',
+                input: '#sessionInput',
+                hidden: '#sessionId',
+                menu: '#sessionDropdown',
+                url: '@Url.Action("Sessions", "Lookup")',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return {
+                        periodId: $('#periodId').val()
+                    };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    return !!$('#periodId').val();
+                },
+                onSelect: function () {
+                    clearBelow('slot');
+                    CrudPage.loadData(1);
+                },
+                onClear: function () { CrudPage.loadData(1); }
+            });
+
+            AdminLookup.create({
+                key: 'busy-slot',
+                input: '#slotInput',
+                hidden: '#slotId',
+                menu: '#slotDropdown',
+                url: '@Url.Action("Slots", "Lookup")',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return {
+                        sessionId: $('#sessionId').val()
+                    };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    return !!$('#sessionId').val();
+                },
+                onSelect: function () { CrudPage.loadData(1); },
+                onClear: function () { CrudPage.loadData(1); }
+            });
+        });
+    </script>
+
+    <style>
+        .role-page .role-header {
+            margin-bottom: 14px !important;
+            gap: 12px;
+        }
+
+        .role-page .filter-glass {
+            margin-bottom: 14px !important;
+            padding: 12px 14px;
+            border-radius: 16px;
+        }
+
+        .role-page .table-modern {
+            justify-content: stretch;
+        }
+
+        .role-page .table-inner {
+            width: 100%;
+        }
+    </style>
+}

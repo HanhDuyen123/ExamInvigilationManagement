@@ -1,0 +1,55 @@
+﻿@using ExamInvigilationManagement.ViewModel
+@model CrudIndexViewModel
+
+@{
+    ViewData["Title"] = "Quản lý môn học";
+}
+
+@await Html.PartialAsync("_CrudIndex", Model)
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+
+    <script>
+        $(function () {
+            CrudPage.init({
+                api: '@Url.Action("GetList", "Subject", new { area = "Admin" })',
+                deleteUrl: '@Url.Action("Delete", "Subject", new { area = "Admin" })',
+                tableId: '#crudTable',
+                filterSelector: '.crud-filter',
+                pageSize: '#pageSize',
+                deleteName: '#deleteName',
+
+                extraData: function () {
+                    return {
+                        id: $('#subjectId').val()?.trim(),
+                        name: $('#subjectName').val()?.trim(),
+                        credit: $('#credit').val() || null,
+                        facultyId: $('#facultyId').val() || null
+                    };
+                }
+            });
+
+            // Faculty lookup
+            AdminLookup.create({
+                key: 'subject-faculty-filter',
+                input: '#facultyInput',
+                hidden: '#facultyId',
+                menu: '#facultyDropdown',
+                button: '#btnFaculty',
+                url: '@Url.Action("Search", "Faculty", new { area = "Admin" })',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
+
+                onSelect: function () {
+                    CrudPage.loadData(1);
+                },
+                onClear: function () {
+                    CrudPage.loadData(1);
+                }
+            });
+        });
+    </script>
+}

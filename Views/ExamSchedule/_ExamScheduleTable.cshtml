@@ -1,0 +1,171 @@
+﻿@using ExamInvigilationManagement.Common
+@model PagedResult<ExamInvigilationManagement.Application.DTOs.ExamSchedule.ExamScheduleDto>
+
+@{
+    int stt = (Model.Page - 1) * Model.PageSize + 1;
+    var actionMode = ViewBag.ScheduleActionMode as string ?? "";
+    var canSendApprovalRequest = ViewBag.CanSendApprovalRequest as bool? ?? false;
+    var canSendConfirmationRequest = ViewBag.CanSendConfirmationRequest as bool? ?? false;
+    var canSendSupportRequest = ViewBag.CanSendSupportRequest as bool? ?? false;
+    var canSelectSchedule = canSendApprovalRequest || canSendConfirmationRequest || canSendSupportRequest;
+    var showActionColumn = true;
+    var colSpan = 14 + (canSelectSchedule ? 1 : 0);
+}
+
+<table class="table modern-table schedule-table-compact">
+    <colgroup>
+        <col style="width:3%;" />
+        @if (canSelectSchedule)
+        {
+            <col style="width:3%;" />
+        }
+        <col style="width:6%;" />
+        <col style="width:16%;" />
+        <col style="width:9%;" />
+        <col style="width:4%;" />
+        <col style="width:7%;" />
+        <col style="width:5%;" />
+        <col style="width:6%;" />
+        <col style="width:5%;" />
+        <col style="width:5%;" />
+        <col style="width:10%;" />
+        <col style="width:10%;" />
+        <col style="width:7%;" />
+        @if (showActionColumn)
+        {
+            <col style="width:@(canSelectSchedule ? "4%" : "7%");" />
+        }
+    </colgroup>
+    <thead>
+        <tr>
+            <th class="col-id">STT</th>
+            @if (canSelectSchedule)
+            {
+                <th class="col-id">
+                    <input type="checkbox" id="selectAllApprovalSchedules" class="form-check-input" title="Chọn tất cả lịch hợp lệ trên trang" />
+                </th>
+            }
+            <th>Mã môn</th>
+            <th>Môn học</th>
+            <th>Lớp học phần</th>
+            <th>Nhóm</th>
+            <th>Năm học</th>
+            <th>Học kỳ</th>
+            <th>Đợt thi</th>
+            <th>Buổi thi</th>
+            <th>Ca thi</th>
+            <th>GT1</th>
+            <th>GT2</th>
+            <th>Trạng thái</th>
+            @if (showActionColumn)
+            {
+                <th class="col-action">Thao tác</th>
+            }
+        </tr>
+    </thead>
+
+    <tbody>
+        @if (Model?.Items != null && Model.Items.Any())
+        {
+            foreach (var item in Model.Items)
+            {
+                <tr class="approval-row">
+                    <td class="col-id">@stt</td>
+                    @if (canSelectSchedule)
+                    {
+                        var isApprovalAlreadySent = string.Equals(item.Status, "Chờ duyệt", StringComparison.OrdinalIgnoreCase) && item.ApprovalCount > 0;
+                        var canSelect = !isApprovalAlreadySent && (string.Equals(item.Status, "Chờ duyệt", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(item.Status, "Đã duyệt", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(item.Status, "Chờ phân công", StringComparison.OrdinalIgnoreCase)
+                            || string.Equals(item.Status, "Thiếu giám thị", StringComparison.OrdinalIgnoreCase));
+
+                        <td class="col-id">
+                            @if (canSelect)
+                            {
+                                <input type="checkbox"
+                                        class="form-check-input approval-schedule-checkbox"
+                                        data-status="@item.Status"
+                                        data-approval-sent="@isApprovalAlreadySent.ToString().ToLowerInvariant()"
+                                        value="@item.Id" />
+                            }
+                            else
+                            {
+                                <input type="checkbox"
+                                         class="form-check-input approval-schedule-checkbox"
+                                         data-status="@item.Status"
+                                         data-approval-sent="@isApprovalAlreadySent.ToString().ToLowerInvariant()"
+                                         value="@item.Id"
+                                         disabled="disabled"
+                                         title="@(isApprovalAlreadySent ? "Lịch này đã được gửi duyệt trước đó" : "Chỉ lịch Chờ phân công, Thiếu giám thị, Chờ duyệt hoặc Đã duyệt mới có thể chọn để gửi xử lý")" />
+                            }
+                        </td>
+                    }
+                    <td class="cell-code">@item.SubjectId</td>
+                    <td class="cell-wrap cell-subject">@item.SubjectName</td>
+                    <td class="cell-wrap">@item.ClassName</td>
+                    <td class="cell-code">@item.GroupNumber</td>
+                    <td class="cell-nowrap">@item.AcademyYearName</td>
+                    <td class="cell-nowrap">@item.SemesterName</td>
+                    <td class="cell-nowrap">@item.PeriodName</td>
+                    <td class="cell-nowrap">@item.SessionName</td>
+                    <td class="cell-nowrap">@item.SlotName</td>
+                    <td class="cell-wrap ui-col-person">@(string.IsNullOrWhiteSpace(item.Lecturer1Name) ? "-" : item.Lecturer1Name)</td>
+                    <td class="cell-wrap ui-col-person">@(string.IsNullOrWhiteSpace(item.Lecturer2Name) ? "-" : item.Lecturer2Name)</td>
+                    <td>
+                        <span class="badge rounded-pill
+                            @(item.Status == "Đã duyệt" ? "bg-success"
+                              : item.Status == "Từ chối duyệt" ? "bg-danger"
+                              : "bg-secondary")">
+                            @item.Status
+                        </span>
+                    </td>
+
+                    @if (showActionColumn)
+                    {
+                        <td class="col-action">
+                            <div class="action-group">
+                                <a href="@Url.Action("Details", "ExamSchedule", new { id = item.Id })"
+                                   class="btn-icon detail"
+                                   title="Xem chi tiết">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+
+                                @if (actionMode == "admin")
+                                {
+                                    <a href="@Url.Action("Edit", "ExamSchedule", new { id = item.Id })"
+                                       class="btn-icon edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+
+                                    <a href="#"
+                                       class="btn-icon delete btn-delete"
+                                       data-id="@item.Id"
+                                       data-name="@($"{item.SubjectId} - {item.ClassName} - {item.GroupNumber}")">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                }
+                                else if (actionMode == "secretary")
+                                {
+                                    <a href="@Url.Action("Assign", "ManualAssignment", new { area = "Secretary", scheduleId = item.Id })"
+                                       class="btn-icon edit"
+                                       title="Phân công giám thị">
+                                        <i class="bi bi-person-plus"></i>
+                                    </a>
+                                }
+                            </div>
+                        </td>
+                    }
+                </tr>
+                stt++;
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="@colSpan" class="text-center py-4">Không có dữ liệu</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@await Html.PartialAsync("_Pagination", Model)

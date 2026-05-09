@@ -1,0 +1,12 @@
+@if (!ViewData.ModelState.IsValid)
+{
+    <div class="validation-panel" role="alert">
+        <div class="validation-panel-icon">
+            <i class="bi bi-exclamation-triangle-fill"></i>
+        </div>
+        <div class="validation-panel-content">
+            <div class="validation-panel-title">Vui lòng kiểm tra lại thông tin</div>
+            <div asp-validation-summary="All" class="validation-panel-list"></div>
+        </div>
+    </div>
+}

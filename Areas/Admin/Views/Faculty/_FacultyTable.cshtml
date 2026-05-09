@@ -1,0 +1,42 @@
+﻿@model ExamInvigilationManagement.Common.PagedResult<
+    ExamInvigilationManagement.Application.DTOs.Admin.Faculty.FacultyDto>
+
+@{
+    int stt = (Model.Page - 1) * Model.PageSize + 1;
+}
+
+<table class="table modern-table">
+    <thead>
+        <tr>
+            <th class="col-id">STT</th>
+            <th class="col-name">Tên khoa</th>
+            <th class="col-action">Action</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                <td class="col-id">@stt</td>
+                <td class="col-name">@item.Name</td>
+                <td class="col-action">
+                    <div class="action-group">
+                        <a href="/Admin/Faculty/Edit/@item.Id" class="btn-icon edit">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+
+                        <a href="#"
+                           class="btn-icon delete btn-delete"
+                           data-id="@item.Id"
+                           data-name="@item.Name">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            stt++;
+        }
+    </tbody>
+</table>
+@await Html.PartialAsync("_Pagination", Model)

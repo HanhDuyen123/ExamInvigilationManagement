@@ -1,0 +1,147 @@
+﻿@model ExamInvigilationManagement.ViewModel.CrudIndexViewModel
+
+<div class="role-page">
+
+    <!-- HEADER -->
+    <div class="role-header mb-4">
+        <div>
+            <h3 class="title-gradient">@Model.Title</h3>
+            <div class="subtitle">@Model.Subtitle</div>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-end gap-2">
+            @if (ViewBag.CanSendApprovalRequest as bool? ?? false)
+            {
+                <button type="button" id="sendApprovalRequest" class="btn btn-create">
+                    <i class="bi bi-send-check"></i>
+                    <span>Gửi duyệt</span>
+                </button>
+            }
+
+            @if (ViewBag.CanSendConfirmationRequest as bool? ?? false)
+            {
+                <button type="button" id="sendInvigilatorConfirmation" class="btn btn-create">
+                    <i class="bi bi-envelope-check"></i>
+                    <span>Gửi xác nhận</span>
+                </button>
+            }
+
+            @if (ViewBag.CanSendSupportRequest as bool? ?? false)
+            {
+                <button type="button" id="previewInvigilatorSupportRequest" class="btn btn-create">
+                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                    <span>Hỗ trợ CBCT</span>
+                </button>
+            }
+
+            @if (Model.ShowCreateButton)
+            {
+                <a href="@Model.CreateUrl" class="btn btn-create">
+                    <i class="bi bi-plus-lg"></i>
+                    <span>Thêm mới</span>
+                </a>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Model.ImportUrl))
+            {
+                <a href="@Model.ImportUrl" class="btn btn-create">
+                    <i class="bi bi-upload"></i>
+                    <span>Import file</span>
+                </a>
+            }
+        </div>
+    </div>
+
+    @if ((ViewBag.CanSendApprovalRequest as bool? ?? false) || (ViewBag.CanSendConfirmationRequest as bool? ?? false) || (ViewBag.CanSendSupportRequest as bool? ?? false))
+    {
+        <div id="approvalRequestMessage" class="alert d-none mb-4"></div>
+    }
+
+    <!-- FILTER -->
+    <div class="filter-glass mb-4">
+        <div class="filter-head d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <div class="filter-head-icon">
+                    <i class="bi bi-funnel"></i>
+                </div>
+                <div>
+                    <div class="filter-head-title">Bộ lọc tìm kiếm</div>
+                    <div class="filter-head-subtitle">Có thể thu gọn để mở rộng vùng hiển thị dữ liệu</div>
+                </div>
+            </div>
+
+            <button type="button"
+                    class="btn filter-toggle-btn"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#searchPanel"
+                    aria-expanded="true"
+                    aria-controls="searchPanel"
+                    id="filterToggleBtn">
+                <i class="bi bi-chevron-up me-1 toggle-icon" id="filterToggleIcon"></i>
+                <span class="toggle-text" id="filterToggleText">Thu gọn</span>
+            </button>
+        </div>
+
+        <div class="collapse show mt-3" id="searchPanel">
+            @await Html.PartialAsync(Model.SearchPartialView)
+        </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-modern">
+        <div class="table-inner @Model.TableClass">
+            <div id="crudTable"></div>
+        </div>
+    </div>
+
+</div>
+
+@section Modals {
+    @await Html.PartialAsync("_DeleteModal")
+}
+
+<script>
+    (function () {
+        function initSearchPanelToggle() {
+            const panel = document.getElementById('searchPanel');
+            const btn = document.getElementById('filterToggleBtn');
+            const text = document.getElementById('filterToggleText');
+            const icon = document.getElementById('filterToggleIcon');
+
+            if (!panel || !btn || !text || !icon || btn.dataset.searchToggleReady === '1') return;
+            btn.dataset.searchToggleReady = '1';
+
+            function setButtonState(isOpen) {
+                text.textContent = isOpen ? 'Thu gọn' : 'Mở rộng';
+                btn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                btn.classList.toggle('collapsed', !isOpen);
+                icon.classList.toggle('bi-chevron-up', isOpen);
+                icon.classList.toggle('bi-chevron-down', !isOpen);
+            }
+
+            setButtonState(panel.classList.contains('show'));
+
+            panel.addEventListener('show.bs.collapse', function () {
+                setButtonState(true);
+            });
+
+            panel.addEventListener('shown.bs.collapse', function () {
+                setButtonState(true);
+            });
+
+            panel.addEventListener('hide.bs.collapse', function () {
+                setButtonState(false);
+            });
+
+            panel.addEventListener('hidden.bs.collapse', function () {
+                setButtonState(false);
+            });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSearchPanelToggle);
+        } else {
+            initSearchPanelToggle();
+        }
+    })();
+</script>

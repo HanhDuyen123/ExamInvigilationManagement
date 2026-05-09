@@ -1,0 +1,25 @@
+﻿@{
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var area = ViewContext.RouteData.Values["area"]?.ToString();
+    var isEdit = action?.ToLower() == "edit";
+    var subtitle = ViewBag.Subtitle as string;
+    var backUrl = Url.Action("Index", controller, new { area = string.IsNullOrWhiteSpace(area) ? null : area });
+}
+
+<div class="form-header mb-4">
+    <div>
+        <h3 class="title-gradient @(isEdit ? "edit" : "")">
+            @(isEdit ? "Edit" : "Create") @controller
+        </h3>
+        <div class="subtitle">
+            @(string.IsNullOrEmpty(subtitle)
+                ? (isEdit ? "Cập nhật thông tin" : "Tạo mới")
+                : subtitle)
+        </div>
+    </div>
+
+    <a href="@(backUrl ?? "#")" class="btn-back">
+        <i class="bi bi-arrow-left"></i> Back
+    </a>
+</div>

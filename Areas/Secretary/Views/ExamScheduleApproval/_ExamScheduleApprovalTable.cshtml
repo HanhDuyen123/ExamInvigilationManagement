@@ -1,0 +1,106 @@
+﻿@model ExamInvigilationManagement.Common.PagedResult<ExamInvigilationManagement.Application.DTOs.Approval.ExamScheduleApprovalIndexItemDto>
+
+@{
+    var stt = (Model.Page - 1) * Model.PageSize + 1;
+    var colspan = 15;
+}
+
+<table class="table modern-table schedule-table-compact approval-table-compact">
+    <colgroup>
+        <col style="width:3%;" />
+        <col style="width:3%;" />
+        <col style="width:6%;" />
+        <col style="width:15%;" />
+        <col style="width:7%;" />
+        <col style="width:5%;" />
+        <col style="width:6%;" />
+        <col style="width:5%;" />
+        <col style="width:6%;" />
+        <col style="width:6%;" />
+        <col style="width:10%;" />
+        <col style="width:10%;" />
+        <col style="width:9%;" />
+        <col style="width:4%;" />
+        <col style="width:5%;" />
+    </colgroup>
+    <thead>
+        <tr>
+            <th style="width:44px;">
+                <input type="checkbox" id="approvalSelectAll" class="form-check-input" />
+            </th>
+            <th>STT</th>
+            <th>Mã MH</th>
+            <th>Tên MH</th>
+            <th>Năm học</th>
+            <th>Học kỳ</th>
+            <th>Đợt thi</th>
+            <th>Buổi thi</th>
+            <th>Ca thi</th>
+            <th>Phòng thi</th>
+            <th>GT1</th>
+            <th>GT2</th>
+            <th>Trạng thái</th>
+            <th>Số GT</th>
+            <th>Ngày thi</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @if (Model?.Items != null && Model.Items.Any())
+        {
+            foreach (var item in Model.Items)
+            {
+                <tr class="approval-row @(item.CanReview ? "" : "table-warning")">
+                    <td>
+                        @if (item.CanReview)
+                        {
+                            <input type="checkbox"
+                                   name="SelectedExamScheduleIds"
+                                   value="@item.ExamScheduleId"
+                                   class="form-check-input approval-select-row" />
+                        }
+                        else
+                        {
+                            <input type="checkbox"
+                                   class="form-check-input approval-select-row"
+                                   disabled="disabled" />
+                        }
+                    </td>
+                    <td>@stt</td>
+                    <td class="cell-code">@item.SubjectId</td>
+                    <td class="cell-wrap cell-subject">@item.SubjectName</td>
+                    <td class="cell-nowrap">@item.AcademyYearName</td>
+                    <td class="cell-nowrap">@item.SemesterName</td>
+                    <td class="cell-nowrap">@item.PeriodName</td>
+                    <td class="cell-nowrap">@item.SessionName</td>
+                    <td class="cell-nowrap">@($"{item.SlotName} ({item.TimeStart:HH\\:mm})")</td>
+                    <td class="cell-nowrap">@item.RoomDisplay</td>
+                    <td class="cell-wrap ui-col-person">@(string.IsNullOrWhiteSpace(item.Invigilator1Name) ? "-" : item.Invigilator1Name)</td>
+                    <td class="cell-wrap ui-col-person">@(string.IsNullOrWhiteSpace(item.Invigilator2Name) ? "-" : item.Invigilator2Name)</td>
+                    <td>
+                        <span class="badge rounded-pill
+                            @(item.Status == "Đã duyệt" ? "bg-success"
+                              : item.Status == "Từ chối duyệt" ? "bg-danger"
+                              : "bg-secondary")">
+                            @item.Status
+                        </span>
+                        <div class="small mt-1 text-muted">
+                            @(item.CanReview ? "Đủ điều kiện duyệt" : item.ReviewReason)
+                        </div>
+                    </td>
+                    <td>@item.CurrentInvigilatorCount/2</td>
+                    <td>@item.ExamDate.ToString("dd/MM/yyyy")</td>
+                </tr>
+                stt++;
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="@colspan" class="text-center py-4">Không có lịch thi phù hợp</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@await Html.PartialAsync("_Pagination", Model)

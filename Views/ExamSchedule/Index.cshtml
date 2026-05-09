@@ -1,0 +1,764 @@
+﻿@using ExamInvigilationManagement.ViewModel
+@model CrudIndexViewModel
+
+@{
+    ViewData["Title"] = "Exam Schedule Management";
+    var showFacultyFilter = ViewBag.ShowFacultyFilter as bool? ?? false;
+    var showUserFilter = ViewBag.ShowUserFilter as bool? ?? false;
+    var showStatusFilter = ViewBag.ShowStatusFilter as bool? ?? false;
+}
+
+@await Html.PartialAsync("_CrudIndex", Model)
+
+@section PageModals {
+    @if (User.IsInRole("Thư ký khoa"))
+    {
+        @await Html.PartialAsync("_InvigilatorSupportPreviewModal")
+    }
+}
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+
+    <script>
+        $(function () {
+            function val(selector) {
+                const $el = $(selector);
+                return $el.length ? ($el.val() || null) : null;
+            }
+
+            function clearBelow(level) {
+                const map = {
+                    faculty: ['user', 'subject'],
+                    year: ['semester', 'period', 'session', 'slot'],
+                    semester: ['period', 'session', 'slot'],
+                    period: ['session', 'slot'],
+                    session: ['slot'],
+                    building: ['room']
+                };
+
+                (map[level] || []).forEach(k => {
+                    const lookup = AdminLookup.get(k);
+                    if (lookup) lookup.clear();
+                });
+            }
+
+            CrudPage.init({
+                api: '@Url.Action("GetList", "ExamSchedule")',
+                deleteUrl: @User.IsInRole("Admin").ToString().ToLower() ? '@Url.Action("Delete", "ExamSchedule")/' : '',
+                tableId: '#crudTable',
+                pageSize: '#pageSize',
+                filterSelector: '.crud-filter',
+                deleteName: '#deleteName',
+                extraData: function () {
+                    return {
+                        facultyId: val('#facultyId'),
+                        userId: val('#userId'),
+                        academyYearId: val('#yearId'),
+                        semesterId: val('#semesterId'),
+                        periodId: val('#periodId'),
+                        sessionId: val('#sessionId'),
+                        slotId: val('#slotId'),
+                        subjectId: val('#subjectId'),
+                        className: val('#className'),
+                        groupNumber: val('#groupNumber'),
+                        buildingId: val('#buildingId'),
+                        roomId: val('#roomId'),
+                        status: val('#status'),
+                        fromDate: val('#fromDate'),
+                        toDate: val('#toDate')
+                    };
+                }
+            });
+
+            function showApprovalMessage(type, message, errors) {
+                const $box = $('#approvalRequestMessage');
+                if (!$box.length) return;
+
+                const extra = Array.isArray(errors) && errors.length
+                    ? '<ul class="mb-0 mt-2">' + errors.map(x => '<li>' + $('<div/>').text(x).html() + '</li>').join('') + '</ul>'
+                    : '';
+
+                $box
+                    .removeClass('d-none alert-success alert-danger alert-warning')
+                    .addClass(type === 'success' ? 'alert-success' : 'alert-danger')
+                    .html($('<div/>').text(message).html() + extra);
+
+                if (window.AppNotify) {
+                    window.AppNotify.show(type, message);
+                }
+            }
+
+            $(document).on('change', '#selectAllApprovalSchedules', function () {
+                $('.approval-schedule-checkbox:not(:disabled)').prop('checked', this.checked);
+            });
+
+            $(document).on('change', '.approval-schedule-checkbox', function () {
+                const $items = $('.approval-schedule-checkbox:not(:disabled)');
+                $('#selectAllApprovalSchedules').prop('checked', $items.length > 0 && $items.filter(':checked').length === $items.length);
+            });
+
+            $('#sendApprovalRequest').on('click', async function () {
+                const invalidCount = $('.approval-schedule-checkbox:checked').filter(function () {
+                    return ($(this).data('status') || '').toString().toLowerCase() !== 'chờ duyệt' || $(this).data('approval-sent') === true;
+                }).length;
+                const ids = $('.approval-schedule-checkbox:checked').filter(function () {
+                    return ($(this).data('status') || '').toString().toLowerCase() === 'chờ duyệt' && $(this).data('approval-sent') !== true;
+                }).map(function () {
+                    return Number(this.value);
+                }).get();
+
+                if (!ids.length) {
+                    showApprovalMessage('error', 'Vui lòng chọn ít nhất một lịch thi đang ở trạng thái Chờ duyệt.');
+                    return;
+                }
+
+                if (invalidCount > 0) {
+                    showApprovalMessage('error', 'Chỉ có thể gửi duyệt các lịch thi Chờ duyệt và chưa từng gửi duyệt trước đó.');
+                    return;
+                }
+
+                const $button = $(this);
+                $button.prop('disabled', true).addClass('disabled');
+
+                try {
+                    const response = await fetch('@Url.Action("RequestApproval", "ExamSchedule")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': $('meta[name="request-verification-token"]').attr('content') || ''
+                        },
+                        body: JSON.stringify({ scheduleIds: ids })
+                    });
+
+                    const result = await response.json();
+                    if (!response.ok || !result.success) {
+                        showApprovalMessage('error', result.message || 'Không thể gửi yêu cầu duyệt.', result.errors);
+                        return;
+                    }
+
+                    showApprovalMessage('success', result.message || 'Đã gửi yêu cầu duyệt thành công.');
+                    CrudPage.loadData(1);
+                } catch {
+                    showApprovalMessage('error', 'Không thể gửi yêu cầu duyệt do kết nối không ổn định. Vui lòng thử lại.');
+                } finally {
+                    $button.prop('disabled', false).removeClass('disabled');
+                }
+            });
+
+            $('#sendInvigilatorConfirmation').on('click', async function () {
+                const invalidCount = $('.approval-schedule-checkbox:checked').filter(function () {
+                    return ($(this).data('status') || '').toString().toLowerCase() !== 'đã duyệt';
+                }).length;
+                const ids = $('.approval-schedule-checkbox:checked').filter(function () {
+                    return ($(this).data('status') || '').toString().toLowerCase() === 'đã duyệt';
+                }).map(function () {
+                    return Number(this.value);
+                }).get();
+
+                if (!ids.length) {
+                    showApprovalMessage('error', 'Vui lòng chọn ít nhất một lịch thi đã duyệt để gửi xác nhận cho giảng viên.');
+                    return;
+                }
+
+                if (invalidCount > 0) {
+                    showApprovalMessage('error', 'Chỉ có thể gửi xác nhận cho các lịch thi đã duyệt. Vui lòng bỏ chọn lịch chưa đủ điều kiện.');
+                    return;
+                }
+
+                const $button = $(this);
+                $button.prop('disabled', true).addClass('disabled');
+
+                try {
+                    const response = await fetch('@Url.Action("SendInvigilatorConfirmation", "ExamSchedule")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': $('meta[name="request-verification-token"]').attr('content') || ''
+                        },
+                        body: JSON.stringify({ scheduleIds: ids })
+                    });
+
+                    const result = await response.json();
+                    if (!response.ok || !result.success) {
+                        showApprovalMessage('error', result.message || 'Không thể gửi email xác nhận.', result.errors);
+                        return;
+                    }
+
+                    showApprovalMessage('success', result.message || 'Đã gửi email xác nhận thành công.');
+                    CrudPage.loadData(1);
+                } catch {
+                    showApprovalMessage('error', 'Không thể gửi email xác nhận do kết nối không ổn định. Vui lòng thử lại.');
+                } finally {
+                    $button.prop('disabled', false).removeClass('disabled');
+                }
+            });
+
+            let supportRequestIds = [];
+
+            function getSupportRequestIds() {
+                const invalidCount = $('.approval-schedule-checkbox:checked').filter(function () {
+                    const status = ($(this).data('status') || '').toString().toLowerCase();
+                    return status !== 'chờ phân công' && status !== 'thiếu giám thị';
+                }).length;
+
+                const ids = $('.approval-schedule-checkbox:checked').filter(function () {
+                    const status = ($(this).data('status') || '').toString().toLowerCase();
+                    return status === 'chờ phân công' || status === 'thiếu giám thị';
+                }).map(function () {
+                    return Number(this.value);
+                }).get();
+
+                return { ids, invalidCount };
+            }
+
+            function html(value) {
+                return $('<div/>').text(value || '').html();
+            }
+
+            function buildSupportFormData() {
+                const formData = new FormData();
+                formData.append('ScheduleIds', supportRequestIds.join(','));
+                const file = document.getElementById('supportTemplateFile')?.files?.[0];
+                if (file) formData.append('TemplateFile', file);
+                return formData;
+            }
+
+            $('#previewInvigilatorSupportRequest').on('click', async function () {
+                const selected = getSupportRequestIds();
+
+                if (!selected.ids.length) {
+                    showApprovalMessage('error', 'Vui lòng chọn ít nhất một lịch thi đang ở trạng thái Chờ phân công hoặc Thiếu giám thị.');
+                    return;
+                }
+
+                if (selected.invalidCount > 0) {
+                    showApprovalMessage('error', 'Chức năng hỗ trợ CBCT chỉ nhận lịch thi Chờ phân công hoặc Thiếu giám thị. Vui lòng bỏ chọn các lịch khác.');
+                    return;
+                }
+
+                const $button = $(this);
+                $button.prop('disabled', true).addClass('disabled');
+
+                try {
+                    const response = await fetch('@Url.Action("PreviewInvigilatorSupportRequest", "ExamSchedule")', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'RequestVerificationToken': $('meta[name="request-verification-token"]').attr('content') || ''
+                        },
+                        body: JSON.stringify({ scheduleIds: selected.ids })
+                    });
+
+                    const result = await response.json();
+                    if (!response.ok || !result.success) {
+                        showApprovalMessage('error', result.message || 'Không thể xem trước file đề nghị hỗ trợ CBCT.', result.errors);
+                        return;
+                    }
+
+                    supportRequestIds = selected.ids;
+                    $('#supportPreviewSummary').text(`${result.title} | ${result.scheduleCount} lịch thi | Còn thiếu ${result.missingInvigilatorCount} CBCT`);
+                    $('#supportPreviewRows').html((result.rows || []).map(row => `
+                        <tr>
+                            <td>${row.stt}</td>
+                            <td>${html(row.subjectId)}</td>
+                            <td>${html(row.subjectName)}</td>
+                            <td>${html(row.examDate)}</td>
+                            <td>${html(row.sessionName)}</td>
+                            <td>${html(row.slotName)}</td>
+                            <td>${html(row.slotTime)}</td>
+                            <td>${html(row.roomName)}</td>
+                            <td>${html(row.buildingName)}</td>
+                            <td>${html(row.lecturer)}</td>
+                            <td>${html(row.lecturer1Code ? `${row.lecturer1Code} - ${row.lecturer1Name || ''}` : '')}</td>
+                            <td>${html(row.lecturer2Code ? `${row.lecturer2Code} - ${row.lecturer2Name || ''}` : '')}</td>
+                            <td><span class="badge bg-warning text-dark">${row.missing}</span></td>
+                        </tr>
+                    `).join(''));
+
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('supportRequestPreviewModal')).show();
+                } catch {
+                    showApprovalMessage('error', 'Không thể xem trước file do kết nối không ổn định. Vui lòng thử lại.');
+                } finally {
+                    $button.prop('disabled', false).removeClass('disabled');
+                }
+            });
+
+            $('#downloadSupportRequestFile').on('click', async function () {
+                if (!supportRequestIds.length) return;
+
+                const $button = $(this);
+                $button.prop('disabled', true).addClass('disabled');
+
+                try {
+                    const response = await fetch('@Url.Action("DownloadInvigilatorSupportRequest", "ExamSchedule")', {
+                        method: 'POST',
+                        headers: {
+                            'RequestVerificationToken': $('meta[name="request-verification-token"]').attr('content') || ''
+                        },
+                        body: buildSupportFormData()
+                    });
+
+                    if (!response.ok) {
+                        const result = await response.json().catch(() => null);
+                        showApprovalMessage('error', result?.message || 'Không thể tải file xem trước.', result?.errors);
+                        return;
+                    }
+
+                    const blob = await response.blob();
+                    const disposition = response.headers.get('content-disposition') || '';
+                    const match = disposition.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i);
+                    const fileName = decodeURIComponent(match?.[1] || match?.[2] || 'De-nghi-ho-tro-CBCT.xls');
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                } catch {
+                    showApprovalMessage('error', 'Không thể tải file do kết nối không ổn định. Vui lòng thử lại.');
+                } finally {
+                    $button.prop('disabled', false).removeClass('disabled');
+                }
+            });
+
+            $('#sendSupportRequestEmail').on('click', async function () {
+                if (!supportRequestIds.length) return;
+
+                const $button = $(this);
+                $button.prop('disabled', true).addClass('disabled');
+
+                try {
+                    const response = await fetch('@Url.Action("SendInvigilatorSupportRequest", "ExamSchedule")', {
+                        method: 'POST',
+                        headers: {
+                            'RequestVerificationToken': $('meta[name="request-verification-token"]').attr('content') || ''
+                        },
+                        body: buildSupportFormData()
+                    });
+
+                    const result = await response.json();
+                    if (!response.ok || !result.success) {
+                        showApprovalMessage('error', result.message || 'Không thể gửi email đề nghị hỗ trợ CBCT.', result.errors);
+                        return;
+                    }
+
+                    bootstrap.Modal.getOrCreateInstance(document.getElementById('supportRequestPreviewModal')).hide();
+                    showApprovalMessage('success', result.message || 'Đã gửi email đề nghị hỗ trợ CBCT thành công.');
+                } catch {
+                    showApprovalMessage('error', 'Không thể gửi email do kết nối không ổn định. Vui lòng thử lại.');
+                } finally {
+                    $button.prop('disabled', false).removeClass('disabled');
+                }
+            });
+
+        @if (showFacultyFilter)
+        {
+            <text>
+                    AdminLookup.create({
+                        key: 'exam-faculty',
+                        input: '#facultyInput',
+                        hidden: '#facultyId',
+                        menu: '#facultyDropdown',
+                            url: '@Url.Action("Search", "Faculty", new { area = "Admin" })',
+                        queryParam: 'keyword',
+                        valueField: 'id',
+                        textField: 'name',
+                        onSelect: function () {
+                            clearBelow('faculty');
+                            CrudPage.loadData(1);
+                        },
+                        onClear: function () {
+                            clearBelow('faculty');
+                            CrudPage.loadData(1);
+                        }
+                    });
+            </text>
+        }
+
+        @if (showUserFilter)
+        {
+            <text>
+                AdminLookup.create({
+                    key: 'exam-user',
+                    input: '#userInput',
+                    hidden: '#userId',
+                    menu: '#userDropdown',
+                    url: '@Url.Action("SearchLecturer", "ExamSchedule")',
+                    queryParam: 'keyword',
+                    valueField: 'id',
+                    textField: 'name',
+                    extraParams: function () {
+                        return {
+                            facultyId: $('#facultyId').val() || null
+                        };
+                    },
+                    beforeSearch: function () {
+                        if (@showFacultyFilter.ToString().ToLower() && !$('#facultyId').val()) {
+                            return true; // admin chưa chọn khoa thì vẫn cho load toàn bộ
+                        }
+                        return true;
+                    },
+                    onSelect: function () {
+                        CrudPage.loadData(1);
+                    },
+                    onClear: function () {
+                        CrudPage.loadData(1);
+                    }
+                });
+            </text>
+        }
+
+            AdminLookup.create({
+                key: 'exam-year',
+                input: '#yearInput',
+                hidden: '#yearId',
+                menu: '#yearDropdown',
+                url: '@Url.Action("AcademyYears", "Lookup")',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
+                onSelect: function () {
+                    clearBelow('year');
+                    CrudPage.loadData(1);
+                },
+                onClear: function () {
+                    clearBelow('year');
+                    CrudPage.loadData(1);
+                }
+            });
+
+            AdminLookup.create({
+                key: 'exam-semester',
+                input: '#semesterInput',
+                hidden: '#semesterId',
+                menu: '#semesterDropdown',
+                url: '@Url.Action("Semesters", "Lookup")',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return { academyYearId: val('#yearId') };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    return !!val('#yearId');
+                },
+                onSelect: function () {
+                    clearBelow('semester');
+                    CrudPage.loadData(1);
+                },
+                onClear: function () {
+                    clearBelow('semester');
+                    CrudPage.loadData(1);
+                }
+            });
+
+            AdminLookup.create({
+                key: 'exam-period',
+                input: '#periodInput',
+                hidden: '#periodId',
+                menu: '#periodDropdown',
+                url: '@Url.Action("Periods", "Lookup")',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return { semesterId: val('#semesterId') };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    return !!val('#semesterId');
+                },
+                onSelect: function () {
+                    clearBelow('period');
+                    CrudPage.loadData(1);
+                },
+                onClear: function () {
+                    clearBelow('period');
+                    CrudPage.loadData(1);
+                }
+            });
+
+            AdminLookup.create({
+                key: 'exam-session',
+                input: '#sessionInput',
+                hidden: '#sessionId',
+                menu: '#sessionDropdown',
+                url: '@Url.Action("Sessions", "Lookup")',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return { periodId: val('#periodId') };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    return !!val('#periodId');
+                },
+                onSelect: function () {
+                    clearBelow('session');
+                    CrudPage.loadData(1);
+                },
+                onClear: function () {
+                    clearBelow('session');
+                    CrudPage.loadData(1);
+                }
+            });
+
+            AdminLookup.create({
+                key: 'exam-slot',
+                input: '#slotInput',
+                hidden: '#slotId',
+                menu: '#slotDropdown',
+                url: '@Url.Action("Slots", "Lookup")',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return { sessionId: val('#sessionId') };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    return !!val('#sessionId');
+                },
+                onSelect: function () {
+                    CrudPage.loadData(1);
+                },
+                onClear: function () {
+                    CrudPage.loadData(1);
+                }
+            });
+
+            AdminLookup.create({
+                key: 'exam-subject',
+                input: '#subjectInput',
+                hidden: '#subjectId',
+                menu: '#subjectDropdown',
+                url: '@Url.Action("Subjects", "Lookup")',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
+                extraParams: function () {
+                    return { facultyId: val('#facultyId') };
+                },
+                onSelect: function () {
+                    CrudPage.loadData(1);
+                },
+                onClear: function () {
+                    CrudPage.loadData(1);
+                }
+            });
+
+            AdminLookup.create({
+                key: 'exam-building',
+                input: '#buildingInput',
+                hidden: '#buildingId',
+                menu: '#buildingDropdown',
+                url: '@Url.Action("Buildings", "Lookup")',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
+                onSelect: function () {
+                    clearBelow('building');
+                    CrudPage.loadData(1);
+                },
+                onClear: function () {
+                    clearBelow('building');
+                    CrudPage.loadData(1);
+                }
+            });
+
+            AdminLookup.create({
+                key: 'exam-room',
+                input: '#roomInput',
+                hidden: '#roomId',
+                menu: '#roomDropdown',
+                url: '@Url.Action("Rooms", "Lookup")',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return { buildingId: val('#buildingId') };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    return !!val('#buildingId');
+                },
+                onSelect: function () {
+                    CrudPage.loadData(1);
+                },
+                onClear: function () {
+                    CrudPage.loadData(1);
+                }
+            });
+
+            $(document).on('change', '#selectAllApprovalSchedules', function () {
+                const checked = $(this).is(':checked');
+
+                $('.approval-schedule-checkbox:not(:disabled)').prop('checked', checked);
+                $('.approval-schedule-checkbox:not(:disabled)').closest('tr').toggleClass('table-active', checked);
+            });
+
+            $(document).on('change', '.approval-schedule-checkbox', function () {
+                $(this).closest('tr').toggleClass('table-active', $(this).is(':checked'));
+
+                const $items = $('.approval-schedule-checkbox:not(:disabled)');
+                $('#selectAllApprovalSchedules').prop('checked', $items.length > 0 && $items.filter(':checked').length === $items.length);
+            });
+        });
+    </script>
+
+    <style>
+        .support-preview-modal .modal-body {
+            background: #f8fafc;
+        }
+
+        .support-preview-table-wrap {
+            max-height: 60vh;
+            background: #fff;
+            border-radius: 12px;
+        }
+
+        .support-preview-table th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: #eef2ff;
+            white-space: nowrap;
+        }
+
+        .support-preview-table td {
+            white-space: nowrap;
+        }
+
+        .support-template-box {
+            padding: 12px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+        }
+
+        .role-page .role-header {
+            margin-bottom: 14px !important;
+            gap: 12px;
+        }
+
+        .role-page .title-gradient {
+            font-size: 1.35rem;
+            margin-bottom: 2px;
+        }
+
+        .role-page .filter-glass {
+            margin-bottom: 14px !important;
+            padding: 12px 14px;
+            border-radius: 16px;
+        }
+
+        .role-page .filter-head-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 11px;
+        }
+
+        .role-page .filter-head-title {
+            font-size: .92rem;
+        }
+
+        .role-page .filter-head-subtitle {
+            display: none;
+        }
+
+        .role-page .filter-toggle-btn,
+        .role-page .btn-create {
+            min-height: 34px;
+            padding: 7px 12px;
+            border-radius: 10px;
+            font-size: 13px;
+        }
+
+        .role-page .table-modern {
+            justify-content: stretch;
+        }
+
+        .role-page .table-inner.full-width {
+            border-radius: 16px;
+            background: rgba(255,255,255,.45);
+        }
+
+        .schedule-table-compact {
+            width: 100%;
+            min-width: 0;
+            border-spacing: 0 3px;
+            table-layout: fixed;
+        }
+
+        .schedule-table-compact thead th {
+            padding: 8px 10px;
+            font-size: 10.5px;
+            letter-spacing: .02em;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
+        .schedule-table-compact tbody td,
+        .schedule-table-compact td {
+            padding: 8px 10px;
+            font-size: 12.5px;
+            line-height: 1.25;
+        }
+
+        .schedule-table-compact tbody tr {
+            box-shadow: 0 2px 8px rgba(15,23,42,.045);
+        }
+
+        .schedule-table-compact tbody tr:hover {
+            transform: none;
+            box-shadow: 0 6px 16px rgba(99,102,241,.12);
+        }
+
+        .schedule-table-compact .col-id {
+            width: 48px;
+            padding-left: 6px;
+            padding-right: 6px;
+        }
+
+        .schedule-table-compact .col-action {
+            width: 82px;
+        }
+
+        .schedule-table-compact .cell-subject {
+            width: auto;
+        }
+
+        .schedule-table-compact .cell-nowrap,
+        .schedule-table-compact .cell-code {
+            white-space: normal;
+        }
+
+        .schedule-table-compact .cell-code {
+            font-weight: 700;
+            color: #334155;
+        }
+
+        .schedule-table-compact .badge {
+            font-size: 11px;
+            padding: 5px 8px;
+            white-space: normal;
+        }
+
+        .schedule-table-compact .action-group {
+            gap: 5px;
+        }
+
+        .schedule-table-compact .btn-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+        }
+
+        @@media (max-width: 991.98px) {
+            .role-page .role-header {
+                align-items: flex-start;
+            }
+        }
+    </style>
+}

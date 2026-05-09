@@ -1,0 +1,58 @@
+﻿@using ExamInvigilationManagement.ViewModel
+@model CrudIndexViewModel
+
+@{
+    ViewData["Title"] = "Quản lý thông tin cá nhân";
+}
+
+@await Html.PartialAsync("_CrudIndex", Model)
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+
+    <script>
+        $(function () {
+            CrudPage.init({
+                api: '@Url.Action("GetList", "Information", new { area = "Admin" })',
+                deleteUrl: '@Url.Action("Delete", "Information", new { area = "Admin" })',
+                tableId: '#crudTable',
+
+                // ✅ dùng chung cho tất cả input
+                filterSelector: '.crud-filter',
+
+                pageSize: '#pageSize',
+                deleteName: '#deleteName',
+
+                extraData: function () {
+                    return {
+                        name: $('#name').val()?.trim(),
+                        email: $('#email').val()?.trim(),
+                        gender: $('#gender').val() || null,
+                        dob: $('#dob').val() || null,
+                        positionId: $('#positionId').val() || null
+                    };
+                }
+            });
+
+            AdminLookup.create({
+                key: 'info-position-filter',
+                input: '#positionInput',
+                hidden: '#positionId',
+                menu: '#positionDropdown',
+                button: '#btnPosition',
+                url: '@Url.Action("Search", "Position", new { area = "Admin" })',
+                queryParam: 'keyword',
+                valueField: 'positionId',
+                textField: 'positionName',
+
+                onSelect: function () {
+                    CrudPage.loadData(1);
+                },
+                onClear: function () {
+                    CrudPage.loadData(1);
+                }
+            });
+        });
+    </script>
+}

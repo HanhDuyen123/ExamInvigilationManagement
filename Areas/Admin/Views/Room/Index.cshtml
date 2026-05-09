@@ -1,0 +1,50 @@
+﻿@using ExamInvigilationManagement.ViewModel
+@model CrudIndexViewModel
+
+@{
+    ViewData["Title"] = "Quản lý phòng thi";
+}
+
+@await Html.PartialAsync("_CrudIndex", Model)
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+
+    <script>
+        $(function () {
+            CrudPage.init({
+                api: '@Url.Action("GetList", "Room", new { area = "Admin" })',
+                deleteUrl: '@Url.Action("Delete", "Room", new { area = "Admin" })',
+                tableId: '#crudTable',
+                filterSelector: '.crud-filter',
+                pageSize: '#pageSize',
+                deleteName: '#deleteName',
+                extraData: function () {
+                    return {
+                        keyword: $('#keyword').val()?.trim(),
+                        buildingId: $('#buildingId').val()
+                    };
+                }
+            });
+
+            AdminLookup.create({
+                key: 'room-building-filter',
+                input: '#buildingInput',
+                hidden: '#buildingId',
+                menu: '#buildingDropdown',
+                url: '@Url.Action("Search", "Building", new { area = "Admin" })',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
+                closeOnSelect: true,
+                onSelect: function () {
+                    CrudPage.loadData(1);
+                },
+                onClear: function () {
+                    CrudPage.loadData(1);
+                }
+            });
+        });
+    </script>
+}

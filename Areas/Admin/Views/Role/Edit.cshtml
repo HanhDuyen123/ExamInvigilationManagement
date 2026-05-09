@@ -1,0 +1,42 @@
+﻿@model ExamInvigilationManagement.Application.DTOs.Admin.Role.RoleDto
+
+@{
+    ViewBag.Subtitle = "Cập nhật quyền";
+}
+
+<form asp-area="Admin" asp-action="Edit" method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="form-page">
+        @await Html.PartialAsync("_FormHeader")
+
+        <div class="form-card">
+
+            <input type="hidden" asp-for="Id" />
+
+            <div class="form-group">
+                <label class="form-label">Tên vai trò</label>
+
+                @if (Model.IsProtected)
+                {
+                    <input asp-for="Name" class="input-modern" readonly />
+                }
+                else
+                {
+                    <input asp-for="Name" class="input-modern" />
+                }
+
+                <span asp-validation-for="Name" class="text-danger d-block mt-1"></span>
+
+                @if (Model.IsProtected)
+                {
+                    <div class="form-text text-warning mt-1">
+                        Đây là vai trò hệ thống, chỉ cho phép xem.
+                    </div>
+                }
+            </div>
+
+            @await Html.PartialAsync("_FormFooter")
+        </div>
+    </div>
+</form>

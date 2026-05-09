@@ -1,0 +1,412 @@
+﻿@model ExamInvigilationManagement.Application.DTOs.ExamSchedule.ExamScheduleDto
+@using ExamInvigilationManagement.ViewModel
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "Create Exam Schedule";
+}
+
+<form asp-action="Create" method="post">
+    <div class="form-page">
+        @await Html.PartialAsync("_FormHeader", "Tạo lịch thi mới")
+
+        <div class="form-card">
+
+            <div class="form-group">
+                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+           {
+               Label = "Học phần mở",
+               InputId = "offeringInput",
+               HiddenId = "offeringId",
+               HiddenName = "OfferingId",
+               MenuId = "offeringDropdown",
+               Placeholder = "Chọn học phần mở...",
+               InputClass = "input-modern",
+               InitialValue = Model.OfferingId?.ToString(),
+               InitialText = string.Join(" - ", new[]
+                {
+                Model.SubjectId,
+                Model.SubjectName,
+                Model.UserName,
+                Model.AcademyYearName,
+                Model.SemesterName,
+                Model.ClassName,
+                Model.GroupNumber
+                }.Where(x => !string.IsNullOrWhiteSpace(x)))
+           })
+            </div>
+
+            <input type="hidden" id="offeringAcademyYearId" value="" />
+            <input type="hidden" id="offeringSemesterId" value="" />
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">Mã môn</label>
+                    <input asp-for="SubjectId" class="input-modern" readonly />
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">Môn học</label>
+                    <input asp-for="SubjectName" class="input-modern" readonly />
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Giảng viên</label>
+                    <input asp-for="UserName" class="input-modern" readonly />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Năm học</label>
+                    <input asp-for="AcademyYearName" class="input-modern" readonly />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Học kỳ</label>
+                    <input asp-for="SemesterName" class="input-modern" readonly />
+                </div>
+
+                <div class="col-md-8">
+                    <label class="form-label">Tên lớp học phần</label>
+                    <input asp-for="ClassName" class="input-modern" readonly />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Nhóm học phần</label>
+                    <input asp-for="GroupNumber" class="input-modern" readonly />
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+               {
+                   Label = "Đợt thi",
+                   InputId = "periodInput",
+                   HiddenId = "periodId",
+                   HiddenName = "PeriodId",
+                   MenuId = "periodDropdown",
+                   Placeholder = "Chọn đợt thi...",
+                   InputClass = "input-modern",
+                   InitialValue = Model.PeriodId?.ToString(),
+                   InitialText = Model.PeriodName ?? ""
+               })
+                </div>
+
+                <div class="col-md-4">
+                    @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+               {
+                   Label = "Buổi thi",
+                   InputId = "sessionInput",
+                   HiddenId = "sessionId",
+                   HiddenName = "SessionId",
+                   MenuId = "sessionDropdown",
+                   Placeholder = "Chọn buổi thi...",
+                   InputClass = "input-modern",
+                   InitialValue = Model.SessionId?.ToString(),
+                   InitialText = Model.SessionName ?? ""
+               })
+                </div>
+
+                <div class="col-md-4">
+                    @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+               {
+                   Label = "Ca thi",
+                   InputId = "slotInput",
+                   HiddenId = "slotId",
+                   HiddenName = "SlotId",
+                   MenuId = "slotDropdown",
+                   Placeholder = "Chọn ca thi...",
+                   InputClass = "input-modern",
+                   InitialValue = Model.SlotId?.ToString(),
+                   InitialText = Model.SlotName ?? ""
+               })
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Ngày thi</label>
+                <input asp-for="ExamDate" type="date" class="input-modern" />
+                <span asp-validation-for="ExamDate" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label>Số lượng phòng thi</label>
+                <input type="number" id="roomCount" class="input-modern" min="1" value="@(Model.RoomCount <= 0 ? 1 : Model.RoomCount)" />
+            </div>
+
+            <div class="form-group">
+                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+           {
+               Label = "Giảng đường dùng chung",
+               InputId = "buildingInput",
+               HiddenId = "buildingId",
+               HiddenName = "",
+               MenuId = "buildingDropdown",
+               Placeholder = "Chọn giảng đường...",
+               InputClass = "input-modern"
+           })
+            </div>
+
+            <div id="roomBlocks" class="d-grid gap-3"></div>
+
+            <div class="form-group mt-3">
+                <label>Trạng thái</label>
+                <select asp-for="Status" class="select-modern">
+                    <option value="Chờ phân công">Chờ phân công</option>
+                    <option value="Thiếu giám thị">Thiếu giám thị</option>
+                    <option value="Chờ duyệt">Chờ duyệt</option>
+                    <option value="Đã duyệt">Đã duyệt</option>
+                    <option value="Từ chối duyệt">Từ chối duyệt</option>
+                </select>
+                <span asp-validation-for="Status" class="text-danger"></span>
+            </div>
+
+            @await Html.PartialAsync("_FormFooter")
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+    <script>
+        $(function () {
+            function clearLookup(key) {
+                const lookup = AdminLookup.get(key);
+                if (lookup) lookup.clear();
+            }
+
+            function clearOfferingSummary() {
+                $('#SubjectId').val('');
+                $('#SubjectName').val('');
+                $('#UserName').val('');
+                $('#AcademyYearName').val('');
+                $('#SemesterName').val('');
+                $('#ClassName').val('');
+                $('#GroupNumber').val('');
+                $('#offeringAcademyYearId').val('');
+                $('#offeringSemesterId').val('');
+            }
+
+            function clearSlotSummary() {
+                $('#PeriodName').val('');
+                $('#SessionName').val('');
+                $('#SlotName').val('');
+            }
+
+            function fillOfferingSummary(item) {
+                if (!item) return;
+
+                $('#SubjectId').val(item.subjectId || '');
+                $('#SubjectName').val(item.subjectName || '');
+                $('#UserName').val(item.userName || '');
+                $('#AcademyYearName').val(item.academyYearName || '');
+                $('#SemesterName').val(item.semesterName || '');
+                $('#ClassName').val(item.className || '');
+                $('#GroupNumber').val(item.groupNumber || '');
+
+                $('#offeringAcademyYearId').val(item.academyYearId || '');
+                $('#offeringSemesterId').val(item.semesterId || '');
+            }
+
+            function fillSlotSummary(item) {
+                if (!item) return;
+
+                $('#PeriodName').val(item.periodName || '');
+                $('#SessionName').val(item.sessionName || '');
+                $('#SlotName').val(item.slotName || '');
+            }
+
+            function renderRoomBlocks() {
+                const count = Math.max(parseInt($('#roomCount').val() || '1', 10), 1);
+                let html = '';
+
+                for (let i = 0; i < count; i++) {
+                    html += `
+                        <div class="form-card p-3">
+                            <div class="row g-3">
+                                <div class="col-md-12">
+                                    <label class="form-label">Phòng thi ${i + 1}</label>
+                                    <input id="roomInput_${i}" class="input-modern" placeholder="Chọn phòng thi..." autocomplete="off" />
+                                    <div id="roomDropdown_${i}" class="dropdown-menu autocomplete-menu w-100"></div>
+                                    <input type="hidden" name="RoomIds" id="roomId_${i}" />
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+
+                $('#roomBlocks').html(html);
+
+                for (let i = 0; i < count; i++) {
+                    AdminLookup.create({
+                        key: 'room-' + i,
+                        input: '#roomInput_' + i,
+                        hidden: '#roomId_' + i,
+                        menu: '#roomDropdown_' + i,
+                        url: '@Url.Action("SearchByBuilding", "Room")',
+                        queryParam: 'keyword',
+                        extraParams: function () {
+                            return {
+                                buildingId: $('#buildingId').val() || null
+                            };
+                        },
+                        valueField: 'id',
+                        textField: 'name',
+                        beforeSearch: function () {
+                            if (!$('#buildingId').val()) {
+                                AppNotify.show('warning', 'Vui lòng chọn giảng đường trước.');
+                                return false;
+                            }
+                            return true;
+                        }
+                    });
+                }
+            }
+
+            AdminLookup.create({
+                key: 'offering-create',
+                input: '#offeringInput',
+                hidden: '#offeringId',
+                menu: '#offeringDropdown',
+                url: '@Url.Action("SearchForExamSchedule", "CourseOffering", new { area = "Admin" })',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
+                onSelect: function (ctx) {
+                    fillOfferingSummary(ctx.item);
+                    clearLookup('period-create');
+                    clearLookup('session-create');
+                    clearLookup('slot-create');
+                    clearSlotSummary();
+                },
+                onClear: function () {
+                    clearOfferingSummary();
+                    clearLookup('period-create');
+                    clearLookup('session-create');
+                    clearLookup('slot-create');
+                    clearSlotSummary();
+                }
+            });
+
+            AdminLookup.create({
+                key: 'period-create',
+                input: '#periodInput',
+                hidden: '#periodId',
+                menu: '#periodDropdown',
+                url: '@Url.Action("GetBySemester", "Period", new { area = "Admin" })',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return {
+                        semesterId: $('#offeringSemesterId').val() || null
+                    };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    if (!$('#offeringSemesterId').val()) {
+                        AppNotify.show('warning', 'Vui lòng chọn học phần mở trước.');
+                        return false;
+                    }
+                    return true;
+                },
+                onSelect: function () {
+                    clearLookup('session-create');
+                    clearLookup('slot-create');
+                    clearSlotSummary();
+                },
+                onClear: function () {
+                    clearLookup('session-create');
+                    clearLookup('slot-create');
+                    clearSlotSummary();
+                }
+            });
+
+            AdminLookup.create({
+                key: 'session-create',
+                input: '#sessionInput',
+                hidden: '#sessionId',
+                menu: '#sessionDropdown',
+                url: '@Url.Action("GetByPeriod", "Session", new { area = "Admin" })',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return {
+                        periodId: $('#periodId').val() || null
+                    };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    if (!$('#periodId').val()) {
+                        AppNotify.show('warning', 'Vui lòng chọn đợt thi trước.');
+                        return false;
+                    }
+                    return true;
+                },
+                onSelect: function () {
+                    clearLookup('slot-create');
+                    clearSlotSummary();
+                },
+                onClear: function () {
+                    clearLookup('slot-create');
+                    clearSlotSummary();
+                }
+            });
+
+            AdminLookup.create({
+                key: 'slot-create',
+                input: '#slotInput',
+                hidden: '#slotId',
+                menu: '#slotDropdown',
+                url: '@Url.Action("GetBySession", "Slot", new { area = "Admin" })',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return {
+                        sessionId: $('#sessionId').val() || null
+                    };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    if (!$('#sessionId').val()) {
+                        AppNotify.show('warning', 'Vui lòng chọn buổi thi trước.');
+                        return false;
+                    }
+                    return true;
+                },
+                onSelect: function (ctx) {
+                    fillSlotSummary(ctx.item);
+                },
+                onClear: function () {
+                    clearSlotSummary();
+                }
+            });
+
+            AdminLookup.create({
+                key: 'building-create',
+                input: '#buildingInput',
+                hidden: '#buildingId',
+                menu: '#buildingDropdown',
+                url: '@Url.Action("Search", "Building", new { area = "Admin" })',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
+                onSelect: function () {
+                    const count = Math.max(parseInt($('#roomCount').val() || '1', 10), 1);
+                    for (let i = 0; i < count; i++) {
+                        const roomLookup = AdminLookup.get('room-' + i);
+                        if (roomLookup) roomLookup.clear();
+                    }
+                },
+                onClear: function () {
+                    const count = Math.max(parseInt($('#roomCount').val() || '1', 10), 1);
+                    for (let i = 0; i < count; i++) {
+                        const roomLookup = AdminLookup.get('room-' + i);
+                        if (roomLookup) roomLookup.clear();
+                    }
+                }
+            });
+
+            $('#roomCount').on('change', function () {
+                renderRoomBlocks();
+            });
+
+            renderRoomBlocks();
+        });
+    </script>
+}

@@ -1,0 +1,397 @@
+@model ExamInvigilationManagement.Application.DTOs.ManualAssignment.ManualAssignmentPageDto
+@using ExamInvigilationManagement.Application.DTOs.ManualAssignment
+
+@{
+    var schedule = Model.Schedule;
+    var canEdit = schedule?.CanEdit ?? false;
+    var isSubstitutionReview = Model.SubstitutionReview != null;
+    var review = Model.SubstitutionReview;
+    var selectableLecturers = Model.LecturerOptions.Count(x => x.CanSelect);
+}
+
+<style>
+    .assignment-page { display: grid; gap: 1.25rem; }
+    .assignment-hero { border: 1px solid rgba(15, 23, 42, .08); border-radius: 24px; background: linear-gradient(135deg, #f8fbff 0%, #eef6ff 48%, #fff7ed 100%); box-shadow: 0 18px 45px rgba(15, 23, 42, .08); padding: 1.4rem; }
+    .assignment-hero-top { display: flex; justify-content: space-between; gap: 1rem; align-items: flex-start; margin-bottom: 1.15rem; }
+    .assignment-title { font-size: 1.35rem; font-weight: 800; color: #0f172a; margin: 0; }
+    .assignment-subtitle { color: #64748b; margin-top: .25rem; }
+    .schedule-grid { display: grid; grid-template-columns: minmax(240px, 1.4fr) repeat(4, minmax(140px, 1fr)); gap: .85rem; }
+    .info-tile { background: rgba(255, 255, 255, .82); border: 1px solid rgba(148, 163, 184, .22); border-radius: 18px; padding: .9rem 1rem; min-height: 82px; }
+    .info-tile.primary { background: #fff; border-color: rgba(37, 99, 235, .18); }
+    .info-label { color: #64748b; font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; margin-bottom: .35rem; }
+    .info-value { color: #0f172a; font-weight: 750; line-height: 1.35; }
+    .info-note { color: #64748b; font-size: .86rem; margin-top: .25rem; }
+    .status-pill { display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .7rem; border-radius: 999px; font-size: .8rem; font-weight: 750; }
+    .status-ok { background: #dcfce7; color: #166534; }
+    .status-wait { background: #fef3c7; color: #92400e; }
+    .status-bad { background: #fee2e2; color: #991b1b; }
+    .status-soft { background: #e0f2fe; color: #075985; }
+    .assignment-card { border: 1px solid rgba(15, 23, 42, .08); border-radius: 22px; background: #fff; box-shadow: 0 14px 35px rgba(15, 23, 42, .06); padding: 1.15rem; }
+    .section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+    .section-title { margin: 0; font-size: 1.05rem; font-weight: 800; color: #0f172a; }
+    .section-desc { color: #64748b; margin: .2rem 0 0; font-size: .9rem; }
+    .invigilator-list { display: grid; gap: .85rem; }
+    .invigilator-item { display: grid; grid-template-columns: auto 1fr auto; gap: .85rem; align-items: flex-start; border: 1px solid #e2e8f0; border-radius: 18px; padding: .95rem; background: #f8fafc; }
+    .position-badge { width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; background: #1d4ed8; color: #fff; font-weight: 800; }
+    .person-name { font-weight: 800; color: #0f172a; }
+    .person-meta { color: #64748b; font-size: .88rem; margin-top: .16rem; }
+    .replacement-note { margin-top: .55rem; border-left: 3px solid #2563eb; padding-left: .7rem; color: #334155; }
+    .activity-list { display: grid; gap: .7rem; max-height: 360px; overflow: auto; padding-right: .25rem; }
+    .activity-item { display: grid; grid-template-columns: 34px 1fr; gap: .65rem; }
+    .activity-dot { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #eff6ff; color: #1d4ed8; }
+    .activity-title { font-weight: 750; color: #0f172a; }
+    .activity-text { color: #475569; font-size: .9rem; }
+    .activity-time { color: #94a3b8; font-size: .78rem; margin-top: .15rem; }
+    .action-panel { background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); }
+    .assignment-select-grid { display: grid; gap: 1rem; }
+    .lecturer-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: .9rem; }
+    .lecturer-card { border: 1px solid #e2e8f0; border-radius: 18px; background: #fff; padding: .95rem; display: grid; gap: .7rem; }
+    .lecturer-card.disabled { opacity: .72; background: #f8fafc; }
+    .lecturer-top { display: flex; justify-content: space-between; gap: .75rem; align-items: flex-start; }
+    .lecturer-name { font-weight: 800; color: #0f172a; }
+    .lecturer-account { color: #64748b; font-size: .84rem; }
+    .reason-list { display: grid; gap: .35rem; color: #475569; font-size: .88rem; }
+    .reason-list span { display: flex; gap: .4rem; align-items: flex-start; }
+    .metric-row { display: flex; flex-wrap: wrap; gap: .4rem; }
+    .metric-chip { background: #f1f5f9; color: #334155; border-radius: 999px; padding: .25rem .55rem; font-size: .78rem; font-weight: 700; }
+    .empty-state { border: 1px dashed #cbd5e1; border-radius: 18px; padding: 1.4rem; text-align: center; color: #64748b; background: #f8fafc; }
+    @@media (max-width: 992px) { .schedule-grid { grid-template-columns: 1fr 1fr; } .assignment-hero-top { flex-direction: column; } }
+    @@media (max-width: 640px) { .schedule-grid { grid-template-columns: 1fr; } .invigilator-item { grid-template-columns: 1fr; } }
+</style>
+
+<div class="assignment-page">
+    <section class="assignment-hero">
+        <div class="assignment-hero-top">
+            <div>
+                <h3 class="assignment-title">@(isSubstitutionReview ? "Duyệt đề xuất đổi giám thị" : "Phân công giám thị thủ công")</h3>
+                <div class="assignment-subtitle">Theo dõi đầy đủ lịch thi, giám thị hiện tại, người thay thế và lịch sử thao tác.</div>
+            </div>
+            <a href="@Url.Action("Index", "ExamSchedule", new { area = "" })" class="btn-back">
+                <i class="bi bi-arrow-left"></i> Quay lại danh sách
+            </a>
+        </div>
+
+        <div class="schedule-grid">
+            <div class="info-tile primary">
+                <div class="info-label">Môn thi</div>
+                <div class="info-value">@schedule?.SubjectId - @schedule?.SubjectName</div>
+                <div class="info-note">Lớp @schedule?.ClassName, nhóm @schedule?.GroupNumber</div>
+            </div>
+            <div class="info-tile">
+                <div class="info-label">Ngày thi</div>
+                <div class="info-value">@schedule?.ExamDate.ToString("dd/MM/yyyy")</div>
+                <div class="info-note">@schedule?.SessionId</div>
+            </div>
+            <div class="info-tile">
+                <div class="info-label">Ca thi</div>
+                <div class="info-value">@schedule?.SlotName</div>
+                <div class="info-note">Bắt đầu @schedule?.TimeStart.ToString("HH\\:mm")</div>
+            </div>
+            <div class="info-tile">
+                <div class="info-label">Phòng thi</div>
+                <div class="info-value">@schedule?.RoomDisplay</div>
+                <div class="info-note">Năm học @schedule?.AcademyYearId, học kỳ @schedule?.SemesterId</div>
+            </div>
+            <div class="info-tile">
+                <div class="info-label">Trạng thái lịch</div>
+                <div class="info-value"><span class="status-pill @ScheduleStatusClass(schedule?.Status)">@schedule?.Status</span></div>
+                <div class="info-note">@schedule?.CurrentInvigilatorCount/2 giám thị</div>
+            </div>
+        </div>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(schedule?.EditReason) && !isSubstitutionReview)
+    {
+        <div class="alert alert-info mb-0">@schedule.EditReason</div>
+    }
+
+    <div class="row g-4">
+        <div class="col-xl-7">
+            <section class="assignment-card h-100">
+                <div class="section-head">
+                    <div>
+                        <h5 class="section-title">Giám thị hiện tại</h5>
+                        <p class="section-desc">Trạng thái phản hồi được lấy từ phản hồi mới nhất của giảng viên.</p>
+                    </div>
+                    <span class="status-pill status-soft">@Model.CurrentInvigilators.Count vị trí đã có người</span>
+                </div>
+
+                @if (Model.CurrentInvigilators.Any())
+                {
+                    <div class="invigilator-list">
+                        @foreach (var item in Model.CurrentInvigilators.OrderBy(x => x.PositionNo))
+                        {
+                            <div class="invigilator-item">
+                                <div class="position-badge">GT @item.PositionNo</div>
+                                <div>
+                                    <div class="person-name">@item.EffectiveFullName</div>
+                                    <div class="person-meta">Tài khoản: @(item.HasReplacement ? item.NewUserName : item.UserName)</div>
+                                    @if (item.HasReplacement)
+                                    {
+                                        <div class="replacement-note">
+                                            <strong>Đã đổi giám thị:</strong> @item.FullName -> @item.NewFullName
+                                            @if (item.UpdatedAt.HasValue)
+                                            {
+                                                <span> lúc @item.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm")</span>
+                                            }
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(item.ResponseNote))
+                                    {
+                                        <div class="person-meta mt-2">Ghi chú phản hồi: @item.ResponseNote</div>
+                                    }
+                                </div>
+                                <div class="text-end">
+                                    <span class="status-pill @ResponseStatusClass(item.ResponseStatus)">@NormalizeResponseStatus(item.ResponseStatus)</span>
+                                    @if (item.ResponseAt.HasValue)
+                                    {
+                                        <div class="person-meta mt-2">@item.ResponseAt.Value.ToString("dd/MM/yyyy HH:mm")</div>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state">Chưa có giám thị nào được phân công cho lịch thi này.</div>
+                }
+            </section>
+        </div>
+
+        <div class="col-xl-5">
+            <section class="assignment-card h-100 action-panel">
+                @if (isSubstitutionReview && review != null)
+                {
+                    <div class="section-head">
+                        <div>
+                            <h5 class="section-title">Duyệt người thay thế</h5>
+                            <p class="section-desc">Chỉ được duyệt một lần. Sau khi duyệt, lịch quay về trạng thái Chờ duyệt.</p>
+                        </div>
+                        <span class="status-pill @ScheduleStatusClass(review.Status)">@review.Status</span>
+                    </div>
+
+                    <div class="alert alert-light border">
+                        <div><strong>Giảng viên từ chối:</strong> @review.RequestUserName, vị trí GT @review.PositionNo</div>
+                        <div><strong>Người được đề xuất:</strong> @review.SubstituteUserName</div>
+                        <div><strong>Lý do từ chối:</strong> @(review.ResponseNote ?? "Không có ghi chú")</div>
+                    </div>
+
+                    @if (review.Status == "Đã đề xuất")
+                    {
+                        <form asp-action="ApproveSubstitution" method="post">
+                            @Html.AntiForgeryToken()
+                            <input type="hidden" name="substitutionId" value="@review.SubstitutionId" />
+                            <div class="mb-3">
+                                <label class="form-label">Giảng viên thay thế sẽ trình duyệt</label>
+                                <select name="replacementUserId" class="select-modern">
+                                    @foreach (var lecturer in Model.LecturerOptions)
+                                    {
+                                        var selected = lecturer.UserId == review.SubstituteUserId;
+                                        var label = $"{lecturer.FullName} ({lecturer.UserName}) - {lecturer.RecommendationLabel}";
+                                        <option value="@lecturer.UserId" selected="@(selected ? "selected" : null)" disabled="@(lecturer.CanSelect ? null : "disabled")">@label</option>
+                                    }
+                                </select>
+                                <div class="form-text">Các giảng viên không đủ điều kiện sẽ bị khóa để tránh chọn nhầm.</div>
+                            </div>
+                            <button type="submit" class="btn-submit w-100">
+                                <i class="bi bi-check2-circle"></i> Duyệt và chuyển lịch về Chờ duyệt
+                            </button>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="alert alert-success mb-0">Đề xuất này đã được xử lý nên không thể duyệt lại.</div>
+                    }
+                }
+                else
+                {
+                    <div class="section-head">
+                        <div>
+                            <h5 class="section-title">Phân công thủ công</h5>
+                            <p class="section-desc">Chọn giảng viên cho các vị trí còn thiếu. Vị trí đã có giám thị sẽ không bị thay đổi tại màn hình này.</p>
+                        </div>
+                    </div>
+
+                    <form asp-action="Assign" method="post">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="ExamScheduleId" value="@schedule?.ExamScheduleId" />
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                        <div class="assignment-select-grid">
+                            @if (Model.MissingPositions.Contains(1))
+                            {
+                                <div>
+                                    <label class="form-label">Vị trí giám thị 1</label>
+                                    <select class="select-modern" name="Position1AssigneeId" @(canEdit ? "" : "disabled")>
+                                        <option value="">-- Chọn giảng viên phù hợp --</option>
+                                        @foreach (var lecturer in Model.LecturerOptions)
+                                        {
+                                            <option value="@lecturer.UserId" disabled="@(lecturer.CanSelect ? null : "disabled")">@lecturer.FullName - @lecturer.RecommendationLabel</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+
+                            @if (Model.MissingPositions.Contains(2))
+                            {
+                                <div>
+                                    <label class="form-label">Vị trí giám thị 2</label>
+                                    <select class="select-modern" name="Position2AssigneeId" @(canEdit ? "" : "disabled")>
+                                        <option value="">-- Chọn giảng viên phù hợp --</option>
+                                        @foreach (var lecturer in Model.LecturerOptions)
+                                        {
+                                            <option value="@lecturer.UserId" disabled="@(lecturer.CanSelect ? null : "disabled")">@lecturer.FullName - @lecturer.RecommendationLabel</option>
+                                        }
+                                    </select>
+                                </div>
+                            }
+                        </div>
+
+                        @if (canEdit)
+                        {
+                            <button type="submit" class="btn-submit w-100 mt-4">
+                                <i class="bi bi-check-lg"></i> Lưu phân công
+                            </button>
+                        }
+                        else
+                        {
+                            <div class="alert alert-info mt-4 mb-0">Lịch thi hiện không ở trạng thái cho phép phân công thủ công.</div>
+                        }
+                    </form>
+                }
+            </section>
+        </div>
+    </div>
+
+    <section class="assignment-card">
+        <div class="section-head">
+            <div>
+                <h5 class="section-title">Danh sách giảng viên có thể cân nhắc</h5>
+                <p class="section-desc">Sắp xếp người phù hợp lên trước. Lý do được viết theo nghiệp vụ để Thư ký khoa dễ lựa chọn.</p>
+            </div>
+            <span class="status-pill status-soft">@selectableLecturers người có thể chọn</span>
+        </div>
+
+        @if (Model.LecturerOptions.Any())
+        {
+            <div class="lecturer-grid">
+                @foreach (var item in Model.LecturerOptions)
+                {
+                    <article class="lecturer-card @(item.CanSelect ? "" : "disabled")">
+                        <div class="lecturer-top">
+                            <div>
+                                <div class="lecturer-name">@item.FullName</div>
+                                <div class="lecturer-account">@item.UserName - @item.FacultyName</div>
+                            </div>
+                            <span class="status-pill @(item.CanSelect ? "status-ok" : "status-bad")">@item.AvailabilityLabel</span>
+                        </div>
+                        <div class="status-pill @(item.CanSelect ? "status-soft" : "status-wait")">@item.RecommendationLabel</div>
+                        <div class="metric-row">
+                            <span class="metric-chip">Điểm phù hợp: @item.PriorityScore</span>
+                            @if (item.HasTaughtClass || item.IsExactOwner)
+                            {
+                                <span class="metric-chip">Hiểu rõ lớp thi</span>
+                            }
+                            else if (item.HasTaughtSubject)
+                            {
+                                <span class="metric-chip">Có kinh nghiệm với môn</span>
+                            }
+                        </div>
+                        <div class="reason-list">
+                            @foreach (var reason in SplitReasons(item.Reason))
+                            {
+                                <span><i class="bi bi-dot"></i>@reason</span>
+                            }
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">Không có giảng viên phù hợp để hiển thị.</div>
+        }
+    </section>
+
+    <section class="assignment-card">
+        <div class="section-head">
+            <div>
+                <h5 class="section-title">Nhật ký phân công</h5>
+                <p class="section-desc">Ghi nhận các mốc phân công, phản hồi và đổi giám thị để dễ kiểm tra lại.</p>
+            </div>
+        </div>
+
+        @if (Model.ActivityLogs.Any())
+        {
+            <div class="activity-list">
+                @foreach (var log in Model.ActivityLogs)
+                {
+                    <div class="activity-item">
+                        <div class="activity-dot"><i class="@ActivityIcon(log.Type)"></i></div>
+                        <div>
+                            <div class="activity-title">@log.Title</div>
+                            <div class="activity-text">@log.Description</div>
+                            @if (log.OccurredAt.HasValue)
+                            {
+                                <div class="activity-time">@log.OccurredAt.Value.ToString("dd/MM/yyyy HH:mm")</div>
+                            }
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">Chưa có nhật ký thao tác cho lịch thi này.</div>
+        }
+    </section>
+</div>
+
+@functions {
+    private static string ScheduleStatusClass(string? status)
+    {
+        return status switch
+        {
+            "Đã duyệt" => "status-ok",
+            "Từ chối" or "Từ chối duyệt" => "status-bad",
+            "Chờ duyệt" or "Đã đề xuất" => "status-wait",
+            _ => "status-soft"
+        };
+    }
+
+    private static string ResponseStatusClass(string? status)
+    {
+        return status switch
+        {
+            "Xác nhận" => "status-ok",
+            "Từ chối" => "status-bad",
+            _ => "status-wait"
+        };
+    }
+
+    private static string NormalizeResponseStatus(string? status)
+    {
+        if (string.IsNullOrWhiteSpace(status) || status == "Chờ xác nhận") return "Chờ phản hồi";
+        return status;
+    }
+
+    private static IEnumerable<string> SplitReasons(string? reason)
+    {
+        return string.IsNullOrWhiteSpace(reason)
+            ? Enumerable.Empty<string>()
+            : reason.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+    }
+
+    private static string ActivityIcon(string? type)
+    {
+        return type switch
+        {
+            "replace" => "bi bi-arrow-left-right",
+            "reject" => "bi bi-x-circle",
+            "confirm" => "bi bi-check-circle",
+            "proposal" => "bi bi-send",
+            _ => "bi bi-person-check"
+        };
+    }
+}

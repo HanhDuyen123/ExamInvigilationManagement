@@ -1,0 +1,36 @@
+﻿@model ExamInvigilationManagement.Application.DTOs.Admin.User.UserListDto
+
+<div class="card shadow-sm p-4">
+
+    <h4 class="text-danger mb-3">
+        Delete User
+    </h4>
+
+    <p>Bạn có chắc muốn xoá user này không?</p>
+
+    <div class="mb-3">
+        <b>Username:</b> @Model.UserName
+    </div>
+
+    <div class="mb-3">
+        <b>Fullname:</b> @Model.FullName
+    </div>
+
+    <div class="mb-3">
+        <b>Email:</b> @Model.Email
+    </div>
+
+    <form method="post" action="/admin/users/delete">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="id" value="@Model.Id" />
+
+        <button type="submit" class="btn btn-danger">
+            Delete
+        </button>
+
+        <a href="/admin/users" class="btn btn-secondary">
+            Cancel
+        </a>
+    </form>
+
+</div>

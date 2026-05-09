@@ -1,0 +1,201 @@
+@using ExamInvigilationManagement.Application.DTOs
+@model ProfileDto
+
+@{
+    ViewData["Title"] = "Thông tin cá nhân";
+    var fullName = $"{Model.LastName} {Model.FirstName}".Trim();
+    var avatarText = !string.IsNullOrWhiteSpace(Model.LastName)
+        ? Model.LastName.Substring(0, 1).ToUpper()
+        : "U";
+}
+
+<div class="profile-page role-page">
+    <div class="profile-summary-card">
+        <div class="profile-avatar">
+            @if (!string.IsNullOrWhiteSpace(Model.Avt))
+            {
+                <img src="@Model.Avt" alt="Ảnh đại diện" />
+            }
+            else
+            {
+                <span>@avatarText</span>
+            }
+        </div>
+
+        <div class="profile-summary-main">
+            <div class="profile-kicker">Hồ sơ tài khoản</div>
+            <h3>@(string.IsNullOrWhiteSpace(fullName) ? Model.UserName : fullName)</h3>
+            <div class="profile-meta">
+                <span><i class="bi bi-person"></i>@Model.UserName</span>
+                <span><i class="bi bi-envelope"></i>@Model.Email</span>
+                @if (!string.IsNullOrWhiteSpace(Model.PositionName))
+                {
+                    <span><i class="bi bi-briefcase"></i>@Model.PositionName</span>
+                }
+            </div>
+        </div>
+
+        <span class="badge rounded-pill px-3 py-2 @(Model.IsActive ? "bg-success" : "bg-danger")">
+            @(Model.IsActive ? "Đang hoạt động" : "Đã khóa")
+        </span>
+    </div>
+
+    <form asp-action="Update" method="post" class="profile-edit-card">
+        <div class="profile-form-grid">
+            <div class="form-group">
+                <label class="form-label">Tên đăng nhập</label>
+                <input class="input-modern" value="@Model.UserName" disabled />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Email</label>
+                <input class="input-modern" value="@Model.Email" disabled />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Họ</label>
+                <input class="input-modern" name="LastName" value="@Model.LastName" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Tên</label>
+                <input class="input-modern" name="FirstName" value="@Model.FirstName" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Số điện thoại</label>
+                <input class="input-modern" name="Phone" value="@Model.Phone" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Giới tính</label>
+                <input class="input-modern" name="Gender" value="@Model.Gender" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Ngày sinh</label>
+                <input type="date" class="input-modern" name="Dob" value="@(Model.Dob?.ToString("yyyy-MM-dd"))" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Chức vụ</label>
+                <input class="input-modern" value="@Model.PositionName" disabled />
+            </div>
+
+            <div class="form-group profile-address-field">
+                <label class="form-label">Địa chỉ</label>
+                <input class="input-modern" name="Address" value="@Model.Address" />
+            </div>
+        </div>
+
+        <div class="profile-actions">
+            <button class="btn-submit" type="submit">
+                <i class="bi bi-save"></i> Lưu thay đổi
+            </button>
+            <button type="reset" class="btn btn-outline-secondary rounded-3 px-4">
+                Làm lại
+            </button>
+        </div>
+    </form>
+</div>
+
+<style>
+    .profile-page {
+        display: grid;
+        gap: 16px;
+    }
+
+    .profile-summary-card,
+    .profile-edit-card {
+        border: 1px solid var(--line-soft);
+        border-radius: 22px;
+        background: var(--surface-1);
+        box-shadow: var(--card-shadow);
+    }
+
+    .profile-summary-card {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 16px;
+        padding: 20px;
+    }
+
+    .profile-avatar {
+        width: 64px;
+        height: 64px;
+        border-radius: 20px;
+        display: grid;
+        place-items: center;
+        overflow: hidden;
+        color: #fff;
+        font-size: 24px;
+        font-weight: 900;
+        background: linear-gradient(135deg, var(--app-primary), var(--app-primary-2));
+    }
+
+    .profile-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .profile-kicker {
+        color: var(--app-primary);
+        font-weight: 800;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+    }
+
+    .profile-summary-main h3 {
+        margin: 2px 0 8px;
+        font-weight: 850;
+    }
+
+    .profile-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 14px;
+        color: var(--text-muted);
+        font-size: 13px;
+    }
+
+    .profile-meta span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .profile-edit-card {
+        padding: 22px;
+    }
+
+    .profile-form-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .profile-address-field {
+        grid-column: span 2;
+    }
+
+    .profile-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 18px;
+    }
+
+    @@media (max-width: 1100px) {
+        .profile-form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    @@media (max-width: 640px) {
+        .profile-summary-card { grid-template-columns: 1fr; }
+        .profile-form-grid { grid-template-columns: 1fr; }
+        .profile-address-field { grid-column: auto; }
+        .profile-actions { justify-content: stretch; flex-direction: column; }
+    }
+</style>

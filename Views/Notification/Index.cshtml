@@ -1,0 +1,85 @@
+﻿@model ExamInvigilationManagement.Application.DTOs.Notification.NotificationIndexPageDto
+@{
+    ViewData["Title"] = "Notifications";
+}
+
+<div class="role-page">
+    <div class="role-header mb-4">
+        <div>
+            <h3 class="title-gradient">Thông báo</h3>
+            <div class="subtitle">Danh sách thông báo giữa các tài khoản và sự kiện trong hệ thống</div>
+        </div>
+
+        <button type="button" class="btn btn-outline-primary" id="markAllReadBtn">
+            <i class="bi bi-check2-all"></i> Đánh dấu tất cả đã đọc
+        </button>
+    </div>
+
+    <div class="filter-glass mb-4">
+        @await Html.PartialAsync("_NotificationSearch", Model)
+    </div>
+
+    <div class="table-modern">
+        <div class="table-inner full-width" id="notificationTableWrap">
+            @await Html.PartialAsync("_NotificationTable", Model.PagedItems)
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+
+    <script>
+        $(function () {
+            CrudPage.init({
+                api: '@Url.Action("GetList", "Notification")',
+                tableId: '#notificationTableWrap',
+                pageSize: '#pageSize',
+                filterSelector: '.notification-filter',
+                extraData: function () {
+                    return {
+                        keyword: $('#keyword').val(),
+                        type: $('#type').val(),
+                        isRead: $('#isRead').val(),
+                        fromDate: $('#fromDate').val(),
+                        toDate: $('#toDate').val(),
+                        recipientId: $('#recipientId').val(),
+                        senderId: $('#senderId').val()
+                    };
+                }
+            });
+
+            function initUserLookup(key, input, hidden, menu) {
+                if (!$(input).length) return;
+
+                let selectedText = $(input).val() || '';
+
+                AdminLookup.create({
+                    key: key,
+                    input: input,
+                    hidden: hidden,
+                    menu: menu,
+                    url: '@Url.Action("SearchUsers", "Notification")',
+                    queryParam: 'keyword',
+                    valueField: 'id',
+                    textField: 'name',
+                    onSelect: function (selected) {
+                        selectedText = selected.text || '';
+                        CrudPage.loadData(1);
+                    },
+                    onClear: function () { CrudPage.loadData(1); }
+                });
+
+                $(input).on('input.notificationLookup', function () {
+                    if ($(input).val() !== selectedText) {
+                        $(hidden).val('');
+                    }
+                });
+            }
+
+            initUserLookup('notification-recipient', '#recipientInput', '#recipientId', '#recipientDropdown');
+            initUserLookup('notification-sender', '#senderInput', '#senderId', '#senderDropdown');
+        });
+    </script>
+}

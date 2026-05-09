@@ -1,0 +1,231 @@
+﻿@model ExamInvigilationManagement.Application.DTOs.LoginRequestDto
+
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Login UI</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* giữ nguyên CSS của bạn */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Segoe UI", sans-serif;
+        }
+
+        body {
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: url("https://img.freepik.com/free-photo/abstract-smooth-empty-grey-studio-well-use-as-background-business-report-digital-website-template-backdrop_1258-53064.jpg?w=360") no-repeat center center;
+            background-size: cover;
+        }
+
+        .login-box {
+            width: 380px; /* giảm từ 520px */
+            padding: 40px 30px; /* giảm padding */
+            text-align: center;
+            background: rgba(255, 255, 255, 0.18);
+            backdrop-filter: blur(14px);
+            border-radius: 20px;
+        }
+
+        .avatar {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: #0b5c6b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+            .avatar svg {
+                width: 45px;
+                fill: white;
+            }
+
+
+        .input-group {
+            position: relative;
+            margin: 20px 0;
+        }
+
+            .input-group input {
+                width: 100%;
+                /* padding: 12px 40px; */
+                padding: 12px 45px 12px 40px;
+                font-size: 16px;
+                border: none;
+                border-bottom: 2px solid rgba(0,0,0,0.4);
+                background: transparent !important;
+                outline: none;
+            }
+
+            .input-group label {
+                position: absolute;
+                left: 40px;
+                top: 12px;
+                font-size: 14px;
+                color: rgba(0,0,0,0.6);
+                pointer-events: none;
+                transition: 0.3s ease;
+            }
+
+            .input-group input:focus + label,
+            .input-group input:valid + label {
+                top: -8px;
+                font-size: 12px;
+                color: #0b5c6b;
+            }
+
+            .input-group i {
+                position: absolute;
+                /* left: 10px; */
+                top: 12px;
+                font-size: 18px;
+                color: gray;
+            }
+
+        .btn {
+            width: 100%;
+            border: none;
+            border-radius: 8px;
+            background: #0b5c6b;
+            color: white;
+            margin-top: 20px;
+            padding: 12px;
+            font-size: 15px;
+        }
+
+        .forgot {
+            display: block;
+            margin-top: 10px;
+            color: black;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        .toggle-password {
+            position: absolute;
+            right: 0px;
+            top: 50%;
+            font-size: 14px; /* nhỏ lại */
+            cursor: pointer;
+            color: gray;
+            z-index: 2;
+        }
+
+            .toggle-password:hover {
+                color: #0b5c6b;
+            }
+
+        .login-validation {
+            margin: 0 0 14px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            background: rgba(254, 242, 242, 0.86);
+            border: 1px solid rgba(220, 38, 38, 0.18);
+            color: #991b1b;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        .login-validation ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .field-validation-error {
+            display: block;
+            margin-top: 6px;
+            color: #991b1b;
+            text-align: left;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-box">
+
+        <div class="avatar">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5
+                     2.3-5 5 2.3 5 5 5zm0 2c-3.3
+                     0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z" />
+            </svg>
+        </div>
+
+        @using (Html.BeginForm("Login", "Account", new { returnUrl = ViewBag.ReturnUrl }, FormMethod.Post))
+        {
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
+
+            <!-- ERROR -->
+            @Html.ValidationSummary(false, "", new { @class = "login-validation" })
+
+            <!-- USERNAME -->
+            <div class="input-group">
+                <i class="fa-solid fa-user"></i>
+                @Html.TextBoxFor(m => m.UserName, new { required = "required" })
+                <label>UserName</label>
+                @Html.ValidationMessageFor(m => m.UserName)
+            </div>
+
+            <!-- PASSWORD -->
+            <div class="input-group">
+                <i class="fa-solid fa-lock"></i>
+
+                @Html.PasswordFor(m => m.Password, new
+                    {
+                        required = "required",
+                        id = "passwordInput"
+                    })
+
+                @* <i class="fa-solid fa-eye toggle-password" onclick="togglePassword()"></i> *@
+
+                <label>Password</label>
+                <i class="fa-solid fa-eye toggle-password" onclick="togglePassword()"></i>
+                @Html.ValidationMessageFor(m => m.Password)
+            </div>
+
+            <!-- FORGOT -->
+            <a href="@Url.Action("ForgotPassword", "Account")" class="forgot">
+                Quên mật khẩu?
+            </a>
+
+            <!-- BUTTON -->
+            <button type="submit" class="btn">LOGIN</button>
+        }
+
+    </div>
+    <script>
+        function togglePassword() {
+            var input = document.getElementById("passwordInput");
+            var icon = document.querySelector(".toggle-password");
+
+            if (input.type === "password") {
+                input.type = "text";
+                icon.classList.remove("fa-eye");
+                icon.classList.add("fa-eye-slash");
+            } else {
+                input.type = "password";
+                icon.classList.remove("fa-eye-slash");
+                icon.classList.add("fa-eye");
+            }
+        }
+    </script>
+</body>
+</html>

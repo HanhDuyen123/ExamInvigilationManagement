@@ -1,0 +1,65 @@
+﻿@using ExamInvigilationManagement.Common
+@model PagedResult<ExamInvigilationManagement.Application.DTOs.Admin.CourseOffering.CourseOfferingDto>
+
+@{
+    int stt = (Model.Page - 1) * Model.PageSize + 1;
+}
+
+<table class="table modern-table">
+    <thead>
+        <tr>
+            <th class="col-id">STT</th>
+            <th class="col-name">Mã HP</th>
+            <th class="col-name">Tên học phần</th>
+            <th class="col-name">Giảng viên</th>
+            <th class="col-id">Học kỳ</th>
+            <th class="col-id">Năm học</th>
+            <th class="col-id">Lớp</th>
+            <th class="col-id">Nhóm</th>
+            <th class="col-action">Action</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @if (Model?.Items != null && Model.Items.Any())
+        {
+            foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td class="col-id">@stt</td>
+                    <td class="col-name">@item.SubjectId</td>
+                    <td class="col-name">@item.SubjectName</td>
+                    <td class="col-name">@item.UserName</td>
+                    <td class="col-id">@item.SemesterName</td>
+                    <td class="col-id">@item.AcademicYearName</td>
+                    <td class="col-id">@item.ClassName</td>
+                    <td class="col-id">@item.GroupNumber</td>
+
+                    <td class="col-action">
+                        <div class="action-group">
+                            <a href="/Admin/CourseOffering/Edit/@item.Id" class="btn-icon edit">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+
+                            <a href="#"
+                               class="btn-icon delete btn-delete"
+                               data-id="@item.Id"
+                               data-name="@($"{item.SubjectId} - {item.GroupNumber}")">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                stt++;
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="9" class="text-center">Không có dữ liệu</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@await Html.PartialAsync("_Pagination", Model)

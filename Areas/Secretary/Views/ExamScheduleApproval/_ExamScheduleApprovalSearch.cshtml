@@ -1,0 +1,174 @@
+@model ExamInvigilationManagement.Application.DTOs.Approval.ExamScheduleApprovalIndexPageDto
+
+<div class="role-filter-compact">
+    <div class="role-filter-main">
+        <div class="search-field search-field-wide">
+            <label class="form-label mb-1">Từ khóa chung</label>
+            <input id="lookup" value="@Model.Search.Lookup" class="input-modern approval-filter"
+                   placeholder="Mã môn, tên môn, phòng, giám thị..." />
+        </div>
+
+        <div class="lookup-modern position-relative search-field search-field-wide">
+            @await Html.PartialAsync("_LookupField", new ExamInvigilationManagement.ViewModel.LookupFieldViewModel
+            {
+                Label = "Môn học",
+                InputId = "subjectInput",
+                HiddenId = "subjectId",
+                HiddenName = "SubjectId",
+                MenuId = "subjectDropdown",
+                Placeholder = "Chọn môn học...",
+                InputClass = "input-modern",
+                InitialValue = Model.Search.SubjectId ?? ""
+            })
+        </div>
+
+        <div class="lookup-modern position-relative search-field">
+            @await Html.PartialAsync("_LookupField", new ExamInvigilationManagement.ViewModel.LookupFieldViewModel
+            {
+                Label = "Năm học",
+                InputId = "yearInput",
+                HiddenId = "yearId",
+                HiddenName = "AcademyYearId",
+                MenuId = "yearDropdown",
+                Placeholder = "Chọn năm học...",
+                InputClass = "input-modern",
+                InitialValue = Model.Search.AcademyYearId?.ToString() ?? ""
+            })
+        </div>
+
+        <div class="lookup-modern position-relative search-field">
+            @await Html.PartialAsync("_LookupField", new ExamInvigilationManagement.ViewModel.LookupFieldViewModel
+            {
+                Label = "Học kỳ",
+                InputId = "semesterInput",
+                HiddenId = "semesterId",
+                HiddenName = "SemesterId",
+                MenuId = "semesterDropdown",
+                Placeholder = "Chọn học kỳ...",
+                InputClass = "input-modern",
+                InitialValue = Model.Search.SemesterId?.ToString() ?? ""
+            })
+        </div>
+
+        <div class="search-field">
+            <label class="form-label mb-1">Trạng thái</label>
+            <select id="status" class="select-modern approval-filter">
+                @foreach (var opt in Model.StatusOptions)
+                {
+                    <option value="@opt" selected="@(string.Equals(Model.Search.Status, opt, StringComparison.OrdinalIgnoreCase))">
+                        @opt
+                    </option>
+                }
+            </select>
+        </div>
+
+        <div class="search-field search-page-size">
+            <label class="form-label mb-1">Số dòng</label>
+            <select id="approvalPageSize" class="select-modern">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="role-filter-tools gap-2">
+        <button class="btn btn-sm role-filter-toggle collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#approvalAdvancedFilters" aria-expanded="false" aria-controls="approvalAdvancedFilters">
+            <i class="bi bi-sliders"></i> Bộ lọc nâng cao <i class="bi bi-chevron-down toggle-chevron"></i>
+        </button>
+        <button type="button" id="approvalSearchBtn" class="btn btn-sm btn-submit">
+            <i class="bi bi-search"></i> Tìm kiếm
+        </button>
+        <a href="@Url.Action("Index", "ExamScheduleApproval", new { area = "Secretary" })" class="btn btn-sm btn-outline-secondary rounded-pill px-3 crud-clear-filters">
+            Xóa lọc
+        </a>
+    </div>
+
+    <div class="collapse" id="approvalAdvancedFilters">
+        <div class="role-filter-advanced">
+            <div class="lookup-modern position-relative search-field search-field-wide">
+                @await Html.PartialAsync("_LookupField", new ExamInvigilationManagement.ViewModel.LookupFieldViewModel
+                {
+                    Label = "Tên giám thị",
+                    InputId = "lecturerInput",
+                    HiddenId = "lecturerId",
+                    HiddenName = "LecturerId",
+                    MenuId = "lecturerDropdown",
+                    Placeholder = "Chọn giám thị...",
+                    InputClass = "input-modern",
+                    InitialValue = Model.Search.LecturerId?.ToString() ?? ""
+                })
+            </div>
+
+            <div class="lookup-modern position-relative search-field">
+                @await Html.PartialAsync("_LookupField", new ExamInvigilationManagement.ViewModel.LookupFieldViewModel
+                {
+                    Label = "Đợt thi",
+                    InputId = "periodInput",
+                    HiddenId = "periodId",
+                    HiddenName = "PeriodId",
+                    MenuId = "periodDropdown",
+                    Placeholder = "Chọn đợt thi...",
+                    InputClass = "input-modern",
+                    InitialValue = Model.Search.PeriodId?.ToString() ?? ""
+                })
+            </div>
+
+            <div class="lookup-modern position-relative search-field">
+                @await Html.PartialAsync("_LookupField", new ExamInvigilationManagement.ViewModel.LookupFieldViewModel
+                {
+                    Label = "Buổi thi",
+                    InputId = "sessionInput",
+                    HiddenId = "sessionId",
+                    HiddenName = "SessionId",
+                    MenuId = "sessionDropdown",
+                    Placeholder = "Chọn buổi thi...",
+                    InputClass = "input-modern",
+                    InitialValue = Model.Search.SessionId?.ToString() ?? ""
+                })
+            </div>
+
+            <div class="lookup-modern position-relative search-field">
+                @await Html.PartialAsync("_LookupField", new ExamInvigilationManagement.ViewModel.LookupFieldViewModel
+                {
+                    Label = "Ca thi",
+                    InputId = "slotInput",
+                    HiddenId = "slotId",
+                    HiddenName = "SlotId",
+                    MenuId = "slotDropdown",
+                    Placeholder = "Chọn ca thi...",
+                    InputClass = "input-modern",
+                    InitialValue = Model.Search.SlotId?.ToString() ?? ""
+                })
+            </div>
+
+            <div class="lookup-modern position-relative search-field">
+                @await Html.PartialAsync("_LookupField", new ExamInvigilationManagement.ViewModel.LookupFieldViewModel
+                {
+                    Label = "Giảng đường",
+                    InputId = "buildingInput",
+                    HiddenId = "buildingId",
+                    HiddenName = "BuildingId",
+                    MenuId = "buildingDropdown",
+                    Placeholder = "Chọn giảng đường...",
+                    InputClass = "input-modern",
+                    InitialValue = Model.Search.BuildingId ?? ""
+                })
+            </div>
+
+            <div class="lookup-modern position-relative search-field">
+                @await Html.PartialAsync("_LookupField", new ExamInvigilationManagement.ViewModel.LookupFieldViewModel
+                {
+                    Label = "Phòng thi",
+                    InputId = "roomInput",
+                    HiddenId = "roomId",
+                    HiddenName = "RoomId",
+                    MenuId = "roomDropdown",
+                    Placeholder = "Chọn phòng thi...",
+                    InputClass = "input-modern",
+                    InitialValue = Model.Search.RoomId?.ToString() ?? ""
+                })
+            </div>
+        </div>
+    </div>
+</div>

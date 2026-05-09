@@ -1,0 +1,80 @@
+﻿@model ExamInvigilationManagement.ViewModel.CrudIndexViewModel
+
+@{
+    ViewData["Title"] = "Quản lý tài khoản";
+}
+
+@await Html.PartialAsync("_CrudIndex", Model)
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+
+    <script>
+                $(function () {
+            CrudPage.init({
+                api: '@Url.Action("GetList", "User", new { area = "Admin" })',
+                deleteUrl: '@Url.Action("Delete", "User", new { area = "Admin" })',
+                tableId: '#crudTable',
+
+                // ✅ unified filter
+                filterSelector: '.crud-filter',
+
+                pageSize: '#pageSize',
+                deleteName: '#deleteName',
+
+                extraData: function () {
+                    return {
+                        keyword: $('#keyword').val()?.trim(),
+                        roleId: $('#roleId').val() || null,
+                        informationId: $('#informationId').val() || null,
+                        facultyId: $('#facultyId').val() || null,
+                        status: $('#status').val() || null
+                    };
+                }
+            });
+
+            // ROLE
+            AdminLookup.create({
+                key: 'user-role-filter',
+                input: '#roleInput',
+                hidden: '#roleId',
+                menu: '#roleDropdown',
+                url: '@Url.Action("Search", "Role", new { area = "Admin" })',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
+                onSelect: () => CrudPage.loadData(1),
+                onClear: () => CrudPage.loadData(1)
+            });
+
+            // INFORMATION
+            AdminLookup.create({
+                key: 'user-information-filter',
+                input: '#informationInput',
+                hidden: '#informationId',
+                menu: '#informationDropdown',
+                url: '@Url.Action("Search", "Information", new { area = "Admin" })',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'fullName',
+                onSelect: () => CrudPage.loadData(1),
+                onClear: () => CrudPage.loadData(1)
+            });
+
+            // FACULTY
+            AdminLookup.create({
+                key: 'user-faculty-filter',
+                input: '#facultyInput',
+                hidden: '#facultyId',
+                menu: '#facultyDropdown',
+                url: '@Url.Action("Search", "Faculty", new { area = "Admin" })',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
+                onSelect: () => CrudPage.loadData(1),
+                onClear: () => CrudPage.loadData(1)
+            });
+        });
+    </script>
+}

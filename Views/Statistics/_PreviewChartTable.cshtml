@@ -1,0 +1,19 @@
+@model IReadOnlyList<ExamInvigilationManagement.Application.DTOs.Statistics.StatisticChartPointDto>
+
+<div class="table-responsive">
+    <table class="table report-table compact-report-table">
+        <thead>
+            <tr><th>Chỉ tiêu</th><th>Số lượng</th><th>Tỷ lệ</th></tr>
+        </thead>
+        <tbody>
+        @foreach (var item in Model)
+        {
+            <tr><td>@item.Label</td><td>@item.Value</td><td>@item.Rate%</td></tr>
+        }
+        @if (!Model.Any())
+        {
+            <tr><td colspan="3" class="text-center text-muted">Không có dữ liệu</td></tr>
+        }
+        </tbody>
+    </table>
+</div>

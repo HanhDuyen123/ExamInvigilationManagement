@@ -1,0 +1,114 @@
+﻿@model ExamInvigilationManagement.Application.DTOs.Admin.Information.InformationDto
+
+@{
+    ViewData["Title"] = "Sửa thông tin cá nhân";
+}
+
+<form asp-area="Admin" asp-action="Edit" method="post" id="informationForm">
+    @Html.AntiForgeryToken()
+
+    <div class="form-page">
+        @await Html.PartialAsync("_FormHeader", "Cập nhật Information")
+
+        <div class="form-card">
+
+            <input type="hidden" asp-for="Id" />
+
+            <div class="form-group">
+                <label>Họ</label>
+                <input asp-for="LastName" class="input-modern" />
+                <span asp-validation-for="LastName" class="text-danger d-block mt-1"></span>
+            </div>
+
+            <div class="form-group">
+                <label>Tên</label>
+                <input asp-for="FirstName" class="input-modern" />
+                <span asp-validation-for="FirstName" class="text-danger d-block mt-1"></span>
+            </div>
+
+            <div class="form-group">
+                <label>Email</label>
+                <input asp-for="Email" class="input-modern" />
+                <span asp-validation-for="Email" class="text-danger d-block mt-1"></span>
+            </div>
+
+            <div class="form-group">
+                <label>SĐT</label>
+                <input asp-for="Phone" class="input-modern" />
+                <span asp-validation-for="Phone" class="text-danger d-block mt-1"></span>
+            </div>
+
+            <div class="form-group">
+                <label>Địa chỉ</label>
+                <input asp-for="Address" class="input-modern" />
+                <span asp-validation-for="Address" class="text-danger d-block mt-1"></span>
+            </div>
+
+            <div class="form-group">
+                <label>Ngày sinh</label>
+                <input asp-for="Dob" type="date" class="input-modern" />
+                <span asp-validation-for="Dob" class="text-danger d-block mt-1"></span>
+            </div>
+
+            <div class="form-group">
+                <label>Giới tính</label>
+                <select asp-for="Gender" class="select-modern">
+                    <option value="">-- Chọn giới tính --</option>
+                    <option value="Male">Nam</option>
+                    <option value="Female">Nữ</option>
+                    <option value="Other">Khác</option>
+                </select>
+                <span asp-validation-for="Gender" class="text-danger d-block mt-1"></span>
+            </div>
+
+            <div class="form-group">
+                @await Html.PartialAsync("_LookupField", new ExamInvigilationManagement.ViewModel.LookupFieldViewModel
+           {
+               Label = "Chức vụ",
+               InputId = "positionInput",
+               HiddenId = "positionId",
+               HiddenName = "PositionId",
+               MenuId = "positionDropdown",
+               ButtonId = "btnPosition",
+               Placeholder = "Chọn chức vụ...",
+               InputClass = "input-modern",
+               ShowButton = false,
+               InitialValue = Model.PositionId.ToString(),
+               InitialText = Model.PositionName ?? ""
+           })
+                <span asp-validation-for="PositionId" class="text-danger d-block mt-1"></span>
+            </div>
+
+            @await Html.PartialAsync("_FormFooter")
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script src="~/js/admin_lookup.js"></script>
+    <script>
+        $(function () {
+            AdminLookup.create({
+                key: 'info-position-edit',
+                input: '#positionInput',
+                hidden: '#positionId',
+                menu: '#positionDropdown',
+                button: '#btnPosition',
+                url: '@Url.Action("Search", "Position", new { area = "Admin" })',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
+                initialValue: '@Model.PositionId',
+                initialText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.PositionName ?? ""))
+            });
+
+            $('#informationForm').on('submit', function (e) {
+                const positionId = ($('#positionId').val() || '').trim();
+                if (!positionId) {
+                    e.preventDefault();
+                    $('span[data-valmsg-for="PositionId"]').text('Vui lòng chọn chức vụ.');
+                }
+            });
+        });
+    </script>
+}

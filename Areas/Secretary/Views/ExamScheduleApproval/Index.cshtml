@@ -1,0 +1,387 @@
+﻿@model ExamInvigilationManagement.Application.DTOs.Approval.ExamScheduleApprovalIndexPageDto
+@using System.Linq
+
+@{
+    ViewData["Title"] = "Duyệt lịch thi";
+    var totalCount = Model.TotalCount;
+    var reviewableCount = Model.ReviewableCount;
+    var notEnoughCount = Model.NotEnoughCount;
+}
+
+<div class="role-page">
+    <div class="role-header mb-4">
+        <div>
+            <h3 class="title-gradient">Duyệt lịch thi</h3>
+            <div class="subtitle">Lọc, chọn và duyệt / từ chối duyệt các lịch thi đủ điều kiện</div>
+        </div>
+
+        <a href="@Url.Action("Index", "ExamSchedule", new { area = "" })" class="btn btn-create">
+            <i class="bi bi-arrow-left"></i>
+            <span>Quay lại lịch thi</span>
+        </a>
+    </div>
+
+    <div class="alert alert-info">
+        Chỉ các lịch ở trạng thái <strong>Chờ duyệt</strong> và đã đủ <strong>2 giám thị</strong> mới được chọn để duyệt.
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="form-card">
+                <div class="subtitle">Tổng số lịch</div>
+                <h4 class="mt-2 mb-0">@totalCount</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="form-card">
+                <div class="subtitle">Có thể duyệt</div>
+                <h4 class="mt-2 mb-0">@reviewableCount</h4>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="form-card">
+                <div class="subtitle">Chưa đủ giám thị</div>
+                <h4 class="mt-2 mb-0">@notEnoughCount</h4>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-glass mb-4">
+        @await Html.PartialAsync("_ExamScheduleApprovalSearch", Model)
+    </div>
+    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+    <form asp-action="BulkApprove" asp-area="Secretary" method="post" id="approvalBulkForm">
+        @Html.AntiForgeryToken()
+
+        <input type="hidden" name="Page" value="@Model.Page" />
+        <input type="hidden" name="PageSize" value="@Model.PageSize" />
+
+        <input type="hidden" name="Search.Lookup" value="@Model.Search.Lookup" />
+        <input type="hidden" name="Search.LecturerId" value="@Model.Search.LecturerId" />
+        <input type="hidden" name="Search.SubjectId" value="@Model.Search.SubjectId" />
+        <input type="hidden" name="Search.AcademyYearId" value="@Model.Search.AcademyYearId" />
+        <input type="hidden" name="Search.SemesterId" value="@Model.Search.SemesterId" />
+        <input type="hidden" name="Search.PeriodId" value="@Model.Search.PeriodId" />
+        <input type="hidden" name="Search.SessionId" value="@Model.Search.SessionId" />
+        <input type="hidden" name="Search.SlotId" value="@Model.Search.SlotId" />
+        <input type="hidden" name="Search.BuildingId" value="@Model.Search.BuildingId" />
+        <input type="hidden" name="Search.RoomId" value="@Model.Search.RoomId" />
+        <input type="hidden" name="Search.Status" value="@Model.Search.Status" />
+
+        <div class="form-card mb-4">
+            <div class="d-flex flex-wrap gap-3 align-items-start">
+                <div class="flex-grow-1">
+                    <label class="form-label">Ghi chú xử lý</label>
+                    <textarea asp-for="BulkNote" class="input-modern" rows="3" maxlength="500"
+                              placeholder="Ghi chú cho hành động duyệt / từ chối..."></textarea>
+                </div>
+
+                <div class="ms-auto d-flex flex-column align-items-end gap-2">
+                    <div class="small text-muted">
+                        Đã chọn: <strong id="approvalSelectedCount">0</strong> lịch thi
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="submit"
+                                id="approvalApproveBtn"
+                                formaction="@Url.Action("BulkApprove", "ExamScheduleApproval", new { area = "Secretary" })"
+                                class="btn-submit">
+                            <i class="bi bi-check2-circle"></i>
+                            Duyệt đã chọn
+                        </button>
+
+                        <button type="submit"
+                                id="approvalRejectBtn"
+                                formaction="@Url.Action("BulkReject", "ExamScheduleApproval", new { area = "Secretary" })"
+                                class="btn btn-outline-danger">
+                            <i class="bi bi-x-circle"></i>
+                            Từ chối đã chọn
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-modern">
+            <div class="table-inner full-width">
+                <div id="approvalTable">
+                    @await Html.PartialAsync("_ExamScheduleApprovalTable", Model.PagedItems)
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+
+    <script>
+        $(function () {
+            function val(selector) {
+                const $el = $(selector);
+                return $el.length ? ($el.val() || null) : null;
+            }
+
+            function clearBelow(level) {
+                const map = {
+                    lecturer: [],
+                    subject: [],
+                    year: ['semester', 'period', 'session', 'slot'],
+                    semester: ['period', 'session', 'slot'],
+                    period: ['session', 'slot'],
+                    session: ['slot'],
+                    building: ['room']
+                };
+
+                (map[level] || []).forEach(k => {
+                    const lookup = AdminLookup.get('approval-' + k);
+                    if (lookup) lookup.clear();
+                });
+            }
+
+            CrudPage.init({
+                api: '@Url.Action("GetList", "ExamScheduleApproval", new { area = "Secretary" })',
+                tableId: '#approvalTable',
+                pageSize: '#approvalPageSize',
+                filterSelector: '.approval-filter',
+                extraData: function () {
+                    return {
+                        lookup: val('#lookup'),
+                        lecturerId: val('#lecturerId'),
+                        subjectId: val('#subjectId'),
+                        academyYearId: val('#yearId'),
+                        semesterId: val('#semesterId'),
+                        periodId: val('#periodId'),
+                        sessionId: val('#sessionId'),
+                        slotId: val('#slotId'),
+                        buildingId: val('#buildingId'),
+                        roomId: val('#roomId'),
+                        status: val('#status')
+                    };
+                }
+            });
+
+            function syncSearchState() {
+                $('input[name="Search.Lookup"]').val($('#lookup').val() || '');
+                $('input[name="Search.LecturerId"]').val($('#lecturerId').val() || '');
+                $('input[name="Search.SubjectId"]').val($('#subjectId').val() || '');
+                $('input[name="Search.AcademyYearId"]').val($('#yearId').val() || '');
+                $('input[name="Search.SemesterId"]').val($('#semesterId').val() || '');
+                $('input[name="Search.PeriodId"]').val($('#periodId').val() || '');
+                $('input[name="Search.SessionId"]').val($('#sessionId').val() || '');
+                $('input[name="Search.SlotId"]').val($('#slotId').val() || '');
+                $('input[name="Search.BuildingId"]').val($('#buildingId').val() || '');
+                $('input[name="Search.RoomId"]').val($('#roomId').val() || '');
+                $('input[name="Search.Status"]').val($('#status').val() || '');
+            }
+
+            $('#approvalSearchBtn').on('click', function () {
+                syncSearchState();
+                CrudPage.loadData(1);
+            });
+
+            $('#approvalPageSize').on('change', function () {
+                CrudPage.loadData(1);
+            });
+
+            $('#approvalBulkForm').on('submit', function () {
+                syncSearchState();
+            });
+
+            AdminLookup.create({
+                key: 'approval-lecturer',
+                input: '#lecturerInput',
+                hidden: '#lecturerId',
+                menu: '#lecturerDropdown',
+                url: '@Url.Action("SearchLecturer", "ExamScheduleApproval", new { area = "Secretary" })',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
+                onSelect: function () { syncSearchState(); CrudPage.loadData(1); },
+                onClear: function () { syncSearchState(); CrudPage.loadData(1); }
+            });
+
+            AdminLookup.create({
+                key: 'approval-subject',
+                input: '#subjectInput',
+                hidden: '#subjectId',
+                menu: '#subjectDropdown',
+                url: '@Url.Action("SearchForExamSchedule", "Subject", new { area = "Admin" })',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
+                onSelect: function () { syncSearchState(); CrudPage.loadData(1); },
+                onClear: function () { syncSearchState(); CrudPage.loadData(1); }
+            });
+
+            AdminLookup.create({
+                key: 'approval-year',
+                input: '#yearInput',
+                hidden: '#yearId',
+                menu: '#yearDropdown',
+                url: '@Url.Action("Search", "AcademyYear", new { area = "Admin" })',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
+                onSelect: function () { clearBelow('year'); syncSearchState(); CrudPage.loadData(1); },
+                onClear: function () { clearBelow('year'); syncSearchState(); CrudPage.loadData(1); }
+            });
+
+            AdminLookup.create({
+                key: 'approval-semester',
+                input: '#semesterInput',
+                hidden: '#semesterId',
+                menu: '#semesterDropdown',
+                url: '@Url.Action("GetByYear", "Semester", new { area = "Admin" })',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return { academyYearId: val('#yearId') };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    return !!val('#yearId');
+                },
+                onSelect: function () { clearBelow('semester'); syncSearchState(); CrudPage.loadData(1); },
+                onClear: function () { clearBelow('semester'); syncSearchState(); CrudPage.loadData(1); }
+            });
+
+            AdminLookup.create({
+                key: 'approval-period',
+                input: '#periodInput',
+                hidden: '#periodId',
+                menu: '#periodDropdown',
+                url: '@Url.Action("GetBySemester", "Period", new { area = "Admin" })',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return { semesterId: val('#semesterId') };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    return !!val('#semesterId');
+                },
+                onSelect: function () { clearBelow('period'); syncSearchState(); CrudPage.loadData(1); },
+                onClear: function () { clearBelow('period'); syncSearchState(); CrudPage.loadData(1); }
+            });
+
+            AdminLookup.create({
+                key: 'approval-session',
+                input: '#sessionInput',
+                hidden: '#sessionId',
+                menu: '#sessionDropdown',
+                url: '@Url.Action("GetByPeriod", "Session", new { area = "Admin" })',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return { periodId: val('#periodId') };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    return !!val('#periodId');
+                },
+                onSelect: function () { clearBelow('session'); syncSearchState(); CrudPage.loadData(1); },
+                onClear: function () { clearBelow('session'); syncSearchState(); CrudPage.loadData(1); }
+            });
+
+            AdminLookup.create({
+                key: 'approval-slot',
+                input: '#slotInput',
+                hidden: '#slotId',
+                menu: '#slotDropdown',
+                url: '@Url.Action("GetBySession", "Slot", new { area = "Admin" })',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return { sessionId: val('#sessionId') };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    return !!val('#sessionId');
+                },
+                onSelect: function () { syncSearchState(); CrudPage.loadData(1); },
+                onClear: function () { syncSearchState(); CrudPage.loadData(1); }
+            });
+
+            AdminLookup.create({
+                key: 'approval-building',
+                input: '#buildingInput',
+                hidden: '#buildingId',
+                menu: '#buildingDropdown',
+                url: '@Url.Action("Search", "Building", new { area = "Admin" })',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
+                onSelect: function () { clearBelow('building'); syncSearchState(); CrudPage.loadData(1); },
+                onClear: function () { clearBelow('building'); syncSearchState(); CrudPage.loadData(1); }
+            });
+
+            AdminLookup.create({
+                key: 'approval-room',
+                input: '#roomInput',
+                hidden: '#roomId',
+                menu: '#roomDropdown',
+                url: '@Url.Action("SearchByBuilding", "Room", new { area = "Admin" })',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return { buildingId: val('#buildingId') };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    return !!val('#buildingId');
+                },
+                onSelect: function () { syncSearchState(); CrudPage.loadData(1); },
+                onClear: function () { syncSearchState(); CrudPage.loadData(1); }
+            });
+
+            $(document).on('click', '#approvalTable .pagination a', function (e) {
+                const href = $(this).attr('href') || '';
+                if (!href || href === '#') return;
+
+                const url = new URL(href, window.location.origin);
+                const page = parseInt(url.searchParams.get('page') || '1', 10);
+
+                if (!Number.isNaN(page)) {
+                    e.preventDefault();
+                    CrudPage.loadData(page);
+                }
+            });
+
+            $('#approvalPageSize').val('@Model.PageSize');
+
+            function refreshApprovalSelectionState() {
+                const $rows = $('#approvalTable .approval-select-row:not(:disabled)');
+                const total = $rows.length;
+                const checked = $rows.filter(':checked').length;
+
+                $('#approvalSelectAll').prop('checked', total > 0 && total === checked);
+                $('#approvalSelectedCount').text(checked);
+
+                $('#approvalApproveBtn, #approvalRejectBtn').prop('disabled', checked === 0);
+            }
+
+            function toggleRowHighlight($row) {
+                $row.closest('tr').toggleClass('table-active', $row.is(':checked'));
+            }
+
+            $(document).on('change', '#approvalSelectAll', function () {
+                const checked = $(this).is(':checked');
+
+                $('#approvalTable .approval-select-row:not(:disabled)')
+                    .prop('checked', checked)
+                    .each(function () {
+                        toggleRowHighlight($(this));
+                    });
+
+                refreshApprovalSelectionState();
+            });
+
+            $(document).on('change', '#approvalTable .approval-select-row', function () {
+                toggleRowHighlight($(this));
+                refreshApprovalSelectionState();
+            });
+        });
+    </script>
+}

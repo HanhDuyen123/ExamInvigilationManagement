@@ -1,0 +1,70 @@
+﻿@model ExamInvigilationManagement.Application.DTOs.Admin.Subject.SubjectDto
+
+@{
+    ViewData["Title"] = "Thêm môn học";
+}
+
+<form asp-area="Admin" asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="form-page">
+        @await Html.PartialAsync("_FormHeader", "Tạo môn học")
+
+        <div class="form-card">
+            <div class="form-group mb-3">
+                <label class="form-label">Mã môn học</label>
+                <input asp-for="Id" class="input-modern" />
+                <span asp-validation-for="Id" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label class="form-label">Tên môn học</label>
+                <input asp-for="Name" class="input-modern" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                <label class="form-label">Số tín chỉ</label>
+                <input asp-for="Credit" type="number" class="input-modern" />
+                <span asp-validation-for="Credit" class="text-danger"></span>
+            </div>
+
+            <div class="form-group mb-3">
+                @await Html.PartialAsync("_LookupField", new ExamInvigilationManagement.ViewModel.LookupFieldViewModel
+           {
+               Label = "Khoa",
+               InputId = "facultyInput",
+               HiddenId = "facultyId",
+               HiddenName = "FacultyId",
+               MenuId = "facultyDropdown",
+               ButtonId = "btnFaculty",
+               Placeholder = "Chọn khoa...",
+               InputClass = "input-modern",
+               ShowButton = false
+           })
+                <span asp-validation-for="FacultyId" class="text-danger"></span>
+            </div>
+
+            @await Html.PartialAsync("_FormFooter")
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script src="~/js/admin_lookup.js"></script>
+    <script>
+        $(function () {
+            AdminLookup.create({
+                key: 'subject-faculty-create',
+                input: '#facultyInput',
+                hidden: '#facultyId',
+                menu: '#facultyDropdown',
+                button: '#btnFaculty',
+                url: '@Url.Action("Search", "Faculty", new { area = "Admin" })',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name'
+            });
+        });
+    </script>
+}

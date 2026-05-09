@@ -1,0 +1,23 @@
+@using ExamInvigilationManagement.Common
+@model PagedResult<ExamInvigilationManagement.Application.DTOs.InvigilatorResponse.InvigilatorAssignmentItemDto>
+
+<div class="calendar-grid">
+@foreach (var day in Model.Items.GroupBy(x => x.ExamDate?.Date).OrderBy(g => g.Key))
+{
+    <div class="calendar-day">
+        <div class="calendar-day-head">@(day.Key?.ToString("dddd, dd/MM/yyyy") ?? "Chưa có ngày")</div>
+        @foreach (var item in day.OrderBy(x => x.TimeStart))
+        {
+            var statusClass = item.ResponseStatus == "Xác nhận" ? "confirmed" : item.ResponseStatus == "Từ chối" ? "rejected" : "";
+            <div class="calendar-slot @statusClass d-block">
+                <div class="d-flex gap-2 align-items-start"><input type="checkbox" class="form-check-input assignment-checkbox mt-1" value="@item.ExamInvigilatorId" /><div><strong>@item.SubjectId - @item.SubjectName</strong><div class="calendar-meta">@item.ClassName | Nhóm @item.GroupNumber | @item.RoomDisplay</div><div class="calendar-meta">@item.SessionName - @item.SlotName (@item.TimeStart?.ToString("HH\\:mm"))</div><span class="badge rounded-pill @(item.ResponseStatus == "Xác nhận" ? "bg-success" : item.ResponseStatus == "Từ chối" ? "bg-danger" : "bg-secondary") mt-2">@item.ResponseStatus</span>@if (item.ResponseStatus == "Từ chối" && !item.HasSubstitutionProposal) { <a href="@Url.Action("Create", "InvigilatorSubstitution", new { area = "Lecturer", examInvigilatorId = item.ExamInvigilatorId })" class="btn btn-sm btn-outline-primary rounded-3 mt-2 d-inline-flex"><i class="bi bi-arrow-left-right me-1"></i>Đề xuất thay thế</a> } else if (item.ResponseStatus == "Từ chối" && item.HasSubstitutionProposal) { <span class="badge rounded-pill bg-info text-dark mt-2">Đã đề xuất thay thế</span> }</div></div>
+            </div>
+        }
+    </div>
+}
+</div>
+@if (!Model.Items.Any())
+{
+    <div class="text-center text-muted py-5">Không có lịch coi thi phù hợp</div>
+}
+@await Html.PartialAsync("_Pagination", Model)

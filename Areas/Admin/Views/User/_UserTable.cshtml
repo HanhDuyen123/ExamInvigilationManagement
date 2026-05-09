@@ -1,0 +1,60 @@
+﻿@model ExamInvigilationManagement.Common.PagedResult<
+    ExamInvigilationManagement.Application.DTOs.Admin.User.UserDto>
+
+@{
+    int stt = (Model.Page - 1) * Model.PageSize + 1;
+}
+
+<table class="table modern-table wide-table">
+    <thead>
+        <tr>
+            <th class="col-id">STT</th>
+            <th class="col-name">Username</th>
+            <th class="col-name">Họ tên</th>
+            <th class="col-name">Role</th>
+            <th class="col-name">Khoa</th>
+            <th class="col-id">Trạng thái</th>
+            <th class="col-action">Action</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                <td class="col-id">@stt</td>
+                <td class="col-name">@item.UserName</td>
+                <td class="col-name">@item.FullName</td>
+                <td class="col-name">@item.RoleName</td>
+                <td class="col-name">@item.FacultyName</td>
+                <td class="col-id">
+                    @if (item.IsActive)
+                    {
+                        <span class="badge bg-success">Active</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-danger">Inactive</span>
+                    }
+                </td>
+                <td class="col-action">
+                    <div class="action-group">
+                        <a asp-area="Admin" asp-action="Edit" asp-route-id="@item.Id" class="btn-icon edit">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+
+                        <a href="#"
+                           class="btn-icon delete btn-delete"
+                           data-id="@item.Id"
+                           data-name="@item.UserName">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            stt++;
+        }
+    </tbody>
+</table>
+
+@await Html.PartialAsync("_Pagination", Model)

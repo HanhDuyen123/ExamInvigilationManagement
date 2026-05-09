@@ -1,0 +1,79 @@
+﻿@model ExamInvigilationManagement.Common.PagedResult<ExamInvigilationManagement.Application.DTOs.Notification.NotificationListItemDto>
+@using ExamInvigilationManagement.Common.Helpers
+
+@{
+    var isAdmin = User.IsInRole("Admin");
+    var colSpan = isAdmin ? 9 : 8;
+}
+
+<table class="table modern-table">
+    <thead>
+        <tr>
+            <th>STT</th>
+            <th>Tiêu đề</th>
+            <th>Nội dung</th>
+            <th>Loại</th>
+            @if (isAdmin)
+            {
+                <th>Người nhận</th>
+            }
+            <th>Người gửi</th>
+            <th>Thời gian</th>
+            <th>Trạng thái</th>
+            <th class="col-action">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model?.Items != null && Model.Items.Any())
+        {
+            var stt = (Model.Page - 1) * Model.PageSize + 1;
+            foreach (var item in Model.Items)
+            {
+                <tr class="@(item.IsRead ? "" : "table-light fw-semibold")">
+                    <td>@stt</td>
+                    <td>@item.Title</td>
+                    <td class="notification-content-cell">@item.Content</td>
+                    <td>
+                        <span class="badge bg-light text-dark border">
+                            <i class="bi @NotificationTypeHelper.GetIcon(item.Type)"></i>
+                            @NotificationTypeHelper.GetLabel(item.Type)
+                        </span>
+                    </td>
+                    @if (isAdmin)
+                    {
+                        <td>@(string.IsNullOrWhiteSpace(item.RecipientName) ? $"#{item.UserId}" : item.RecipientName)</td>
+                    }
+                    <td>@(string.IsNullOrWhiteSpace(item.CreatedByName) ? "Hệ thống" : item.CreatedByName)</td>
+                    <td>@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td>
+                        <span class="badge @(item.IsRead ? "bg-secondary" : "bg-primary")">
+                            @(item.IsRead ? "Đã đọc" : "Chưa đọc")
+                        </span>
+                    </td>
+                    <td class="col-action">
+                        <div class="action-group">
+                            <a href="@Url.Action("Open", "Notification", new { id = item.Id })" class="btn-icon edit" title="Mở thông báo">
+                                <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                            @if (!item.IsRead)
+                            {
+                                <button type="button" class="btn-icon read-btn" data-id="@item.Id" title="Đánh dấu đã đọc">
+                                    <i class="bi bi-envelope-open"></i>
+                                </button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+                stt++;
+            }
+        }
+        else
+        {
+            <tr>
+                <td colspan="@colSpan" class="text-center py-4">Không có thông báo</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+@await Html.PartialAsync("_Pagination", Model)

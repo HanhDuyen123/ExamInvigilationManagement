@@ -1,0 +1,41 @@
+﻿@model ExamInvigilationManagement.ViewModel.CrudIndexViewModel
+
+<div class="role-page">
+
+    <!-- HEADER -->
+    <div class="role-header mb-4">
+        <div>
+            <h3 class="title-gradient">@Model.Title</h3>
+            <div class="subtitle">@Model.Subtitle</div>
+        </div>
+
+        @if (Model.ShowCreateButton)
+        {
+            <a href="@Model.CreateUrl" class="btn btn-create">
+                <i class="bi bi-plus-lg"></i>
+                <span>Thêm mới</span>
+            </a>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(Model.ImportUrl))
+        {
+            <a href="@Model.ImportUrl" class="btn btn-create">
+                <i class="bi bi-upload"></i>
+                <span>Import file</span>
+            </a>
+        }
+    </div>
+
+    <!-- FILTER -->
+    <div class="filter-glass mb-4">
+        @await Html.PartialAsync(Model.SearchPartialView)
+    </div>
+
+    <!-- TABLE -->
+    <div class="table-modern">
+        <div class="table-inner @Model.TableClass">
+            <div id="crudTable"></div>
+        </div>
+    </div>
+
+</div>

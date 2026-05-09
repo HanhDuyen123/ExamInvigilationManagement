@@ -1,0 +1,169 @@
+@model ExamInvigilationManagement.Application.DTOs.AutoAssign.AutoAssignResultDto
+
+@{
+    ViewData["Title"] = "Kết quả tự động phân công";
+}
+
+<div class="role-page auto-assign-result-page">
+    <div class="role-header mb-4">
+        <div>
+            <h3 class="title-gradient">Kết quả tự động phân công</h3>
+            <div class="subtitle">Tổng hợp lịch đã xử lý, số giám thị được gán và các lịch còn thiếu</div>
+        </div>
+
+        <a href="@Url.Action("Index", "AutoAssignment", new { area = "Secretary" })" class="btn btn-create">
+            <i class="bi bi-arrow-repeat"></i>
+            <span>Chạy lại</span>
+        </a>
+    </div>
+
+    <div class="alert @(Model.Success ? "alert-success" : "alert-danger") mb-4">
+        <i class="bi @(Model.Success ? "bi-check-circle" : "bi-exclamation-triangle") me-1"></i>
+        @Model.Message
+    </div>
+
+    @if (Model.Warnings.Any())
+    {
+        <div class="alert alert-warning mb-4">
+            @foreach (var warning in Model.Warnings)
+            {
+                <div><i class="bi bi-exclamation-circle me-1"></i>@warning</div>
+            }
+        </div>
+    }
+
+    <div class="auto-result-stats mb-4">
+        <div class="auto-stat-card">
+            <span>Tổng lịch</span>
+            <strong>@Model.TotalSchedules</strong>
+        </div>
+        <div class="auto-stat-card success">
+            <span>Giám thị mới</span>
+            <strong>@Model.AssignedInvigilators</strong>
+        </div>
+        <div class="auto-stat-card primary">
+            <span>Đủ 2 giám thị</span>
+            <strong>@Model.FullyAssignedSchedules</strong>
+        </div>
+        <div class="auto-stat-card warning">
+            <span>Còn thiếu</span>
+            <strong>@Model.MissingSchedules</strong>
+        </div>
+    </div>
+
+    <div class="table-modern">
+        <div class="table-inner full-width">
+            <table class="modern-table schedule-table-compact auto-result-table">
+                <thead>
+                    <tr>
+                        <th class="col-id">#</th>
+                        <th>Môn học</th>
+                        <th>Lớp</th>
+                        <th>Ngày thi</th>
+                        <th>Ca / Phòng</th>
+                        <th>Trạng thái</th>
+                        <th>Giám thị được gán</th>
+                        <th>Ghi chú</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Details.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center text-muted py-4">Không có lịch cần hiển thị.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var item in Model.Details)
+                        {
+                            <tr>
+                                <td class="cell-code">@item.ExamScheduleId</td>
+                                <td class="cell-wrap">@item.SubjectName</td>
+                                <td class="cell-wrap">@item.ClassName</td>
+                                <td class="cell-nowrap">@item.ExamDate.ToString("dd/MM/yyyy")</td>
+                                <td class="cell-wrap">@item.SlotName<br /><span class="text-muted">@item.RoomDisplay</span></td>
+                                <td class="cell-wrap">
+                                    <span class="badge bg-light text-dark border">@item.StatusBefore</span>
+                                    <i class="bi bi-arrow-right mx-1 text-muted"></i>
+                                    <span class="badge @(item.StatusAfter == "Chờ duyệt" ? "bg-success" : item.StatusAfter == "Thiếu giám thị" ? "bg-warning text-dark" : "bg-secondary")">@item.StatusAfter</span>
+                                </td>
+                                <td class="cell-wrap">
+                                    @if (item.AssignedLecturers.Any())
+                                    {
+                                        foreach (var lecturer in item.AssignedLecturers)
+                                        {
+                                            <div class="assigned-chip">
+                                                <strong>GT@lecturer.PositionNo:</strong>
+                                                @lecturer.FullName
+                                                <span>@lecturer.UserName · điểm @lecturer.Score</span>
+                                                <em>@lecturer.Reason</em>
+                                            </div>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Không gán mới</span>
+                                    }
+                                </td>
+                                <td class="cell-wrap">@item.Message</td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<style>
+    .auto-result-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 12px;
+    }
+
+    .auto-stat-card {
+        padding: 16px;
+        border-radius: 18px;
+        background: var(--surface-1);
+        border: 1px solid var(--line-soft);
+        box-shadow: var(--card-shadow);
+    }
+
+    .auto-stat-card span {
+        display: block;
+        color: var(--text-muted);
+        font-size: 13px;
+        font-weight: 800;
+    }
+
+    .auto-stat-card strong {
+        display: block;
+        margin-top: 4px;
+        color: var(--text-strong);
+        font-size: 28px;
+        line-height: 1;
+    }
+
+    .auto-stat-card.success { border-color: rgba(34, 197, 94, .28); }
+    .auto-stat-card.primary { border-color: rgba(37, 99, 235, .28); }
+    .auto-stat-card.warning { border-color: rgba(245, 158, 11, .34); }
+
+    .auto-result-table .assigned-chip {
+        display: grid;
+        gap: 2px;
+        padding: 7px 8px;
+        margin-bottom: 6px;
+        border-radius: 10px;
+        background: var(--surface-3);
+        border: 1px solid var(--line-soft);
+    }
+
+    .auto-result-table .assigned-chip span,
+    .auto-result-table .assigned-chip em {
+        color: var(--text-muted);
+        font-size: 12px;
+        font-style: normal;
+    }
+</style>

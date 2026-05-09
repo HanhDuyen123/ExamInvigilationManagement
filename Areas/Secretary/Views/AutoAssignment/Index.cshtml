@@ -1,0 +1,293 @@
+@model ExamInvigilationManagement.Application.DTOs.AutoAssign.AutoAssignRequestDto
+
+@{
+    ViewData["Title"] = "Tự động phân công";
+}
+
+<div class="role-page auto-assign-page">
+    <div class="role-header mb-4">
+        <div>
+            <h3 class="title-gradient">Tự động phân công giám thị</h3>
+            <div class="subtitle">Chọn học kỳ và đợt thi, hệ thống sẽ phân công giám thị cùng khoa theo lịch bận và tải coi thi hiện tại</div>
+        </div>
+
+        <a href="@Url.Action("Index", "ExamSchedule", new { area = "" })" class="btn btn-create">
+            <i class="bi bi-calendar-week"></i>
+            <span>Xem lịch thi</span>
+        </a>
+    </div>
+
+    <div class="auto-assign-hero mb-4">
+        <div class="auto-assign-hero-icon"><i class="bi bi-magic"></i></div>
+        <div>
+            <div class="auto-assign-kicker">Quy tắc phân công</div>
+            <h4>Ưu tiên đúng giảng viên phụ trách lớp, sau đó cân bằng tải trong khoa</h4>
+            <p>Chỉ xử lý các lịch thuộc khoa của thư ký, bỏ qua lịch đã ở trạng thái cuối và cập nhật lịch đủ giám thị sang trạng thái chờ duyệt.</p>
+        </div>
+    </div>
+
+    <form asp-area="Secretary" asp-controller="AutoAssignment" asp-action="Run" method="post" class="auto-assign-layout">
+        @Html.AntiForgeryToken()
+
+        <div class="form-card auto-assign-form-card">
+            <div asp-validation-summary="ModelOnly" class="text-danger auto-assign-full"></div>
+
+            <div class="auto-assign-section auto-assign-full">
+                <div class="section-icon"><i class="bi bi-funnel"></i></div>
+                <div>
+                    <h5>Phạm vi phân công</h5>
+                    <p>Chọn đúng học kỳ và đợt thi cần tự động bổ sung giám thị.</p>
+                </div>
+            </div>
+
+            <div class="lookup-modern position-relative">
+                <label class="form-label mb-1">Năm học</label>
+                <input id="yearInput" class="input-modern" placeholder="Chọn năm học..." autocomplete="off" />
+                <div id="yearDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="yearId" />
+            </div>
+
+            <div class="lookup-modern position-relative">
+                <label class="form-label mb-1">Học kỳ <span class="text-danger">*</span></label>
+                <input id="semesterInput" class="input-modern" placeholder="Chọn học kỳ..." autocomplete="off" />
+                <div id="semesterDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="SemesterId" name="SemesterId" value="@(Model.SemesterId > 0 ? Model.SemesterId.ToString() : "")" />
+                <span asp-validation-for="SemesterId" class="text-danger small"></span>
+            </div>
+
+            <div class="lookup-modern position-relative auto-assign-full">
+                <label class="form-label mb-1">Đợt thi <span class="text-danger">*</span></label>
+                <input id="periodInput" class="input-modern" placeholder="Chọn đợt thi..." autocomplete="off" />
+                <div id="periodDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="PeriodId" name="PeriodId" value="@(Model.PeriodId > 0 ? Model.PeriodId.ToString() : "")" />
+                <span asp-validation-for="PeriodId" class="text-danger small"></span>
+            </div>
+
+            <div class="auto-assign-note auto-assign-full">
+                <i class="bi bi-info-circle"></i>
+                <span>Sau khi chạy, lịch đủ 2 giám thị sẽ chuyển sang <strong>Chờ duyệt</strong>; lịch chưa đủ vẫn được giữ ở trạng thái <strong>Thiếu giám thị</strong>.</span>
+            </div>
+
+            <div class="auto-assign-actions auto-assign-full">
+                <button type="submit" class="btn-submit">
+                    <i class="bi bi-play-circle"></i>
+                    Chạy tự động phân công
+                </button>
+            </div>
+        </div>
+
+        <div class="auto-assign-side">
+            <div class="auto-rule-card">
+                <div class="rule-number">1</div>
+                <div>
+                    <h6>Kiểm tra lịch bận</h6>
+                    <p>Không chọn giảng viên đã đăng ký bận hoặc đã có lịch cùng ca thi.</p>
+                </div>
+            </div>
+            <div class="auto-rule-card">
+                <div class="rule-number">2</div>
+                <div>
+                    <h6>Ưu tiên chủ nhiệm học phần</h6>
+                    <p>Nếu giảng viên phụ trách lớp khả dụng, hệ thống ưu tiên phân vào vị trí còn trống.</p>
+                </div>
+            </div>
+            <div class="auto-rule-card">
+                <div class="rule-number">3</div>
+                <div>
+                    <h6>Cân bằng tải</h6>
+                    <p>Ứng viên còn lại được chấm điểm theo tải học kỳ, số lịch trong ngày và độ phù hợp.</p>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+    .auto-assign-hero {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        padding: 18px 20px;
+        border-radius: 22px;
+        border: 1px solid var(--line-soft);
+        background: linear-gradient(135deg, color-mix(in srgb, var(--app-primary) 16%, var(--surface-1)), var(--surface-1));
+        box-shadow: var(--card-shadow);
+    }
+
+    .auto-assign-hero-icon {
+        width: 54px;
+        height: 54px;
+        display: grid;
+        place-items: center;
+        border-radius: 18px;
+        color: #fff;
+        background: linear-gradient(135deg, var(--app-primary), var(--app-primary-2));
+        box-shadow: 0 16px 30px rgba(37, 99, 235, .22);
+        flex: 0 0 auto;
+    }
+
+    .auto-assign-kicker {
+        color: var(--app-primary);
+        font-size: 12px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+    }
+
+    .auto-assign-hero h4 { margin: 3px 0 5px; font-weight: 900; color: var(--text-strong); }
+    .auto-assign-hero p { margin: 0; color: var(--text-muted); }
+
+    .auto-assign-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        gap: 18px;
+        align-items: start;
+    }
+
+    .auto-assign-form-card {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 15px 16px;
+    }
+
+    .auto-assign-full { grid-column: 1 / -1; }
+
+    .auto-assign-section {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding-bottom: 4px;
+    }
+
+    .auto-assign-section .section-icon {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        border-radius: 14px;
+        color: var(--app-primary);
+        background: var(--surface-3);
+    }
+
+    .auto-assign-section h5 { margin: 0 0 2px; font-weight: 900; color: var(--text-strong); }
+    .auto-assign-section p { margin: 0; color: var(--text-muted); }
+
+    .auto-assign-note {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 12px 14px;
+        border-radius: 14px;
+        color: var(--text-main);
+        background: var(--surface-3);
+        border: 1px solid var(--line-soft);
+    }
+
+    .auto-assign-note i { color: var(--app-primary); }
+
+    .auto-assign-actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .auto-assign-side {
+        display: grid;
+        gap: 12px;
+    }
+
+    .auto-rule-card {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        padding: 16px;
+        border-radius: 18px;
+        background: var(--surface-1);
+        border: 1px solid var(--line-soft);
+        box-shadow: var(--card-shadow);
+    }
+
+    .rule-number {
+        width: 30px;
+        height: 30px;
+        display: grid;
+        place-items: center;
+        border-radius: 10px;
+        color: #fff;
+        font-weight: 900;
+        background: linear-gradient(135deg, var(--app-primary), var(--app-primary-2));
+        flex: 0 0 auto;
+    }
+
+    .auto-rule-card h6 { margin: 0 0 4px; font-weight: 900; color: var(--text-strong); }
+    .auto-rule-card p { margin: 0; color: var(--text-muted); font-size: 13px; }
+
+    @@media (max-width: 992px) {
+        .auto-assign-layout { grid-template-columns: 1fr; }
+        .auto-assign-side { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+    }
+
+    @@media (max-width: 576px) {
+        .auto-assign-hero { align-items: flex-start; }
+        .auto-assign-form-card { grid-template-columns: 1fr; }
+        .auto-assign-actions .btn-submit { width: 100%; justify-content: center; }
+    }
+</style>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+    <script>
+        $(function () {
+            function val(selector) { return $(selector).val() || null; }
+
+            function clearLookup(key) {
+                const lookup = AdminLookup.get(key);
+                if (lookup) lookup.clear();
+            }
+
+            AdminLookup.create({
+                key: 'auto-year',
+                input: '#yearInput',
+                hidden: '#yearId',
+                menu: '#yearDropdown',
+                url: '@Url.Action("AcademyYears", "Lookup", new { area = "" })',
+                valueField: 'id',
+                textField: 'name',
+                onSelect: function () {
+                    clearLookup('auto-semester');
+                    clearLookup('auto-period');
+                },
+                onClear: function () {
+                    clearLookup('auto-semester');
+                    clearLookup('auto-period');
+                }
+            });
+
+            AdminLookup.create({
+                key: 'auto-semester',
+                input: '#semesterInput',
+                hidden: '#SemesterId',
+                menu: '#semesterDropdown',
+                url: '@Url.Action("Semesters", "Lookup", new { area = "" })',
+                valueField: 'id',
+                textField: 'name',
+                extraParams: function () { return { academyYearId: val('#yearId') }; },
+                beforeSearch: function () { return !!val('#yearId'); },
+                onSelect: function () { clearLookup('auto-period'); },
+                onClear: function () { clearLookup('auto-period'); }
+            });
+
+            AdminLookup.create({
+                key: 'auto-period',
+                input: '#periodInput',
+                hidden: '#PeriodId',
+                menu: '#periodDropdown',
+                url: '@Url.Action("Periods", "Lookup", new { area = "" })',
+                valueField: 'id',
+                textField: 'name',
+                extraParams: function () { return { semesterId: val('#SemesterId') }; },
+                beforeSearch: function () { return !!val('#SemesterId'); }
+            });
+        });
+    </script>
+}

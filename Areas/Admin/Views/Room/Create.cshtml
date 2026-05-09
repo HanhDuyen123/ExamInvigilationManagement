@@ -1,0 +1,62 @@
+﻿@model ExamInvigilationManagement.Application.DTOs.Admin.Room.RoomDto
+
+@{
+    ViewData["Title"] = "Thêm phòng";
+}
+
+<form asp-area="Admin" asp-action="Create" method="post">
+    <div class="form-page">
+        @await Html.PartialAsync("_FormHeader", "Tạo phòng mới")
+
+        <div class="form-card">
+            <div class="form-group">
+                <label>Tên phòng</label>
+                <input asp-for="RoomName" class="input-modern" />
+                <span asp-validation-for="RoomName" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                @await Html.PartialAsync("_LookupField", new ExamInvigilationManagement.ViewModel.LookupFieldViewModel
+           {
+               Label = "Giảng đường",
+               InputId = "buildingInput",
+               HiddenId = "buildingId",
+               HiddenName = "BuildingId",
+               MenuId = "buildingDropdown",
+               ButtonId = "btnBuilding",
+               Placeholder = "Chọn giảng đường...",
+               InputClass = "input-modern",
+               ShowButton = false
+           })
+                <span asp-validation-for="BuildingId" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label>Sức chứa</label>
+                <input asp-for="Capacity" type="number" class="input-modern" />
+                <span asp-validation-for="Capacity" class="text-danger"></span>
+            </div>
+
+            @await Html.PartialAsync("_FormFooter")
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script src="~/js/admin_lookup.js"></script>
+    <script>
+        $(function () {
+            AdminLookup.create({
+                key: 'room-building-create',
+                input: '#buildingInput',
+                hidden: '#buildingId',
+                menu: '#buildingDropdown',
+                button: '#btnBuilding',
+                url: '@Url.Action("Search", "Building", new { area = "Admin" })',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name'
+            });
+        });
+    </script>
+}

@@ -1,0 +1,372 @@
+﻿@model ExamInvigilationManagement.Application.DTOs.Admin.AcademyYear.CreateAcademyYearDto
+@using ExamInvigilationManagement.Common.Helpers
+@using ExamInvigilationManagement.Domain.Enums
+
+@{
+    ViewData["Title"] = "Tạo năm học";
+}
+
+<form asp-area="Admin" asp-action="Create" method="post">
+    <div class="form-page">
+
+        @await Html.PartialAsync("_FormHeader", "Tạo năm học mới")
+
+        <div class="form-card academy-create-card">
+
+            <div class="academy-summary-box">
+                <div class="academy-summary-title">Cấu trúc tự động</div>
+                <div class="academy-summary-text">
+                    Chọn theo cây năm học. Khi chọn cấp cha, hệ thống tự chọn toàn bộ đợt thi, buổi thi và ca thi đúng cấu trúc chuẩn.
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Tên năm học</label>
+                <input asp-for="Name" class="input-modern" />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+
+            <div class="academy-toolbar">
+                <label class="academy-toggle">
+                    <input type="checkbox" asp-for="AutoGenerate" />
+                    <span>Tự động tạo cấu trúc</span>
+                </label>
+            </div>
+
+            <div class="academy-grid">
+                @for (int i = 0; i < Model.Semesters.Count; i++)
+                {
+                    <div class="semester-card">
+
+                        <div class="semester-header">
+                            <label class="node-check">
+                                <input type="checkbox" asp-for="Semesters[i].Selected" />
+                                <span class="node-title">
+                                    @(Model.Semesters[i].Type switch
+                                    {
+                                        SemesterType.Semester1 => "Học kỳ 1",
+                                        SemesterType.Semester2 => "Học kỳ 2",
+                                        SemesterType.Summer => "Hè",
+                                        _ => "Học kỳ"
+                                    })
+                                </span>
+                            </label>
+
+                            <span class="node-badge">Học kỳ</span>
+                        </div>
+
+                        <input type="hidden" asp-for="Semesters[i].Type" />
+
+                        <div class="period-grid">
+                            @for (int j = 0; j < Model.Semesters[i].Periods.Count; j++)
+                            {
+                                <div class="period-card">
+
+                                    <div class="period-header">
+                                        <label class="node-check">
+                                            <input type="checkbox" asp-for="Semesters[i].Periods[j].Selected" />
+                                            <span class="node-title">@Model.Semesters[i].Periods[j].Name</span>
+                                        </label>
+                                    </div>
+
+                                    <input type="hidden" asp-for="Semesters[i].Periods[j].Name" />
+
+                                    <div class="session-grid">
+                                        @for (int k = 0; k < Model.Semesters[i].Periods[j].Sessions.Count; k++)
+                                        {
+                                            <div class="session-card">
+
+                                                <div class="session-header">
+                                                    <label class="node-check">
+                                                        <input type="checkbox" asp-for="Semesters[i].Periods[j].Sessions[k].Selected" />
+                                                        <span class="node-title">@Model.Semesters[i].Periods[j].Sessions[k].Name</span>
+                                                    </label>
+                                                </div>
+
+                                                <input type="hidden" asp-for="Semesters[i].Periods[j].Sessions[k].Name" />
+
+                                                <div class="slot-wrap">
+                                                    @for (int m = 0; m < Model.Semesters[i].Periods[j].Sessions[k].Slots.Count; m++)
+                                                    {
+                                                        <label class="slot-chip">
+                                                            <input type="checkbox" asp-for="Semesters[i].Periods[j].Sessions[k].Slots[m].Selected" />
+                                                            <span>
+                                                                @Model.Semesters[i].Periods[j].Sessions[k].Slots[m].Name
+                                                                (@Model.Semesters[i].Periods[j].Sessions[k].Slots[m].TimeStart)
+                                                            </span>
+                                                        </label>
+
+                                                        <input type="hidden" asp-for="Semesters[i].Periods[j].Sessions[k].Slots[m].Name" />
+                                                        <input type="hidden" asp-for="Semesters[i].Periods[j].Sessions[k].Slots[m].TimeStart" />
+                                                    }
+                                                </div>
+
+                                            </div>
+                                        }
+                                    </div>
+
+                                </div>
+                            }
+                        </div>
+
+                    </div>
+                }
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-submit">
+                    <i class="bi bi-check-lg"></i>
+                    Tạo
+                </button>
+            </div>
+
+        </div>
+    </div>
+</form>
+<style>
+    .form-card {
+        max-width: 100% !important;
+        border-radius: 18px;
+        padding: 20px;
+    }
+    .academy-summary-box {
+        background: linear-gradient(135deg, rgba(79,70,229,0.08), rgba(99,102,241,0.05));
+        border: 1px solid rgba(79,70,229,0.12);
+        border-radius: 18px;
+        padding: 16px 18px;
+        margin-bottom: 18px;
+    }
+
+    .academy-summary-title {
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 4px;
+    }
+
+    .academy-summary-text {
+        color: #64748b;
+        font-size: 13px;
+    }
+
+    .academy-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+    }
+
+    .academy-toggle {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        color: #334155;
+        font-weight: 500;
+    }
+
+    /* MAIN GRID */
+    .academy-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 18px;
+        align-items: start;
+    }
+
+    .academy-grid.academy-disabled {
+        opacity: .55;
+        pointer-events: none;
+    }
+
+    /* SEMESTER CARD */
+    .semester-card {
+        border-radius: 18px;
+        border: 1px solid rgba(0,0,0,0.05);
+        background: linear-gradient(135deg, rgba(79,70,229,0.05), rgba(255,255,255,1));
+        padding: 16px;
+        box-shadow: 0 8px 22px rgba(0,0,0,0.04);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        animation: fadeUp .25s ease;
+    }
+
+        .semester-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 30px rgba(79,70,229,0.10);
+        }
+
+    .semester-header,
+    .period-header,
+    .session-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* REMOVE VERTICAL INDENTS */
+    .period-grid,
+    .session-grid {
+        display: grid;
+        gap: 12px;
+        margin-top: 12px;
+    }
+
+    /* 2 columns inside semester */
+    .period-grid {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    /* 2 columns inside period */
+    .session-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    /* PERIOD CARD */
+    .period-card {
+        background: rgba(248,250,252,0.95);
+        border: 1px solid rgba(0,0,0,0.04);
+        border-radius: 14px;
+        padding: 12px;
+    }
+
+    /* SESSION CARD */
+    .session-card {
+        background: #fff;
+        border: 1px solid rgba(0,0,0,0.05);
+        border-radius: 12px;
+        padding: 10px;
+    }
+
+    /* SLOT CHIPS */
+    .slot-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 10px;
+    }
+
+    .slot-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: #f8fafc;
+        border: 1px solid rgba(0,0,0,0.04);
+        font-size: 13px;
+        color: #334155;
+        transition: all 0.2s ease;
+    }
+
+        .slot-chip:hover {
+            background: #eef2ff;
+            border-color: rgba(79,70,229,0.18);
+            transform: translateY(-1px);
+        }
+
+    .node-check {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .node-title {
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    .node-badge {
+        font-size: 11px;
+        padding: 4px 10px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #4f46e5;
+        font-weight: 600;
+    }
+
+    @@keyframes fadeUp {
+        from
+
+    {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
+</style>
+
+@section Scripts {
+    <script>
+        (function () {
+            const autoGenerate = document.querySelector('input[name="AutoGenerate"]');
+            const tree = document.querySelector('.academy-grid');
+            if (!tree) return;
+
+            function childCheckboxes(card, selector) {
+                return Array.from(card.querySelectorAll(selector)).filter(x => x.type === 'checkbox');
+            }
+
+            function setChildren(card, selector, checked) {
+                childCheckboxes(card, selector).forEach(x => {
+                    x.checked = checked;
+                    x.indeterminate = false;
+                });
+            }
+
+            function updateParent(card, parentSelector, childSelector) {
+                const parent = card.querySelector(parentSelector);
+                const children = childCheckboxes(card, childSelector);
+                if (!parent || children.length === 0) return;
+
+                const checked = children.filter(x => x.checked).length;
+                parent.checked = checked === children.length;
+                parent.indeterminate = checked > 0 && checked < children.length;
+            }
+
+            function refreshTree() {
+                document.querySelectorAll('.session-card').forEach(card => {
+                    updateParent(card, '.session-header input[type="checkbox"]', '.slot-wrap input[type="checkbox"]');
+                });
+
+                document.querySelectorAll('.period-card').forEach(card => {
+                    updateParent(card, '.period-header input[type="checkbox"]', '.session-header input[type="checkbox"]');
+                });
+
+                document.querySelectorAll('.semester-card').forEach(card => {
+                    updateParent(card, '.semester-header input[type="checkbox"]', '.period-header input[type="checkbox"]');
+                });
+
+                const enabled = !autoGenerate || autoGenerate.checked;
+                childCheckboxes(tree, 'input[type="checkbox"]').forEach(x => {
+                    if (x !== autoGenerate) x.disabled = !enabled;
+                });
+                tree.classList.toggle('academy-disabled', !enabled);
+            }
+
+            tree.addEventListener('change', function (event) {
+                const input = event.target;
+                if (!(input instanceof HTMLInputElement) || input.type !== 'checkbox') return;
+
+                const sessionCard = input.closest('.session-card');
+                const periodCard = input.closest('.period-card');
+                const semesterCard = input.closest('.semester-card');
+
+                if (input.closest('.semester-header') && semesterCard) {
+                    setChildren(semesterCard, '.period-grid input[type="checkbox"]', input.checked);
+                } else if (input.closest('.period-header') && periodCard) {
+                    setChildren(periodCard, '.session-grid input[type="checkbox"]', input.checked);
+                } else if (input.closest('.session-header') && sessionCard) {
+                    setChildren(sessionCard, '.slot-wrap input[type="checkbox"]', input.checked);
+                }
+
+                refreshTree();
+            });
+
+            if (autoGenerate) autoGenerate.addEventListener('change', refreshTree);
+            refreshTree();
+        })();
+    </script>
+}

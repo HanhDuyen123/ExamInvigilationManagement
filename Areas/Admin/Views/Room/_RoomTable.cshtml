@@ -1,0 +1,47 @@
+﻿@using ExamInvigilationManagement.Application.DTOs.Admin.Room
+@using ExamInvigilationManagement.Common
+@model PagedResult<RoomDto>
+
+@{
+    int stt = (Model.Page - 1) * Model.PageSize + 1;
+}
+
+<table class="table modern-table">
+    <thead>
+        <tr>
+            <th class="col-id">STT</th>
+            <th class="col-name">Phòng</th>
+            <th class="col-name">Tòa</th>
+            <th class="col-id">Sức chứa</th>
+            <th class="col-action">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                <td class="col-id">@stt</td>
+                <td class="col-name">@item.RoomName</td>
+                <td class="col-name">@item.BuildingName</td>
+                <td class="col-id">@item.Capacity</td>
+                <td class="col-action">
+                    <div class="action-group">
+                        <a href="/Admin/Room/Edit/@item.RoomId" class="btn-icon edit">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+
+                        <a href="#"
+                           class="btn-icon delete btn-delete"
+                           data-id="@item.RoomId"
+                           data-name="@item.RoomName">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            stt++;
+        }
+    </tbody>
+</table>
+
+@await Html.PartialAsync("_Pagination", Model)

@@ -1,0 +1,67 @@
+@model ExamInvigilationManagement.Application.DTOs.ExamSchedule.ExamScheduleDto
+
+@{
+    ViewData["Title"] = "Chi tiết lịch thi";
+}
+
+<div class="form-page wide exam-detail-page">
+    <div class="form-header mb-4">
+        <div>
+            <h3 class="title-gradient">Chi tiết lịch thi</h3>
+            <div class="subtitle">Thông tin lịch thi, phòng thi và giám thị liên quan</div>
+        </div>
+        <a asp-action="Index" class="btn-back"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+
+    <div class="form-card exam-detail-card">
+        <div class="exam-detail-hero">
+            <div class="exam-detail-icon"><i class="bi bi-calendar2-week-fill"></i></div>
+            <div class="min-width-0">
+                <div class="exam-detail-kicker">@Model.SubjectId</div>
+                <h4>@Model.SubjectName</h4>
+                <div class="exam-detail-subtitle">@Model.ClassName - Nhóm @Model.GroupNumber</div>
+            </div>
+            <div class="ms-auto">
+                <span class="badge rounded-pill exam-status-badge @(Model.Status == "Đã duyệt" ? "approved" : Model.Status == "Từ chối duyệt" ? "rejected" : "pending")">@Model.Status</span>
+            </div>
+        </div>
+
+        <div class="detail-section-title"><i class="bi bi-journal-text"></i> Học phần</div>
+        <div class="detail-grid">
+            <div class="detail-item"><span>Giảng viên</span><strong>@(Model.UserName ?? "-")</strong></div>
+            <div class="detail-item"><span>Khoa</span><strong>@(Model.FacultyName ?? "-")</strong></div>
+            <div class="detail-item"><span>Năm học</span><strong>@(Model.AcademyYearName ?? "-")</strong></div>
+            <div class="detail-item"><span>Học kỳ</span><strong>@(Model.SemesterName ?? "-")</strong></div>
+        </div>
+
+        <div class="detail-section-title"><i class="bi bi-clock-history"></i> Thời gian và phòng thi</div>
+        <div class="detail-grid">
+            <div class="detail-item"><span>Đợt thi</span><strong>@(Model.PeriodName ?? "-")</strong></div>
+            <div class="detail-item"><span>Ngày thi</span><strong>@(Model.ExamDate?.ToString("dd/MM/yyyy") ?? "-")</strong></div>
+            <div class="detail-item"><span>Buổi thi</span><strong>@(Model.SessionName ?? "-")</strong></div>
+            <div class="detail-item"><span>Ca thi</span><strong>@(Model.SlotName ?? "-")</strong></div>
+            <div class="detail-item"><span>Giảng đường</span><strong>@(Model.BuildingName ?? Model.BuildingId ?? "-")</strong></div>
+            <div class="detail-item"><span>Phòng thi</span><strong>@(Model.RoomName ?? "-")</strong></div>
+        </div>
+
+        <div class="detail-section-title"><i class="bi bi-people"></i> Phân công giám thị</div>
+        <div class="invigilator-strip">
+            <div class="invigilator-card">
+                <div class="avatar-mini"><i class="bi bi-person-check"></i></div>
+                <div><span>Giám thị 1</span><strong>@(string.IsNullOrWhiteSpace(Model.Lecturer1Name) ? "Chưa phân công" : Model.Lecturer1Name)</strong></div>
+            </div>
+            <div class="invigilator-card">
+                <div class="avatar-mini"><i class="bi bi-person-check"></i></div>
+                <div><span>Giám thị 2</span><strong>@(string.IsNullOrWhiteSpace(Model.Lecturer2Name) ? "Chưa phân công" : Model.Lecturer2Name)</strong></div>
+            </div>
+        </div>
+
+        <div class="form-actions d-flex justify-content-end gap-2">
+            <a asp-action="Index" class="btn btn-outline-secondary rounded-3 px-4">Quay lại</a>
+            @if (User.IsInRole("Admin"))
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-submit text-decoration-none"><i class="bi bi-pencil-square"></i> Cập nhật</a>
+            }
+        </div>
+    </div>
+</div>

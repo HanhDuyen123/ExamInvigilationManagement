@@ -1,0 +1,81 @@
+@{
+    var showUserFilter = ViewBag.ShowUserFilter as bool? ?? false;
+}
+
+<div class="role-filter-compact">
+    <div class="role-filter-main">
+        @if (showUserFilter)
+        {
+            <div class="lookup-modern position-relative search-field search-field-wide">
+                <label class="form-label mb-1">Giảng viên</label>
+                <input id="userInput" class="input-modern" placeholder="Chọn giảng viên..." autocomplete="off" />
+                <div id="userDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="userId" />
+            </div>
+        }
+
+        <div class="lookup-modern position-relative search-field">
+            <label class="form-label mb-1">Năm học</label>
+            <input id="yearInput" class="input-modern" placeholder="Chọn năm học..." autocomplete="off" />
+            <div id="yearDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+            <input type="hidden" id="yearId" />
+        </div>
+
+        <div class="lookup-modern position-relative search-field">
+            <label class="form-label mb-1">Học kỳ</label>
+            <input id="semesterInput" class="input-modern" placeholder="Chọn học kỳ..." autocomplete="off" />
+            <div id="semesterDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+            <input type="hidden" id="semesterId" />
+        </div>
+
+        <div class="search-field">
+            <label class="form-label mb-1">Từ ngày</label>
+            <input type="date" id="fromDate" class="input-modern crud-filter" />
+        </div>
+
+        <div class="search-field">
+            <label class="form-label mb-1">Đến ngày</label>
+            <input type="date" id="toDate" class="input-modern crud-filter" />
+        </div>
+
+        <div class="search-field search-page-size">
+            <label class="form-label mb-1">Số dòng</label>
+            <select id="pageSize" class="select-modern">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="role-filter-tools">
+        <button class="btn btn-sm role-filter-toggle collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#busyAdvancedFilters" aria-expanded="false" aria-controls="busyAdvancedFilters">
+            <i class="bi bi-sliders"></i> Bộ lọc nâng cao <i class="bi bi-chevron-down toggle-chevron"></i>
+        </button>
+    </div>
+
+    <div class="collapse" id="busyAdvancedFilters">
+        <div class="role-filter-advanced">
+            <div class="lookup-modern position-relative search-field">
+                <label class="form-label mb-1">Đợt thi</label>
+                <input id="periodInput" class="input-modern" placeholder="Chọn đợt thi..." autocomplete="off" />
+                <div id="periodDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="periodId" />
+            </div>
+
+            <div class="lookup-modern position-relative search-field">
+                <label class="form-label mb-1">Buổi thi</label>
+                <input id="sessionInput" class="input-modern" placeholder="Chọn buổi thi..." autocomplete="off" />
+                <div id="sessionDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="sessionId" />
+            </div>
+
+            <div class="lookup-modern position-relative search-field">
+                <label class="form-label mb-1">Ca thi</label>
+                <input id="slotInput" class="input-modern" placeholder="Chọn ca thi..." autocomplete="off" />
+                <div id="slotDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="slotId" />
+            </div>
+        </div>
+    </div>
+</div>

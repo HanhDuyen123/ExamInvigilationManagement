@@ -1,0 +1,267 @@
+﻿@model ExamInvigilationManagement.Application.DTOs.LecturerBusySlot.LecturerBusySlotDto
+@using ExamInvigilationManagement.ViewModel;
+
+@{
+    ViewData["Title"] = "Create Busy Slot";
+}
+
+<form asp-action="Create" method="post">
+
+    <div class="form-page">
+
+        @await Html.PartialAsync("_FormHeader")
+
+        <div class="form-card busy-slot-form-card">
+            <div class="busy-slot-form-grid">
+
+            <!-- Busy Date -->
+            <div class="form-group">
+                <label>Ngày bận</label>
+                <input asp-for="BusyDate" type="date" class="input-modern" />
+            </div>
+
+            <!-- YEAR -->
+            <div class="form-group">
+                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+           {
+               Label = "Năm học",
+               InputId = "yearInput",
+               HiddenId = "yearId",
+               HiddenName = "",
+               MenuId = "yearDropdown",
+               Placeholder = "Chọn năm học...",
+               InputClass = "input-modern"
+           })
+            </div>
+
+            <!-- SEMESTER -->
+            <div class="form-group">
+                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+           {
+               Label = "Học kỳ",
+               InputId = "semesterInput",
+               HiddenId = "semesterId",
+               HiddenName = "",
+               MenuId = "semesterDropdown",
+               Placeholder = "Chọn học kỳ...",
+               InputClass = "input-modern"
+           })
+            </div>
+
+            <!-- PERIOD -->
+            <div class="form-group">
+                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+           {
+               Label = "Đợt thi",
+               InputId = "periodInput",
+               HiddenId = "periodId",
+               HiddenName = "",
+               MenuId = "periodDropdown",
+               Placeholder = "Chọn đợt thi...",
+               InputClass = "input-modern"
+           })
+            </div>
+
+            <!-- SESSION -->
+            <div class="form-group">
+                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+           {
+               Label = "Buổi thi",
+               InputId = "sessionInput",
+               HiddenId = "sessionId",
+               HiddenName = "",
+               MenuId = "sessionDropdown",
+               Placeholder = "Chọn buổi thi...",
+               InputClass = "input-modern"
+           })
+            </div>
+
+            <!-- SLOT (submit thật) -->
+            <div class="form-group">
+                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+           {
+               Label = "Ca thi",
+               InputId = "slotInput",
+               HiddenId = "slotId",
+               HiddenName = "ExamSlotId",
+               MenuId = "slotDropdown",
+               Placeholder = "Chọn ca thi...",
+               InputClass = "input-modern"
+           })
+            </div>
+
+            <!-- NOTE -->
+            <div class="form-group busy-slot-note-field">
+                <label>Ghi chú</label>
+                <textarea asp-for="Note" class="input-modern"></textarea>
+            </div>
+
+            </div>
+
+            @await Html.PartialAsync("_FormFooter")
+
+        </div>
+
+    </div>
+
+</form>
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+
+    <script>
+        function clearBelow(level) {
+            const map = {
+                semester: ['semester', 'period', 'session', 'slot'],
+                period: ['period', 'session', 'slot'],
+                session: ['session', 'slot'],
+                slot: ['slot']
+            };
+
+            map[level]?.forEach(k => {
+                const lookup = AdminLookup.get(k);
+                if (lookup) lookup.clear();
+            });
+        }
+
+        $(function () {
+            AdminLookup.create({
+                key: 'busy-year',
+                input: '#yearInput',
+                hidden: '#yearId',
+                menu: '#yearDropdown',
+                url: '@Url.Action("AcademyYears", "Lookup")',
+                valueField: 'id',
+                textField: 'name',
+                onSelect: function () {
+                    clearBelow('semester');
+                },
+                onClear: function () { }
+            });
+
+            AdminLookup.create({
+                key: 'busy-semester',
+                input: '#semesterInput',
+                hidden: '#semesterId',
+                menu: '#semesterDropdown',
+                url: '@Url.Action("Semesters", "Lookup")',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return {
+                        academyYearId: $('#yearId').val()
+                    };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    if (!$('#yearId').val()) {
+                        AppNotify.show('warning', 'Vui lòng chọn năm học trước.');
+                        return false;
+                    }
+                    return true;
+                },
+                onSelect: function () {
+                    clearBelow('period');
+                },
+                onClear: function () { }
+            });
+
+            AdminLookup.create({
+                key: 'busy-period',
+                input: '#periodInput',
+                hidden: '#periodId',
+                menu: '#periodDropdown',
+                url: '@Url.Action("Periods", "Lookup")',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return {
+                        semesterId: $('#semesterId').val()
+                    };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    return !!$('#semesterId').val();
+                },
+                onSelect: function () {
+                    clearBelow('session');
+                },
+                onClear: function () { }
+            });
+
+            AdminLookup.create({
+                key: 'busy-session',
+                input: '#sessionInput',
+                hidden: '#sessionId',
+                menu: '#sessionDropdown',
+                url: '@Url.Action("Sessions", "Lookup")',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return {
+                        periodId: $('#periodId').val()
+                    };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    return !!$('#periodId').val();
+                },
+                onSelect: function () {
+                    clearBelow('slot');
+                },
+                onClear: function () { }
+            });
+
+            AdminLookup.create({
+                key: 'busy-slot',
+                input: '#slotInput',
+                hidden: '#slotId',
+                menu: '#slotDropdown',
+                url: '@Url.Action("Slots", "Lookup")',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return {
+                        sessionId: $('#sessionId').val()
+                    };
+                },
+                valueField: 'id',
+                textField: 'name',
+                beforeSearch: function () {
+                    return !!$('#sessionId').val();
+                },
+                onSelect: function () { },
+                onClear: function () { }
+            });
+        });
+    </script>
+
+    <style>
+        .busy-slot-form-card {
+            max-width: 980px;
+        }
+
+        .busy-slot-form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px 16px;
+        }
+
+        .busy-slot-form-grid .form-group {
+            margin-bottom: 0;
+        }
+
+        .busy-slot-note-field {
+            grid-column: 1 / -1;
+        }
+
+        .busy-slot-note-field textarea {
+            min-height: 92px;
+        }
+
+        @@media (max-width: 768px) {
+            .busy-slot-form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+}

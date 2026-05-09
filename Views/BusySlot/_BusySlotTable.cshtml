@@ -1,0 +1,79 @@
+﻿@using ExamInvigilationManagement.Application.DTOs.LecturerBusySlot
+@using ExamInvigilationManagement.Common
+@model PagedResult<LecturerBusySlotDto>
+
+@{
+    int stt = (Model.Page - 1) * Model.PageSize + 1;
+    var canEdit = ViewBag.ShowActionColumn as bool? ?? false;
+}
+
+<table class="table modern-table schedule-table-compact busy-slot-table-compact">
+    <colgroup>
+        <col style="width:4%;" />
+        <col style="width:16%;" />
+        <col style="width:10%;" />
+        <col style="width:8%;" />
+        <col style="width:10%;" />
+        <col style="width:8%;" />
+        <col style="width:10%;" />
+        <col style="width:10%;" />
+        <col style="width:16%;" />
+        <col style="width:8%;" />
+    </colgroup>
+    <thead>
+        <tr>
+            <th>STT</th>
+            <th>Giảng viên</th>
+            <th>Năm học</th>
+            <th>Học kỳ</th>
+            <th>Đợt thi</th>
+            <th>Buổi thi</th>
+            <th>Ca thi</th>
+            <th>Ngày bận</th>
+            <th>Ghi chú</th>
+            <th>Thao tác</th>
+        </tr>
+    </thead>
+
+    <tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                <td>@stt</td>
+                <td class="cell-wrap ui-col-person">@item.UserName</td>
+                <td class="cell-nowrap">@item.AcademyYearName</td>
+                <td class="cell-nowrap">@item.SemesterName</td>
+                <td class="cell-nowrap">@item.ExamPeriodName</td>
+                <td class="cell-nowrap">@item.ExamSessionName</td>
+                <td class="cell-wrap">@item.ExamSlotName</td>
+                <td class="cell-nowrap">@item.BusyDate.ToString("dd/MM/yyyy")</td>
+                <td class="cell-wrap">@(string.IsNullOrWhiteSpace(item.Note) ? "-" : item.Note)</td>
+
+                <td class="col-action">
+                    <div class="action-group">
+                        <a href="@Url.Action("Details", "BusySlot", new { id = item.Id })" class="btn-icon detail" title="Xem chi tiết">
+                            <i class="bi bi-eye"></i>
+                        </a>
+
+                        @if (canEdit)
+                        {
+                            <a href="@Url.Action("Edit", "BusySlot", new { id = item.Id })" class="btn-icon edit" title="Cập nhật">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="#"
+                               class="btn-icon delete btn-delete"
+                               data-id="@item.Id"
+                               title="Xóa"
+                               data-name="@item.UserName">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        }
+                    </div>
+                </td>
+            </tr>
+            stt++;
+        }
+    </tbody>
+</table>
+
+@await Html.PartialAsync("_Pagination", Model)

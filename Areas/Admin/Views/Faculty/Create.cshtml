@@ -1,0 +1,23 @@
+﻿@model ExamInvigilationManagement.Application.DTOs.Admin.Faculty.FacultyDto
+@{
+    ViewBag.Subtitle = "Tạo khoa mới";
+}
+
+<form asp-area="Admin" asp-controller="Faculty" asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="form-page">
+        @await Html.PartialAsync("_FormHeader")
+
+        <div class="form-card">
+
+            <div class="form-group">
+                <label class="form-label">Tên khoa</label>
+                <input asp-for="Name" class="input-modern" />
+                <span asp-validation-for="Name" class="text-danger d-block mt-1"></span>
+            </div>
+
+            @await Html.PartialAsync("_FormFooter")
+        </div>
+    </div>
+</form>

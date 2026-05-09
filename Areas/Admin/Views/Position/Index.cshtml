@@ -1,0 +1,32 @@
+﻿@using ExamInvigilationManagement.ViewModel
+@model CrudIndexViewModel
+
+@{
+    ViewData["Title"] = "Quản lý chức vụ";
+}
+
+@await Html.PartialAsync("_CrudIndex", Model)
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+
+    <script>
+        $(document).ready(function () {
+
+            CrudPage.init({
+                api: '@Url.Action("GetList", "Position", new { area = "Admin" })',
+                deleteUrl: '@Url.Action("Delete", "Position", new { area = "Admin" })',
+                tableId: '#crudTable',
+                filterSelector: '.crud-filter',
+                pageSize: '#pageSize',
+                deleteName: '#deleteName',
+                extraData: function () {
+                    return {
+                        keyword: $('#searchBox').val()?.trim()
+                    };
+                }
+            });
+
+        });
+    </script>
+}

@@ -1,0 +1,153 @@
+﻿@model ExamInvigilationManagement.Application.DTOs.Admin.AcademyYear.AcademyYearDetailDto
+
+@{
+    ViewData["Title"] = "Chi tiết năm học";
+}
+
+<h2>@Model.Name</h2>
+
+<hr />
+
+@foreach (var sem in Model.Semesters)
+{
+    <div class="card mb-3 p-3">
+
+        <!-- SEMESTER -->
+        <form asp-controller="Semester" asp-action="Edit" method="post" class="mb-2">
+            <input type="hidden" name="Id" value="@sem.Id" />
+            <input type="hidden" name="academyYearId" value="@Model.Id" />
+
+            <b>Học kỳ:</b>
+            <input name="Name" value="@sem.Name" />
+
+            <button type="submit" class="btn btn-sm btn-success">💾</button>
+
+            <a asp-controller="Semester"
+               asp-action="Delete"
+               asp-route-id="@sem.Id"
+               asp-route-academyYearId="@Model.Id"
+               class="btn btn-sm btn-danger">
+                🗑️
+            </a>
+        </form>
+        <form asp-controller="Semester" asp-action="Add" method="post">
+            <input type="hidden" name="academyYearId" value="@Model.Id" />
+
+            <select name="type">
+                <option value="1">HK1</option>
+                <option value="2">HK2</option>
+                <option value="3">Hè</option>
+            </select>
+
+            <button class="btn btn-primary btn-sm">+ Học kỳ</button>
+        </form>
+
+        @foreach (var per in sem.Periods)
+        {
+            <div style="margin-left:20px;" class="mb-2">
+
+                <!-- PERIOD -->
+                <form asp-controller="Period" asp-action="Edit" method="post">
+                    <input type="hidden" name="Id" value="@per.Id" />
+                    <input type="hidden" name="academyYearId" value="@Model.Id" />
+
+                    <b>Đợt:</b>
+                    <input name="Name" value="@per.Name" />
+
+                    <button type="submit" class="btn btn-sm btn-success">💾</button>
+
+                    <a asp-controller="Period"
+                       asp-action="Delete"
+                       asp-route-id="@per.Id"
+                       asp-route-academyYearId="@Model.Id"
+                       class="btn btn-sm btn-danger">
+                        🗑️
+                    </a>
+                </form>
+                <form asp-controller="Period" asp-action="Add" method="post">
+                    <input type="hidden" name="semesterId" value="@sem.Id" />
+                    <input type="hidden" name="academyYearId" value="@Model.Id" />
+
+                    <input name="name" placeholder="Tên đợt" />
+
+                    <button class="btn btn-primary btn-sm">+ Đợt</button>
+                </form>
+
+                @foreach (var ses in per.Sessions)
+                {
+                    <div style="margin-left:20px;" class="mb-2">
+
+                        <!-- SESSION -->
+                        <form asp-controller="Session" asp-action="Edit" method="post">
+                            <input type="hidden" name="Id" value="@ses.Id" />
+                            <input type="hidden" name="academyYearId" value="@Model.Id" />
+
+                            <b>Buổi:</b>
+                            <input name="Name" value="@ses.Name" />
+
+                            <button type="submit" class="btn btn-sm btn-success">💾</button>
+
+                            <a asp-controller="Session"
+                               asp-action="Delete"
+                               asp-route-id="@ses.Id"
+                               asp-route-academyYearId="@Model.Id"
+                               class="btn btn-sm btn-danger">
+                                🗑️
+                            </a>
+                        </form>
+                        <form asp-controller="Session" asp-action="Add" method="post">
+                            <input type="hidden" name="periodId" value="@per.Id" />
+                            <input type="hidden" name="academyYearId" value="@Model.Id" />
+
+                            <input name="name" placeholder="Tên buổi" />
+
+                            <button class="btn btn-primary btn-sm">+ Buổi</button>
+                        </form>
+
+                        @foreach (var slot in ses.Slots)
+                        {
+                            <div style="margin-left:20px;" class="mb-2">
+
+                                <form asp-controller="Slot" asp-action="Add" method="post">
+                                    <input type="hidden" name="sessionId" value="@ses.Id" />
+                                    <input type="hidden" name="academyYearId" value="@Model.Id" />
+
+                                    <input name="name" placeholder="Tên ca" />
+                                    <input type="time" name="timeStart" />
+
+                                    <button class="btn btn-primary btn-sm">+ Ca</button>
+                                </form>
+                                <!-- SLOT -->
+                                <form asp-controller="Slot" asp-action="Edit" method="post" class="d-inline">
+                                    <input type="hidden" name="Id" value="@slot.Id" />
+                                    <input type="hidden" name="academyYearId" value="@Model.Id" />
+
+                                    <b>Ca:</b>
+                                    <input name="Name" value="@slot.Name" style="width:100px;" />
+
+                                    <input name="TimeStart"
+                                           type="time"
+                                           value="@slot.TimeStart.ToString("HH\\:mm")" />
+
+                                    <button type="submit" class="btn btn-sm btn-success">💾</button>
+                                </form>
+
+                                <a asp-controller="Slot"
+                                   asp-action="Delete"
+                                   asp-route-id="@slot.Id"
+                                   asp-route-academyYearId="@Model.Id"
+                                   class="btn btn-sm btn-danger">
+                                    🗑️
+                                </a>
+
+                            </div>
+                        }
+
+                    </div>
+                }
+
+            </div>
+        }
+
+    </div>
+}

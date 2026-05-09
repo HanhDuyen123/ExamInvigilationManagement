@@ -1,0 +1,121 @@
+@model ExamInvigilationManagement.Application.DTOs.Statistics.StatisticsDashboardDto
+
+@{
+    ViewData["Title"] = "Xem trước báo cáo thống kê";
+    var isAdmin = Model.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+    Layout = isAdmin ? "_Layout" : "_AcademicLayout";
+}
+
+<div class="role-page report-preview-page">
+    <div class="role-header mb-4">
+        <div>
+            <h3 class="title-gradient">Xem trước báo cáo thống kê</h3>
+            <div class="subtitle">Kiểm tra nội dung trước khi tải file PDF hoặc Excel</div>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-light rounded-3" asp-action="Index" asp-route-academyYearId="@Model.Filter.AcademyYearId" asp-route-semesterId="@Model.Filter.SemesterId" asp-route-periodId="@Model.Filter.PeriodId" asp-route-fromDate="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" asp-route-toDate="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")">
+                <i class="bi bi-arrow-left"></i> Quay lại thống kê
+            </a>
+            <a class="btn btn-outline-primary rounded-3" asp-action="Export" asp-route-format="pdf" asp-route-academyYearId="@Model.Filter.AcademyYearId" asp-route-semesterId="@Model.Filter.SemesterId" asp-route-periodId="@Model.Filter.PeriodId" asp-route-fromDate="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" asp-route-toDate="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")">
+                <i class="bi bi-filetype-pdf"></i> Tải PDF
+            </a>
+            <a class="btn btn-outline-success rounded-3" asp-action="Export" asp-route-format="excel" asp-route-academyYearId="@Model.Filter.AcademyYearId" asp-route-semesterId="@Model.Filter.SemesterId" asp-route-periodId="@Model.Filter.PeriodId" asp-route-fromDate="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" asp-route-toDate="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")">
+                <i class="bi bi-file-earmark-spreadsheet"></i> Tải Excel
+            </a>
+        </div>
+    </div>
+
+    <section class="report-paper">
+        <div class="report-head">
+            <div>
+                <h4>Báo cáo thống kê coi thi</h4>
+                <p>Phạm vi: <strong>@Model.ScopeName</strong></p>
+                <p>Vai trò: <strong>@Model.RoleName</strong></p>
+            </div>
+            <div class="report-date">Ngày xuất: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</div>
+        </div>
+
+        <div class="report-section">
+            <h5>Tổng quan</h5>
+            <div class="report-metrics">
+                @foreach (var item in Model.Metrics)
+                {
+                    <div class="report-metric"><span>@item.Label</span><strong>@item.Value</strong><small>@item.Hint</small></div>
+                }
+            </div>
+        </div>
+
+        <div class="report-grid">
+            <div class="report-section">
+                <h5>Trạng thái lịch thi</h5>
+                @await Html.PartialAsync("_PreviewChartTable", Model.ScheduleStatus)
+            </div>
+            <div class="report-section">
+                <h5>Phản hồi giảng viên</h5>
+                @await Html.PartialAsync("_PreviewChartTable", Model.ResponseStatus)
+            </div>
+        </div>
+
+        <div class="report-grid">
+            <div class="report-section">
+                <h5>Lịch thi theo đợt</h5>
+                @await Html.PartialAsync("_PreviewChartTable", Model.SchedulesByPeriod)
+            </div>
+            <div class="report-section">
+                <h5>Từ chối theo buổi/ca</h5>
+                @await Html.PartialAsync("_PreviewChartTable", Model.RejectionsBySession)
+            </div>
+        </div>
+
+        <div class="report-section">
+            <h5>Hiệu suất coi thi của giảng viên</h5>
+            <div class="table-responsive">
+                <table class="table report-table">
+                    <thead><tr><th>Giảng viên</th><th>Phân công</th><th>Xác nhận</th><th>Từ chối</th><th>Chưa phản hồi</th><th>Tỷ lệ xác nhận</th></tr></thead>
+                    <tbody>
+                    @foreach (var item in Model.LecturerWorkloads)
+                    {
+                        <tr><td>@item.LecturerName</td><td>@item.AssignedCount</td><td>@item.ConfirmedCount</td><td>@item.RejectedCount</td><td>@item.PendingCount</td><td>@item.ConfirmationRate%</td></tr>
+                    }
+                    @if (!Model.LecturerWorkloads.Any()) { <tr><td colspan="6" class="text-center text-muted">Không có dữ liệu</td></tr> }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="report-section">
+            <h5>Độ phủ giám thị theo ca thi</h5>
+            <div class="table-responsive">
+                <table class="table report-table">
+                    <thead><tr><th>Đợt thi</th><th>Buổi</th><th>Ca</th><th>Số lịch</th><th>Đủ 2 giám thị</th><th>Tỷ lệ phủ</th></tr></thead>
+                    <tbody>
+                    @foreach (var item in Model.SlotCoverage)
+                    {
+                        <tr><td>@item.PeriodName</td><td>@item.SessionName</td><td>@item.SlotName</td><td>@item.ScheduleCount</td><td>@item.FullCoveredCount</td><td>@item.CoverageRate%</td></tr>
+                    }
+                    @if (!Model.SlotCoverage.Any()) { <tr><td colspan="6" class="text-center text-muted">Không có dữ liệu</td></tr> }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</div>
+
+<style>
+    .report-paper { background:#fff; border:1px solid rgba(15,23,42,.08); border-radius:24px; padding:28px; box-shadow:0 18px 50px rgba(15,23,42,.08); }
+    .report-head { display:flex; justify-content:space-between; gap:18px; border-bottom:2px solid #e2e8f0; padding-bottom:18px; margin-bottom:22px; }
+    .report-head h4 { font-weight:800; text-transform:uppercase; margin-bottom:10px; }
+    .report-head p { margin:0 0 4px; color:#475569; }
+    .report-date { color:#64748b; white-space:nowrap; }
+    .report-section { margin-bottom:24px; }
+    .report-section h5 { font-weight:800; color:#1e293b; margin-bottom:12px; }
+    .report-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; }
+    .report-metrics { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:12px; }
+    .report-metric { border:1px solid #e2e8f0; border-radius:16px; padding:14px; background:#f8fafc; }
+    .report-metric span, .report-metric small { display:block; color:#64748b; }
+    .report-metric strong { display:block; font-size:1.6rem; color:#0f172a; }
+    .report-table { border:1px solid #e2e8f0; margin:0; }
+    .report-table th { background:#f1f5f9; color:#334155; white-space:nowrap; }
+    .report-table td, .report-table th { border-color:#e2e8f0; vertical-align:middle; }
+    @@media (max-width: 991.98px) { .report-grid, .report-head { grid-template-columns:1fr; display:grid; } .report-date { white-space:normal; } }
+</style>

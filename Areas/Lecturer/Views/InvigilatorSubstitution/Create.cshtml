@@ -1,0 +1,94 @@
+@model ExamInvigilationManagement.Application.DTOs.InvigilatorSubstitution.InvigilatorSubstitutionCreatePageDto
+
+@{
+    ViewData["Title"] = "Đề xuất người thay thế";
+    var schedule = Model.Schedule;
+}
+
+<div class="form-page wide">
+    <div class="form-header mb-4">
+        <div>
+            <h3 class="title-gradient">Đề xuất người thay thế</h3>
+            <div class="subtitle">Chọn giảng viên phù hợp để gửi Thư ký khoa duyệt thay thế lịch đã từ chối</div>
+        </div>
+        <a asp-area="Lecturer" asp-controller="InvigilatorResponse" asp-action="Index" asp-route-status="Từ chối" class="btn-back"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+
+    <div class="form-card mb-4">
+        <h5 class="mb-3">Lịch coi thi đã từ chối</h5>
+        <div class="row g-3">
+            <div class="col-md-2"><label class="form-label">Mã môn</label><input class="input-modern" readonly value="@schedule.SubjectId" /></div>
+            <div class="col-md-4"><label class="form-label">Môn học</label><input class="input-modern" readonly value="@schedule.SubjectName" /></div>
+            <div class="col-md-2"><label class="form-label">Lớp</label><input class="input-modern" readonly value="@schedule.ClassName" /></div>
+            <div class="col-md-2"><label class="form-label">Nhóm</label><input class="input-modern" readonly value="@schedule.GroupNumber" /></div>
+            <div class="col-md-2"><label class="form-label">Vị trí</label><input class="input-modern" readonly value="GT @schedule.PositionNo" /></div>
+            <div class="col-md-3"><label class="form-label">Ngày thi</label><input class="input-modern" readonly value="@schedule.ExamDate.ToString("dd/MM/yyyy")" /></div>
+            <div class="col-md-3"><label class="form-label">Ca thi</label><input class="input-modern" readonly value="@schedule.SlotName (@schedule.TimeStart.ToString("HH\\:mm"))" /></div>
+            <div class="col-md-3"><label class="form-label">Phòng</label><input class="input-modern" readonly value="@schedule.RoomDisplay" /></div>
+            <div class="col-md-3"><label class="form-label">Lý do từ chối</label><input class="input-modern" readonly value="@(schedule.ResponseNote ?? "Không có ghi chú")" /></div>
+        </div>
+    </div>
+
+    <div class="form-card">
+        <div class="d-flex flex-wrap align-items-end gap-3 mb-3">
+            <div class="flex-grow-1" style="min-width:260px;max-width:420px">
+                <label class="form-label">Tìm giảng viên</label>
+                <input id="lecturerSearch" class="input-modern" placeholder="Nhập username hoặc họ tên..." />
+            </div>
+            <div class="text-muted small">Mỗi lịch coi thi chỉ được đề xuất thay thế một lần. Người không phù hợp sẽ bị khóa để tránh chọn nhầm.</div>
+        </div>
+
+        <form asp-action="Create" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="ExamInvigilatorId" value="@schedule.ExamInvigilatorId" />
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="row g-3" id="lecturerOptions">
+                @foreach (var lecturer in Model.LecturerOptions)
+                {
+                    var disabled = !lecturer.CanSelect;
+                    <div class="col-lg-4 col-md-6 lecturer-option" data-text="@($"{lecturer.UserName} {lecturer.FullName}".ToLower())">
+                        <label class="substitution-card @(disabled ? "disabled" : "")">
+                            <input type="radio" name="SubstituteUserId" value="@lecturer.UserId" disabled="@(disabled ? "disabled" : null)" />
+                            <span class="fw-bold d-block">@lecturer.FullName</span>
+                            <span class="text-muted d-block">@lecturer.UserName</span>
+                            <span class="small d-block mt-2"><strong>@lecturer.RecommendationLabel</strong></span>
+                            <span class="small text-muted d-block mt-1">@lecturer.WorkloadLabel</span>
+                            @if (lecturer.HasTaughtClass)
+                            {
+                                <span class="badge bg-primary-subtle text-primary mt-2">Hiểu rõ lớp thi</span>
+                            }
+                            else if (lecturer.HasTaughtSubject)
+                            {
+                                <span class="badge bg-info-subtle text-info mt-2">Có kinh nghiệm với môn thi</span>
+                            }
+                            <span class="small @(lecturer.CanSelect ? "text-success" : "text-danger") d-block mt-2">@lecturer.Reason</span>
+                        </label>
+                    </div>
+                }
+            </div>
+
+            <div class="form-actions mt-4">
+                <button type="submit" class="btn-submit"><i class="bi bi-send-check"></i> Gửi đề xuất cho Thư ký khoa</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+    .substitution-card { display:block; height:100%; border:1px solid rgba(79,70,229,.14); border-radius:18px; padding:16px; background:#fff; cursor:pointer; transition:.2s ease; }
+    .substitution-card:hover { transform:translateY(-2px); box-shadow:0 16px 36px rgba(79,70,229,.12); }
+    .substitution-card input { margin-right:8px; }
+    .substitution-card.disabled { opacity:.55; cursor:not-allowed; background:#f8fafc; }
+</style>
+
+@section Scripts {
+    <script>
+        $('#lecturerSearch').on('input', function () {
+            const value = (this.value || '').toLowerCase().trim();
+            $('.lecturer-option').each(function () {
+                $(this).toggle(!value || ($(this).data('text') || '').includes(value));
+            });
+        });
+    </script>
+}

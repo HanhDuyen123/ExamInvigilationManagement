@@ -1,0 +1,127 @@
+@model ExamInvigilationManagement.Application.DTOs.InvigilatorResponse.InvigilatorAssignmentIndexDto
+
+@{ 
+    ViewData["Title"] = "Xác nhận lịch coi thi";
+    var initialStatus = ViewBag.InitialStatus as string ?? "Chưa phản hồi";
+}
+
+<div class="role-page inv-response-page">
+    <div class="role-header mb-4">
+        <div>
+            <h3 class="title-gradient">Xác nhận lịch coi thi</h3>
+            <div class="subtitle">Xem lịch được phân công, xác nhận tham gia hoặc từ chối kèm lý do</div>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-outline-primary rounded-3" id="viewTable"><i class="bi bi-table"></i> Danh sách</button>
+            <button type="button" class="btn btn-outline-primary rounded-3" id="viewCalendar"><i class="bi bi-calendar-week"></i> Lịch trực quan</button>
+        </div>
+    </div>
+
+    <div id="responseMessage" class="alert d-none mb-4"></div>
+
+    <div class="filter-glass mb-4">
+        @await Html.PartialAsync("_AssignmentSearch")
+    </div>
+
+    <div class="form-card mb-4">
+        <div class="d-flex flex-wrap align-items-center gap-3">
+            <textarea id="responseNote" class="input-modern flex-grow-1" rows="1" placeholder="Ghi chú khi cần, bắt buộc nhập nếu từ chối..."></textarea>
+            <button type="button" id="confirmAssignments" class="btn-submit text-decoration-none"><i class="bi bi-check2-circle"></i> Xác nhận</button>
+            <button type="button" id="rejectAssignments" class="btn btn-danger rounded-3 px-4"><i class="bi bi-x-circle"></i> Từ chối</button>
+        </div>
+    </div>
+
+    <div class="table-modern">
+        <div id="assignmentResult" class="table-inner full-width"></div>
+    </div>
+</div>
+
+<style>
+    .calendar-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; }
+    .calendar-day { border:1px solid rgba(37,99,235,.14); border-radius:18px; background:linear-gradient(180deg,#fff,#f8fbff); overflow:hidden; }
+    .calendar-day-head { padding:14px 16px; background:#eff6ff; font-weight:800; color:#1d4ed8; }
+    .calendar-slot { margin:12px; padding:12px; border-radius:14px; background:white; box-shadow:0 10px 28px rgba(15,23,42,.08); border-left:4px solid #2563eb; }
+    .calendar-slot.rejected { border-left-color:#dc2626; }
+    .calendar-slot.confirmed { border-left-color:#16a34a; }
+    .calendar-meta { color:#64748b; font-size:.88rem; }
+</style>
+
+@section Scripts {
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+    <script>
+        $(function () {
+            let viewMode = 'table';
+            const initialStatus = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(initialStatus));
+
+            function val(selector) { return $(selector).val() || null; }
+            function clearBelow(level) {
+                const map = { year: ['semester', 'period', 'session', 'slot'], semester: ['period', 'session', 'slot'], period: ['session', 'slot'], session: ['slot'], building: ['room'] };
+                (map[level] || []).forEach(k => { const lookup = AdminLookup.get('ir-' + k); if (lookup) lookup.clear(); });
+            }
+            function showMessage(type, message, errors) {
+                const extra = Array.isArray(errors) && errors.length ? '<ul class="mb-0 mt-2">' + errors.map(x => '<li>' + $('<div/>').text(x).html() + '</li>').join('') + '</ul>' : '';
+                $('#responseMessage').removeClass('d-none alert-success alert-danger').addClass(type === 'success' ? 'alert-success' : 'alert-danger').html($('<div/>').text(message).html() + extra);
+                if (window.AppNotify) {
+                    window.AppNotify.show(type, message);
+                }
+            }
+            function loadData(page) {
+                $('#assignmentResult').fadeTo(100, .45);
+                $.get('@Url.Action("GetList", "InvigilatorResponse", new { area = "Lecturer" })', {
+                    page: page || 1,
+                    pageSize: val('#pageSize') || 10,
+                    viewMode,
+                    keyword: val('#keyword'),
+                    subjectId: val('#subjectId'),
+                    buildingId: val('#buildingId'),
+                    roomId: val('#roomId'),
+                    academyYearId: val('#yearId'),
+                    semesterId: val('#semesterId'),
+                    periodId: val('#periodId'),
+                    sessionId: val('#sessionId'),
+                    slotId: val('#slotId'),
+                    status: val('#status'),
+                    fromDate: val('#fromDate'),
+                    toDate: val('#toDate')
+                }, function (html) { $('#assignmentResult').html(html).fadeTo(100, 1); });
+            }
+            window.CrudPage = { loadData };
+            async function submit(status) {
+                const ids = $('.assignment-checkbox:checked').map(function () { return Number(this.value); }).get();
+                const note = $('#responseNote').val();
+                if (!ids.length) { showMessage('error', 'Vui lòng chọn ít nhất một lịch coi thi.'); return; }
+                if (status === 'Từ chối' && !note.trim()) { showMessage('error', 'Vui lòng nhập lý do khi từ chối lịch coi thi.'); return; }
+                const response = await fetch('@Url.Action("Submit", "InvigilatorResponse", new { area = "Lecturer" })', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': $('meta[name="request-verification-token"]').attr('content') || '' },
+                    body: JSON.stringify({ examInvigilatorIds: ids, status, note })
+                });
+                const result = await response.json();
+                if (!response.ok || !result.success) { showMessage('error', result.message || 'Không thể ghi nhận phản hồi.', result.errors); return; }
+                showMessage('success', result.message || 'Đã ghi nhận phản hồi.');
+                $('#responseNote').val('');
+                loadData(1);
+            }
+
+            $(document).on('change', '#selectAllAssignments', function () { $('.assignment-checkbox').prop('checked', this.checked); });
+            $(document).on('click', '.pagination a[data-page]', function(e) { e.preventDefault(); loadData($(this).data('page')); });
+            $('#confirmAssignments').on('click', () => submit('Xác nhận'));
+            $('#rejectAssignments').on('click', () => submit('Từ chối'));
+            $('#viewTable').on('click', function(){ viewMode='table'; loadData(1); });
+            $('#viewCalendar').on('click', function(){ viewMode='calendar'; loadData(1); });
+            $('.assignment-filter').on('input change', function(){ clearTimeout(window.irSearchTimer); window.irSearchTimer = setTimeout(() => loadData(1), 250); });
+            $('#pageSize').on('change', () => loadData(1));
+            if (initialStatus) $('#status').val(initialStatus);
+
+            AdminLookup.create({ key:'ir-subject', input:'#subjectInput', hidden:'#subjectId', menu:'#subjectDropdown', url:'@Url.Action("Subjects", "Lookup", new { area = "" })', valueField:'id', textField:'name', onSelect:function(){loadData(1)}, onClear:function(){loadData(1)} });
+            AdminLookup.create({ key:'ir-building', input:'#buildingInput', hidden:'#buildingId', menu:'#buildingDropdown', url:'@Url.Action("Buildings", "Lookup", new { area = "" })', valueField:'id', textField:'name', onSelect:function(){clearBelow('building');loadData(1)}, onClear:function(){clearBelow('building');loadData(1)} });
+            AdminLookup.create({ key:'ir-room', input:'#roomInput', hidden:'#roomId', menu:'#roomDropdown', url:'@Url.Action("Rooms", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { buildingId: val('#buildingId') }}, beforeSearch:function(){return !!val('#buildingId')}, onSelect:function(){loadData(1)}, onClear:function(){loadData(1)} });
+            AdminLookup.create({ key:'ir-year', input:'#yearInput', hidden:'#yearId', menu:'#yearDropdown', url:'@Url.Action("AcademyYears", "Lookup", new { area = "" })', valueField:'id', textField:'name', onSelect:function(){clearBelow('year');loadData(1)}, onClear:function(){clearBelow('year');loadData(1)} });
+            AdminLookup.create({ key:'ir-semester', input:'#semesterInput', hidden:'#semesterId', menu:'#semesterDropdown', url:'@Url.Action("Semesters", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { academyYearId: val('#yearId') }}, beforeSearch:function(){return !!val('#yearId')}, onSelect:function(){clearBelow('semester');loadData(1)}, onClear:function(){clearBelow('semester');loadData(1)} });
+            AdminLookup.create({ key:'ir-period', input:'#periodInput', hidden:'#periodId', menu:'#periodDropdown', url:'@Url.Action("Periods", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { semesterId: val('#semesterId') }}, beforeSearch:function(){return !!val('#semesterId')}, onSelect:function(){clearBelow('period');loadData(1)}, onClear:function(){clearBelow('period');loadData(1)} });
+            AdminLookup.create({ key:'ir-session', input:'#sessionInput', hidden:'#sessionId', menu:'#sessionDropdown', url:'@Url.Action("Sessions", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { periodId: val('#periodId') }}, beforeSearch:function(){return !!val('#periodId')}, onSelect:function(){clearBelow('session');loadData(1)}, onClear:function(){clearBelow('session');loadData(1)} });
+            AdminLookup.create({ key:'ir-slot', input:'#slotInput', hidden:'#slotId', menu:'#slotDropdown', url:'@Url.Action("Slots", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { sessionId: val('#sessionId') }}, beforeSearch:function(){return !!val('#sessionId')}, onSelect:function(){loadData(1)}, onClear:function(){loadData(1)} });
+            loadData(1);
+        });
+    </script>
+}

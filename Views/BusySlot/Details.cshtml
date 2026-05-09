@@ -1,0 +1,37 @@
+@model ExamInvigilationManagement.Application.DTOs.LecturerBusySlot.LecturerBusySlotDto
+
+@{
+    ViewData["Title"] = "Chi tiết lịch bận";
+}
+
+<div class="form-page wide">
+    <div class="form-header mb-4">
+        <div>
+            <h3 class="title-gradient">Chi tiết lịch bận</h3>
+            <div class="subtitle">Thông tin thời gian giảng viên không thể tham gia coi thi</div>
+        </div>
+        <a asp-action="Index" class="btn-back"><i class="bi bi-arrow-left"></i> Back</a>
+    </div>
+
+    <div class="form-card">
+        <div class="detail-grid">
+            <div class="detail-item"><span>Giảng viên</span><strong>@(Model.UserName ?? "-")</strong></div>
+            <div class="detail-item"><span>Khoa</span><strong>@(Model.FacultyName ?? "-")</strong></div>
+            <div class="detail-item"><span>Năm học</span><strong>@(Model.AcademyYearName ?? "-")</strong></div>
+            <div class="detail-item"><span>Học kỳ</span><strong>@(Model.SemesterName ?? "-")</strong></div>
+            <div class="detail-item"><span>Đợt thi</span><strong>@(Model.ExamPeriodName ?? "-")</strong></div>
+            <div class="detail-item"><span>Buổi thi</span><strong>@(Model.ExamSessionName ?? "-")</strong></div>
+            <div class="detail-item"><span>Ca thi</span><strong>@(Model.ExamSlotName ?? "-")</strong></div>
+            <div class="detail-item"><span>Ngày bận</span><strong>@Model.BusyDate.ToString("dd/MM/yyyy")</strong></div>
+            <div class="detail-item wide"><span>Ghi chú</span><strong>@(string.IsNullOrWhiteSpace(Model.Note) ? "-" : Model.Note)</strong></div>
+        </div>
+
+        <div class="form-actions d-flex justify-content-end gap-2">
+            <a asp-action="Index" class="btn btn-outline-secondary rounded-3 px-4">Quay lại</a>
+            @if (User.IsInRole("Giảng viên"))
+            {
+                <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-submit text-decoration-none"><i class="bi bi-pencil-square"></i> Cập nhật</a>
+            }
+        </div>
+    </div>
+</div>

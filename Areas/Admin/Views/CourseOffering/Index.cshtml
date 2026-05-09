@@ -1,0 +1,59 @@
+﻿@using ExamInvigilationManagement.ViewModel
+@model CrudIndexViewModel
+
+@{
+    ViewData["Title"] = "Quản lý học phần mở";
+}
+
+@await Html.PartialAsync("_CrudIndex", Model)
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+
+    <script>
+        $(function () {
+            CrudPage.init({
+                api: '@Url.Action("GetList", "CourseOffering", new { area = "Admin" })',
+                deleteUrl: '@Url.Action("Delete", "CourseOffering", new { area = "Admin" })',
+                tableId: '#crudTable',
+                filterSelector: '.crud-filter',
+                pageSize: '#pageSize',
+                deleteName: '#deleteName',
+                extraData: function () {
+                    return {
+                        subjectId: $('#subjectId').val()?.trim() || null,
+                        userId: $('#userId').val() || null,
+                        semesterType: $('#semesterType').val(),
+                        className: $('#className').val()?.trim() || null,
+                        groupNumber: $('#groupNumber').val()?.trim() || null
+                    };
+                }
+            });
+
+            AdminLookup.create({
+                key: 'co-subject',
+                input: '#subjectInput',
+                hidden: '#subjectId',
+                menu: '#subjectDropdown',
+                url: '@Url.Action("Search", "Subject", new { area = "Admin" })',
+                valueField: 'id',
+                textField: 'name',
+                onSelect: () => CrudPage.loadData(1),
+                onClear: () => CrudPage.loadData(1)
+            });
+
+            AdminLookup.create({
+                key: 'co-user',
+                input: '#userInput',
+                hidden: '#userId',
+                menu: '#userDropdown',
+                url: '@Url.Action("SearchLecturer", "User", new { area = "Admin" })',
+                valueField: 'id',
+                textField: 'fullName',
+                onSelect: () => CrudPage.loadData(1),
+                onClear: () => CrudPage.loadData(1)
+            });
+        });
+    </script>
+}

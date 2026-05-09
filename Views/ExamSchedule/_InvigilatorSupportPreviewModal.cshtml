@@ -1,0 +1,54 @@
+<div class="modal fade" id="supportRequestPreviewModal" tabindex="-1" aria-labelledby="supportRequestPreviewLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content support-preview-modal">
+            <div class="modal-header">
+                <div>
+                    <h5 class="modal-title" id="supportRequestPreviewLabel">Xem trước đề nghị hỗ trợ CBCT</h5>
+                    <div class="text-muted small" id="supportPreviewSummary">Kiểm tra danh sách trước khi gửi email.</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info mb-3">
+                    File đính kèm sẽ dùng đúng cấu trúc mẫu đề nghị hỗ trợ CBCT. Các ô CBCT còn trống là vị trí đang cần hỗ trợ.
+                </div>
+                <div class="support-template-box mb-3">
+                    <label class="form-label mb-1">Mẫu Excel sử dụng</label>
+                    <input type="file" id="supportTemplateFile" class="form-control" accept=".xlsx" />
+                    <div class="form-text">Nếu không chọn file, hệ thống dùng mẫu mặc định tại <code>wwwroot/templates/MAU DE NGHI HO TRO CBCT.xlsx</code>.</div>
+                </div>
+                <div class="table-responsive support-preview-table-wrap">
+                    <table class="table table-sm table-bordered align-middle support-preview-table">
+                        <thead>
+                            <tr>
+                                <th>STT</th>
+                                <th>Mã HP</th>
+                                <th>Tên học phần</th>
+                                <th>Ngày thi</th>
+                                <th>Buổi</th>
+                                <th>Ca</th>
+                                <th>Giờ</th>
+                                <th>Phòng</th>
+                                <th>Giảng đường</th>
+                                <th>CBGD</th>
+                                <th>CBCT1</th>
+                                <th>CBCT2</th>
+                                <th>Còn thiếu</th>
+                            </tr>
+                        </thead>
+                        <tbody id="supportPreviewRows"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer flex-wrap gap-2">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-outline-primary" id="downloadSupportRequestFile">
+                    <i class="bi bi-download"></i> Tải file xem trước
+                </button>
+                <button type="button" class="btn btn-create" id="sendSupportRequestEmail">
+                    <i class="bi bi-send"></i> Xác nhận gửi email
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

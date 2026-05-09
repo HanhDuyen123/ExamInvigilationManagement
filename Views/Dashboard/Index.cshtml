@@ -1,0 +1,274 @@
+﻿@{
+    ViewData["Title"] = "Dashboard";
+
+    var role = (ViewBag.RoleName as string ?? "").Trim();
+    var fullName = User.Identity?.Name ?? "Người dùng";
+
+    bool isAdmin = role.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+    bool isLecturer = role.Equals("Giảng viên", StringComparison.OrdinalIgnoreCase);
+    bool isSecretary = role.Equals("Thư ký khoa", StringComparison.OrdinalIgnoreCase);
+    bool isDean = role.Equals("Trưởng khoa", StringComparison.OrdinalIgnoreCase);
+
+    Layout = isAdmin ? "_Layout" : "_AcademicLayout";
+}
+
+@if (isAdmin)
+{
+    <div class="container-fluid">
+        <div class="dashboard-hero mb-4">
+            <div class="hero-badge">
+                <i class="bi bi-shield-check"></i>
+                <span>Admin Dashboard</span>
+            </div>
+
+            <h1 class="hero-title">Xin chào, @fullName 👋</h1>
+
+            <p class="hero-desc">
+                Bạn đang đăng nhập với quyền <strong>Admin</strong>. Tại đây bạn có thể theo dõi và quản lý toàn bộ hệ thống.
+            </p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="container-fluid">
+
+        <!-- HERO -->
+        <div class="dashboard-hero mb-4">
+            <div class="hero-badge">
+                <i class="bi bi-stars"></i>
+                <span>Dashboard</span>
+            </div>
+
+            <h1 class="hero-title">Xin chào, @fullName 👋</h1>
+
+            <p class="hero-desc">
+                @if (isLecturer)
+                {
+                    <text>Bạn đang đăng nhập với quyền <strong>Giảng viên</strong>. Theo dõi lịch thi, phân công và thông báo liên quan.</text>
+                }
+                else if (isSecretary)
+                {
+                    <text>Bạn đang đăng nhập với quyền <strong>Thư ký khoa</strong>. Quản lý lịch thi, điều phối và phân công coi thi.</text>
+                }
+                else if (isDean)
+                {
+                    <text>Bạn đang đăng nhập với quyền <strong>Trưởng khoa</strong>. Duyệt lịch thi, theo dõi báo cáo và điều hành nghiệp vụ.</text>
+                }
+                else
+                {
+                    <text>Chào mừng bạn đến với hệ thống quản lý coi thi.</text>
+                }
+            </p>
+        </div>
+
+        <!-- QUICK ACTION -->
+        <div class="section-title mb-3">
+            <h5 class="mb-0 fw-bold">Chức năng chính</h5>
+            <span class="text-muted">Hiển thị theo quyền truy cập</span>
+        </div>
+
+        <div class="dashboard-grid">
+
+            @* ================= GIẢNG VIÊN / THƯ KÝ / TRƯỞNG KHOA GIỮ NGUYÊN AREA CARD ================= *@
+
+            @if (isLecturer || isSecretary || isDean)
+            {
+                <a asp-area="" asp-controller="ExamSchedule" asp-action="Index" class="dash-card">
+                    <div class="card-icon"><i class="bi bi-calendar2-week-fill"></i></div>
+                    <div class="card-title">Lịch thi</div>
+                    <div class="card-desc">Tra cứu lịch thi, trạng thái duyệt và thông tin phòng/ca thi.</div>
+                </a>
+
+                <a asp-area="" asp-controller="Statistics" asp-action="Index" class="dash-card stats-card">
+                    <div class="card-icon"><i class="bi bi-bar-chart-line-fill"></i></div>
+                    <div class="card-title">Thống kê</div>
+                    <div class="card-desc">Theo dõi tổng quan lịch thi, phân công, phản hồi và hiệu suất theo phạm vi quyền của bạn.</div>
+                </a>
+            }
+
+            @if (isLecturer)
+            {
+                <a asp-area="Lecturer" asp-controller="InvigilatorResponse" asp-action="Index" asp-route-status="Chưa phản hồi" class="dash-card">
+                    <div class="card-icon"><i class="bi bi-check2-square"></i></div>
+                    <div class="card-title">Xác nhận coi thi</div>
+                    <div class="card-desc">Xem các lịch được phân công, ưu tiên lịch chưa phản hồi để xác nhận hoặc từ chối kịp thời.</div>
+                </a>
+            }
+
+            @if (isDean || isSecretary)
+            {
+                <a asp-area="Secretary" asp-controller="ExamScheduleApproval" asp-action="Index" class="dash-card">
+                    <div class="card-icon"><i class="bi bi-check2-circle"></i></div>
+                    <div class="card-title">Duyệt lịch thi</div>
+                    <div class="card-desc">Kiểm tra điều kiện, duyệt hoặc từ chối các lịch cần xử lý.</div>
+                </a>
+            }
+
+            @if (isSecretary)
+            {
+                <a asp-area="Secretary" asp-controller="AutoAssignment" asp-action="Index" class="dash-card">
+                    <div class="card-icon"><i class="bi bi-magic"></i></div>
+                    <div class="card-title">Tự động phân công</div>
+                    <div class="card-desc">Đề xuất giám thị theo dữ liệu lịch bận và điều kiện của khoa.</div>
+                </a>
+
+                <a asp-area="Secretary" asp-controller="InvigilatorSubstitution" asp-action="Index" class="dash-card">
+                    <div class="card-icon"><i class="bi bi-arrow-left-right"></i></div>
+                    <div class="card-title">Đề xuất thay thế</div>
+                    <div class="card-desc">Theo dõi, xử lý các đề xuất thay thế giám thị sau khi giảng viên từ chối.</div>
+                </a>
+            }
+
+            @if (isLecturer || isSecretary || isDean)
+            {
+                <a asp-area="" asp-controller="BusySlot" asp-action="Index" class="dash-card">
+                    <div class="card-icon"><i class="bi bi-calendar-x-fill"></i></div>
+                    <div class="card-title">Lịch bận</div>
+                    <div class="card-desc">Quản lý thời gian bận để hệ thống phân công chính xác hơn.</div>
+                </a>
+
+                <a asp-area="" asp-controller="Notification" asp-action="Index" class="dash-card">
+                    <div class="card-icon"><i class="bi bi-bell-fill"></i></div>
+                    <div class="card-title">Thông báo</div>
+                    <div class="card-desc">Theo dõi thay đổi mới nhất không cần reload trang.</div>
+                </a>
+
+                <a asp-area="" asp-controller="Profile" asp-action="Index" class="dash-card">
+                    <div class="card-icon"><i class="bi bi-person-badge-fill"></i></div>
+                    <div class="card-title">Hồ sơ cá nhân</div>
+                    <div class="card-desc">Xem và cập nhật thông tin tài khoản, hồ sơ cá nhân và bảo mật đăng nhập.</div>
+                </a>
+            }
+
+            @if (!isAdmin && !isLecturer && !isSecretary && !isDean)
+            {
+                <div class="alert alert-warning rounded-4">
+                    Role chưa xác định.
+                </div>
+            }
+
+        </div>
+    </div>
+}
+
+@if (isAdmin)
+{
+    <div class="container-fluid">
+        <div class="dashboard-grid">
+            <a asp-area="" asp-controller="Statistics" asp-action="Index" class="dash-card stats-card">
+                <div class="card-icon"><i class="bi bi-bar-chart-line-fill"></i></div>
+                <div class="card-title">Thống kê hệ thống</div>
+                <div class="card-desc">Quan sát tổng quan lịch thi, độ phủ phân công, phản hồi và hiệu suất vận hành toàn hệ thống.</div>
+            </a>
+        </div>
+    </div>
+}
+
+<style>
+    .dashboard-hero {
+        background: rgba(255,255,255,.82);
+        border: 1px solid rgba(79,70,229,.08);
+        border-radius: 24px;
+        padding: 28px;
+        box-shadow: 0 18px 48px rgba(15,23,42,.06);
+        backdrop-filter: blur(14px);
+    }
+
+    .hero-badge {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: #eef2ff;
+        color: #4f46e5;
+        font-weight: 600;
+        font-size: .85rem;
+        margin-bottom: 14px;
+    }
+
+    .hero-title {
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 10px;
+    }
+
+    .hero-desc {
+        color: #64748b;
+        margin: 0;
+        line-height: 1.7;
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
+        gap: 18px;
+    }
+
+    .dash-card {
+        background: rgba(255,255,255,.88);
+        border: 1px solid rgba(79,70,229,.08);
+        border-radius: 22px;
+        padding: 20px;
+        min-height: 200px;
+        text-decoration: none;
+        color: #1e293b;
+        transition: .25s ease;
+        box-shadow: 0 12px 30px rgba(15,23,42,.04);
+    }
+
+        .dash-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 24px 60px rgba(79,70,229,.12);
+            border-color: rgba(79,70,229,.18);
+            color: #1e293b;
+        }
+
+    .card-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        font-size: 1.8rem;
+        color: #4f46e5;
+        background: linear-gradient(135deg,#eef2ff,#ffffff);
+        margin-bottom: 16px;
+    }
+
+    .card-title {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+
+    .card-desc {
+        color: #64748b;
+        line-height: 1.6;
+        font-size: .92rem;
+    }
+
+    @@media (max-width: 575.98px) {
+        .dashboard-hero {
+            padding: 22px;
+            border-radius: 20px;
+        }
+
+        .hero-title {
+            font-size: 1.55rem;
+        }
+
+        .dash-card {
+            min-height: 180px;
+            padding: 16px;
+        }
+    }
+</style>

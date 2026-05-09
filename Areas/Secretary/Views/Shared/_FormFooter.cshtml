@@ -1,0 +1,10 @@
+﻿@{
+    var isEdit = ViewContext.RouteData.Values["action"]?.ToString().ToLower() == "edit";
+}
+
+<div class="form-actions">
+    <button type="submit" class="btn-submit @(isEdit ? "edit" : "")">
+        <i class="bi @(isEdit ? "bi-save" : "bi-check-lg")"></i>
+        @(isEdit ? "Update" : "Save")
+    </button>
+</div>

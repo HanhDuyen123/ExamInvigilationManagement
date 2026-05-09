@@ -1,0 +1,500 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\views\\examschedule\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:views\\examschedule\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\views\\examschedule\\_examscheduletable.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:views\\examschedule\\_examscheduletable.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\infrastructure\\services\\emailservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:infrastructure\\services\\emailservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\areas\\admin\\views\\shared\\_crudindex.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:areas\\admin\\views\\shared\\_crudindex.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\views\\shared\\_deletemodal.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:views\\shared\\_deletemodal.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\views\\shared\\_academiclayout.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:views\\shared\\_academiclayout.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\controllers\\examschedulecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:controllers\\examschedulecontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:appsettings.json||{90A6B3A7-C1A3-4009-A288-E2FF89E96FA0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\areas\\secretary\\controllers\\autoassignmentcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:areas\\secretary\\controllers\\autoassignmentcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\application\\services\\autoassignmentservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:application\\services\\autoassignmentservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\infrastructure\\repositories\\autoassignmentrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:infrastructure\\repositories\\autoassignmentrepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\application\\dtos\\autoassign\\autoassignscheduledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:application\\dtos\\autoassign\\autoassignscheduledto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\application\\dtos\\autoassign\\autoassignresultdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:application\\dtos\\autoassign\\autoassignresultdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\application\\dtos\\autoassign\\autoassignrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:application\\dtos\\autoassign\\autoassignrequestdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\application\\dtos\\autoassign\\autoassignplandto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:application\\dtos\\autoassign\\autoassignplandto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\application\\dtos\\autoassign\\autoassignlecturerdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:application\\dtos\\autoassign\\autoassignlecturerdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\application\\dtos\\autoassign\\autoassignexistingassignmentdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:application\\dtos\\autoassign\\autoassignexistingassignmentdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\application\\dtos\\autoassign\\autoassignbusyslotdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:application\\dtos\\autoassign\\autoassignbusyslotdto.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\infrastructure\\repositories\\examschedulerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:infrastructure\\repositories\\examschedulerepository.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\views\\examschedule\\_examschedulesearch.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:views\\examschedule\\_examschedulesearch.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\common\\helpers\\examschedulestatushelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:common\\helpers\\examschedulestatushelper.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\application\\services\\examscheduleservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:application\\services\\examscheduleservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\views\\statistics\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:views\\statistics\\index.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\controllers\\statisticscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:controllers\\statisticscontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\views\\shared\\_crudindex.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:views\\shared\\_crudindex.cshtml||{40D31677-CBC0-4297-A9EF-89D907823A98}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\wwwroot\\js\\admin_lookup.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:wwwroot\\js\\admin_lookup.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\wwwroot\\js\\admin_crud.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:wwwroot\\js\\admin_crud.js||{14D17961-FE51-464D-9111-C4AF11D7D99A}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|c:\\users\\duyentth\\study\\datn\\examinvigilationmanagement\\wwwroot\\css\\admin_index.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
+      "RelativeMoniker": "D:0:0:{C04FF2BA-4F1A-4F30-B55A-AF05AA863403}|ExamInvigilationManagement.csproj|solutionrelative:wwwroot\\css\\admin_index.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 1,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedHeight": 16,
+          "SelectedChildIndex": 4,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{40ea2e6b-2121-4bb8-a43e-c83c04b51041}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{3ae79031-e1bc-11d0-8f78-00a0c9110057}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "EmailService.cs",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Infrastructure\\Services\\EmailService.cs",
+              "RelativeDocumentMoniker": "Infrastructure\\Services\\EmailService.cs",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Infrastructure\\Services\\EmailService.cs",
+              "RelativeToolTip": "Infrastructure\\Services\\EmailService.cs",
+              "ViewState": "AgIAACoAAAAAAAAAAAAowDgAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-08T08:12:19.464Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 5,
+              "Title": "_AcademicLayout.cshtml",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Views\\Shared\\_AcademicLayout.cshtml",
+              "RelativeDocumentMoniker": "Views\\Shared\\_AcademicLayout.cshtml",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Views\\Shared\\_AcademicLayout.cshtml",
+              "RelativeToolTip": "Views\\Shared\\_AcademicLayout.cshtml",
+              "ViewState": "AgIAANUCAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-05-08T05:06:48.497Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Index.cshtml",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Views\\ExamSchedule\\Index.cshtml",
+              "RelativeDocumentMoniker": "Views\\ExamSchedule\\Index.cshtml",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Views\\ExamSchedule\\Index.cshtml",
+              "RelativeToolTip": "Views\\ExamSchedule\\Index.cshtml",
+              "ViewState": "AgIAAHsAAAAAAAAAAAAAAIMAAAAwAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-05-08T05:06:10.536Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "_ExamScheduleTable.cshtml",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Views\\ExamSchedule\\_ExamScheduleTable.cshtml",
+              "RelativeDocumentMoniker": "Views\\ExamSchedule\\_ExamScheduleTable.cshtml",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Views\\ExamSchedule\\_ExamScheduleTable.cshtml",
+              "RelativeToolTip": "Views\\ExamSchedule\\_ExamScheduleTable.cshtml",
+              "ViewState": "AgIAAAQAAAAAAAAAAAAQwBEAAAAfAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-05-06T06:35:08.164Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "_DeleteModal.cshtml",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Views\\Shared\\_DeleteModal.cshtml",
+              "RelativeDocumentMoniker": "Views\\Shared\\_DeleteModal.cshtml",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Views\\Shared\\_DeleteModal.cshtml",
+              "RelativeToolTip": "Views\\Shared\\_DeleteModal.cshtml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-05-08T05:07:00.081Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "_CrudIndex.cshtml",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Areas\\Admin\\Views\\Shared\\_CrudIndex.cshtml",
+              "RelativeDocumentMoniker": "Areas\\Admin\\Views\\Shared\\_CrudIndex.cshtml",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Areas\\Admin\\Views\\Shared\\_CrudIndex.cshtml",
+              "RelativeToolTip": "Areas\\Admin\\Views\\Shared\\_CrudIndex.cshtml",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-05-08T05:07:45.382Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "appsettings.json",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\appsettings.json",
+              "RelativeDocumentMoniker": "appsettings.json",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\appsettings.json",
+              "RelativeToolTip": "appsettings.json",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABMAAABAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001642|",
+              "WhenOpened": "2026-05-08T05:03:37.312Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 9,
+              "Title": "AutoAssignmentService.cs",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\Services\\AutoAssignmentService.cs",
+              "RelativeDocumentMoniker": "Application\\Services\\AutoAssignmentService.cs",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\Services\\AutoAssignmentService.cs",
+              "RelativeToolTip": "Application\\Services\\AutoAssignmentService.cs",
+              "ViewState": "AgIAAN0BAAAAAAAAAADwv/cBAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-06T02:26:16.231Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 8,
+              "Title": "AutoAssignmentController.cs",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Areas\\Secretary\\Controllers\\AutoAssignmentController.cs",
+              "RelativeDocumentMoniker": "Areas\\Secretary\\Controllers\\AutoAssignmentController.cs",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Areas\\Secretary\\Controllers\\AutoAssignmentController.cs",
+              "RelativeToolTip": "Areas\\Secretary\\Controllers\\AutoAssignmentController.cs",
+              "ViewState": "AgIAABsAAAAAAAAAAAAywCoAAAANAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-06T02:26:33.262Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 6,
+              "Title": "ExamScheduleController.cs",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Controllers\\ExamScheduleController.cs",
+              "RelativeDocumentMoniker": "Controllers\\ExamScheduleController.cs",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Controllers\\ExamScheduleController.cs",
+              "RelativeToolTip": "Controllers\\ExamScheduleController.cs",
+              "ViewState": "AgIAAE8BAAAAAAAAAAAwwFYBAAA6AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-06T06:34:16.967Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 10,
+              "Title": "AutoAssignmentRepository.cs",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Infrastructure\\Repositories\\AutoAssignmentRepository.cs",
+              "RelativeDocumentMoniker": "Infrastructure\\Repositories\\AutoAssignmentRepository.cs",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Infrastructure\\Repositories\\AutoAssignmentRepository.cs",
+              "RelativeToolTip": "Infrastructure\\Repositories\\AutoAssignmentRepository.cs",
+              "ViewState": "AgIAALUAAAAAAAAAAAAiwNEAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-06T02:26:06.246Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "AutoAssignScheduleDto.cs",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\DTOs\\AutoAssign\\AutoAssignScheduleDto.cs",
+              "RelativeDocumentMoniker": "Application\\DTOs\\AutoAssign\\AutoAssignScheduleDto.cs",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\DTOs\\AutoAssign\\AutoAssignScheduleDto.cs",
+              "RelativeToolTip": "Application\\DTOs\\AutoAssign\\AutoAssignScheduleDto.cs",
+              "ViewState": "AgIAAAsAAAAAAAAAAAAgwB0AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-06T02:25:55.131Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 12,
+              "Title": "AutoAssignResultDto.cs",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\DTOs\\AutoAssign\\AutoAssignResultDto.cs",
+              "RelativeDocumentMoniker": "Application\\DTOs\\AutoAssign\\AutoAssignResultDto.cs",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\DTOs\\AutoAssign\\AutoAssignResultDto.cs",
+              "RelativeToolTip": "Application\\DTOs\\AutoAssign\\AutoAssignResultDto.cs",
+              "ViewState": "AgIAABkAAAAAAAAAAAA5wCwAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-06T02:25:44.834Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 13,
+              "Title": "AutoAssignRequestDto.cs",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\DTOs\\AutoAssign\\AutoAssignRequestDto.cs",
+              "RelativeDocumentMoniker": "Application\\DTOs\\AutoAssign\\AutoAssignRequestDto.cs",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\DTOs\\AutoAssign\\AutoAssignRequestDto.cs",
+              "RelativeToolTip": "Application\\DTOs\\AutoAssign\\AutoAssignRequestDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA8AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-06T02:25:38.729Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "AutoAssignPlanDto.cs",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\DTOs\\AutoAssign\\AutoAssignPlanDto.cs",
+              "RelativeDocumentMoniker": "Application\\DTOs\\AutoAssign\\AutoAssignPlanDto.cs",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\DTOs\\AutoAssign\\AutoAssignPlanDto.cs",
+              "RelativeToolTip": "Application\\DTOs\\AutoAssign\\AutoAssignPlanDto.cs",
+              "ViewState": "AgIAAAYAAAAAAAAAAAAowBUAAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-06T02:25:27.544Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "AutoAssignLecturerDto.cs",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\DTOs\\AutoAssign\\AutoAssignLecturerDto.cs",
+              "RelativeDocumentMoniker": "Application\\DTOs\\AutoAssign\\AutoAssignLecturerDto.cs",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\DTOs\\AutoAssign\\AutoAssignLecturerDto.cs",
+              "RelativeToolTip": "Application\\DTOs\\AutoAssign\\AutoAssignLecturerDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAA4AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-06T02:25:19.547Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 16,
+              "Title": "AutoAssignExistingAssignmentDto.cs",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\DTOs\\AutoAssign\\AutoAssignExistingAssignmentDto.cs",
+              "RelativeDocumentMoniker": "Application\\DTOs\\AutoAssign\\AutoAssignExistingAssignmentDto.cs",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\DTOs\\AutoAssign\\AutoAssignExistingAssignmentDto.cs",
+              "RelativeToolTip": "Application\\DTOs\\AutoAssign\\AutoAssignExistingAssignmentDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-07T17:20:16.231Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 20,
+              "Title": "ExamScheduleStatusHelper.cs",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Common\\Helpers\\ExamScheduleStatusHelper.cs",
+              "RelativeDocumentMoniker": "Common\\Helpers\\ExamScheduleStatusHelper.cs",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Common\\Helpers\\ExamScheduleStatusHelper.cs",
+              "RelativeToolTip": "Common\\Helpers\\ExamScheduleStatusHelper.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-06T06:38:12.474Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 18,
+              "Title": "ExamScheduleRepository.cs",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Infrastructure\\Repositories\\ExamScheduleRepository.cs",
+              "RelativeDocumentMoniker": "Infrastructure\\Repositories\\ExamScheduleRepository.cs",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Infrastructure\\Repositories\\ExamScheduleRepository.cs",
+              "RelativeToolTip": "Infrastructure\\Repositories\\ExamScheduleRepository.cs",
+              "ViewState": "AgIAAEMAAAAAAAAAAAD4v6YBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-06T06:29:36.212Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 17,
+              "Title": "AutoAssignBusySlotDto.cs",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\DTOs\\AutoAssign\\AutoAssignBusySlotDto.cs",
+              "RelativeDocumentMoniker": "Application\\DTOs\\AutoAssign\\AutoAssignBusySlotDto.cs",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\DTOs\\AutoAssign\\AutoAssignBusySlotDto.cs",
+              "RelativeToolTip": "Application\\DTOs\\AutoAssign\\AutoAssignBusySlotDto.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-06T02:25:03.147Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 19,
+              "Title": "_ExamScheduleSearch.cshtml",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Views\\ExamSchedule\\_ExamScheduleSearch.cshtml",
+              "RelativeDocumentMoniker": "Views\\ExamSchedule\\_ExamScheduleSearch.cshtml",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Views\\ExamSchedule\\_ExamScheduleSearch.cshtml",
+              "RelativeToolTip": "Views\\ExamSchedule\\_ExamScheduleSearch.cshtml",
+              "ViewState": "AgIAAF4AAAAAAAAAAAAQwHEAAAAQAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-05-06T06:34:58.076Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 21,
+              "Title": "ExamScheduleService.cs",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\Services\\ExamScheduleService.cs",
+              "RelativeDocumentMoniker": "Application\\Services\\ExamScheduleService.cs",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Application\\Services\\ExamScheduleService.cs",
+              "RelativeToolTip": "Application\\Services\\ExamScheduleService.cs",
+              "ViewState": "AgIAAGwAAAAAAAAAAAAuwI4AAAABAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-06T06:23:38.675Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
+              "Title": "Index.cshtml",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Views\\Statistics\\Index.cshtml",
+              "RelativeDocumentMoniker": "Views\\Statistics\\Index.cshtml",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Views\\Statistics\\Index.cshtml",
+              "RelativeToolTip": "Views\\Statistics\\Index.cshtml",
+              "ViewState": "AgIAAPcAAAAAAAAAAAAlwFwBAAAoAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-05-05T15:59:16.678Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 23,
+              "Title": "StatisticsController.cs",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Controllers\\StatisticsController.cs",
+              "RelativeDocumentMoniker": "Controllers\\StatisticsController.cs",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Controllers\\StatisticsController.cs",
+              "RelativeToolTip": "Controllers\\StatisticsController.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-05-05T15:59:02.74Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 25,
+              "Title": "admin_lookup.js",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\wwwroot\\js\\admin_lookup.js",
+              "RelativeDocumentMoniker": "wwwroot\\js\\admin_lookup.js",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\wwwroot\\js\\admin_lookup.js",
+              "RelativeToolTip": "wwwroot\\js\\admin_lookup.js",
+              "ViewState": "AgIAABQAAAAAAAAAAAAQwAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
+              "WhenOpened": "2026-05-05T03:24:03.168Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 26,
+              "Title": "admin_crud.js",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\wwwroot\\js\\admin_crud.js",
+              "RelativeDocumentMoniker": "wwwroot\\js\\admin_crud.js",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\wwwroot\\js\\admin_crud.js",
+              "RelativeToolTip": "wwwroot\\js\\admin_crud.js",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001646|",
+              "WhenOpened": "2026-05-05T03:23:54.787Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 27,
+              "Title": "admin_index.css",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\wwwroot\\css\\admin_index.css",
+              "RelativeDocumentMoniker": "wwwroot\\css\\admin_index.css",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\wwwroot\\css\\admin_index.css",
+              "RelativeToolTip": "wwwroot\\css\\admin_index.css",
+              "ViewState": "AgIAAJwBAAAAAAAAAAAowMEBAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
+              "WhenOpened": "2026-05-05T03:14:29.231Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 24,
+              "Title": "_CrudIndex.cshtml",
+              "DocumentMoniker": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Views\\Shared\\_CrudIndex.cshtml",
+              "RelativeDocumentMoniker": "Views\\Shared\\_CrudIndex.cshtml",
+              "ToolTip": "C:\\Users\\duyentth\\Study\\DATN\\ExamInvigilationManagement\\Views\\Shared\\_CrudIndex.cshtml",
+              "RelativeToolTip": "Views\\Shared\\_CrudIndex.cshtml",
+              "ViewState": "AgIAAFQAAAAAAAAAAAAIwHcAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000759|",
+              "WhenOpened": "2026-05-05T03:14:07.751Z"
+            }
+          ]
+        },
+        {
+          "DockedHeight": 4,
+          "SelectedChildIndex": -1,
+          "Children": [
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{d78612c7-9962-4b83-95d9-268046dad23a}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{34e76e81-ee4a-11d0-ae2e-00a0c90fffc3}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:1:0:{d212f56b-c48a-434c-a121-1c5d80b59b9f}"
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{6324226f-61b6-4f28-92ee-18d4b5fe1e48}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

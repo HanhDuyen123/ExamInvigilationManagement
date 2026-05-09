@@ -1,0 +1,414 @@
+﻿@model ExamInvigilationManagement.Application.DTOs.ExamSchedule.ExamScheduleDto
+@using ExamInvigilationManagement.ViewModel
+@using System.Text.Json
+
+@{
+    ViewData["Title"] = "Edit Exam Schedule";
+}
+
+<form asp-action="Edit" method="post">
+    <div class="form-page">
+        @await Html.PartialAsync("_FormHeader", "Cập nhật lịch thi")
+
+        <div class="form-card">
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="OfferingAcademyYearId" id="offeringAcademyYearId" />
+            <input type="hidden" asp-for="OfferingSemesterId" id="offeringSemesterId" />
+
+            <div class="form-group">
+                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+           {
+               Label = "Học phần mở",
+               InputId = "offeringInput",
+               HiddenId = "offeringId",
+               HiddenName = "OfferingId",
+               MenuId = "offeringDropdown",
+               Placeholder = "Chọn học phần mở...",
+               InputClass = "input-modern",
+               InitialValue = Model.OfferingId?.ToString(),
+               InitialText = string.Join(" - ", new[]
+                {
+                Model.SubjectId,
+                Model.SubjectName,
+                Model.UserName,
+                Model.AcademyYearName,
+                Model.SemesterName,
+                Model.ClassName,
+                Model.GroupNumber
+                }.Where(x => !string.IsNullOrWhiteSpace(x)))
+           })
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">Mã môn</label>
+                    <input asp-for="SubjectId" class="input-modern" readonly />
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">Môn học</label>
+                    <input asp-for="SubjectName" class="input-modern" readonly />
+                </div>
+
+                <div class="col-md-4">
+                    <label class="form-label">Giảng viên</label>
+                    <input asp-for="UserName" class="input-modern" readonly />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Năm học</label>
+                    <input asp-for="AcademyYearName" class="input-modern" readonly />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Học kỳ</label>
+                    <input asp-for="SemesterName" class="input-modern" readonly />
+                </div>
+
+                <div class="col-md-8">
+                    <label class="form-label">Tên lớp học phần</label>
+                    <input asp-for="ClassName" class="input-modern" readonly />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Nhóm học phần</label>
+                    <input asp-for="GroupNumber" class="input-modern" readonly />
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-md-4">
+                    @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+               {
+                   Label = "Đợt thi",
+                   InputId = "periodInput",
+                   HiddenId = "periodId",
+                   HiddenName = "PeriodId",
+                   MenuId = "periodDropdown",
+                   Placeholder = "Chọn đợt thi...",
+                   InputClass = "input-modern",
+                   InitialValue = Model.PeriodId?.ToString(),
+                   InitialText = Model.PeriodName ?? ""
+               })
+                </div>
+
+                <div class="col-md-4">
+                    @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+               {
+                   Label = "Buổi thi",
+                   InputId = "sessionInput",
+                   HiddenId = "sessionId",
+                   HiddenName = "SessionId",
+                   MenuId = "sessionDropdown",
+                   Placeholder = "Chọn buổi thi...",
+                   InputClass = "input-modern",
+                   InitialValue = Model.SessionId?.ToString(),
+                   InitialText = Model.SessionName ?? ""
+               })
+                </div>
+
+                <div class="col-md-4">
+                    @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+               {
+                   Label = "Ca thi",
+                   InputId = "slotInput",
+                   HiddenId = "slotId",
+                   HiddenName = "SlotId",
+                   MenuId = "slotDropdown",
+                   Placeholder = "Chọn ca thi...",
+                   InputClass = "input-modern",
+                   InitialValue = Model.SlotId?.ToString(),
+                   InitialText = Model.SlotName ?? ""
+               })
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Ngày thi</label>
+                <input asp-for="ExamDate" type="date" class="input-modern" />
+                <span asp-validation-for="ExamDate" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+           {
+               Label = "Giảng đường",
+               InputId = "buildingInput",
+               HiddenId = "buildingId",
+               HiddenName = "BuildingId",
+               MenuId = "buildingDropdown",
+               Placeholder = "Chọn giảng đường...",
+               InputClass = "input-modern",
+               InitialValue = Model.BuildingId ?? "",
+               InitialText = Model.BuildingName ?? ""
+           })
+            </div>
+
+            <div class="form-group">
+                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+           {
+               Label = "Phòng thi",
+               InputId = "roomInput",
+               HiddenId = "roomId",
+               HiddenName = "RoomId",
+               MenuId = "roomDropdown",
+               Placeholder = "Chọn phòng thi...",
+               InputClass = "input-modern",
+               InitialValue = Model.RoomId?.ToString(),
+               InitialText = string.Join(".", new[]
+                {
+                Model.BuildingId,
+                Model.RoomName
+                }.Where(x => !string.IsNullOrWhiteSpace(x)))
+           })
+            </div>
+
+            <div class="form-group">
+                <label>Trạng thái</label>
+                <select asp-for="Status" class="select-modern">
+                    <option value="Chờ phân công">Chờ phân công</option>
+                    <option value="Thiếu giám thị">Thiếu giám thị</option>
+                    <option value="Chờ duyệt">Chờ duyệt</option>
+                    <option value="Đã duyệt">Đã duyệt</option>
+                    <option value="Từ chối duyệt">Từ chối duyệt</option>
+                </select>
+                <span asp-validation-for="Status" class="text-danger"></span>
+            </div>
+
+            @await Html.PartialAsync("_FormFooter")
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+    <script>
+        $(function () {
+            function clearLookup(key) {
+                const lookup = AdminLookup.get(key);
+                if (lookup) lookup.clear();
+            }
+
+            function clearOfferingSummary() {
+                $('#SubjectId').val('');
+                $('#SubjectName').val('');
+                $('#UserName').val('');
+                $('#AcademyYearName').val('');
+                $('#SemesterName').val('');
+                $('#ClassName').val('');
+                $('#GroupNumber').val('');
+                $('#offeringAcademyYearId').val('');
+                $('#offeringSemesterId').val('');
+            }
+
+            function clearSlotSummary() {
+                $('#PeriodName').val('');
+                $('#SessionName').val('');
+                $('#SlotName').val('');
+            }
+
+            function fillOfferingSummary(item) {
+                if (!item) return;
+
+                $('#SubjectId').val(item.subjectId || '');
+                $('#SubjectName').val(item.subjectName || '');
+                $('#UserName').val(item.userName || '');
+                $('#AcademyYearName').val(item.academyYearName || '');
+                $('#SemesterName').val(item.semesterName || '');
+                $('#ClassName').val(item.className || '');
+                $('#GroupNumber').val(item.groupNumber || '');
+                $('#offeringAcademyYearId').val(item.academyYearId || '');
+                $('#offeringSemesterId').val(item.semesterId || '');
+            }
+
+            function fillSlotSummary(item) {
+                if (!item) return;
+
+                $('#PeriodName').val(item.periodName || '');
+                $('#SessionName').val(item.sessionName || '');
+                $('#SlotName').val(item.slotName || '');
+            }
+
+            function syncRoomState() {
+                const hasBuilding = !!$('#buildingId').val();
+
+                $('#roomInput').prop('disabled', !hasBuilding);
+                $('#roomInput').attr(
+                    'placeholder',
+                    hasBuilding ? 'Chọn phòng thi...' : 'Vui lòng chọn giảng đường trước'
+                );
+            }
+
+            AdminLookup.create({
+                key: 'offering-edit',
+                input: '#offeringInput',
+                hidden: '#offeringId',
+                menu: '#offeringDropdown',
+                url: '@Url.Action("SearchForExamSchedule", "CourseOffering", new { area = "Admin" })',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
+                initialValue: '@Model.OfferingId',
+                initialText: @Html.Raw(JsonSerializer.Serialize(string.Join(" - ", new[]
+            {
+                Model.SubjectId,
+                Model.SubjectName,
+                Model.UserName,
+                Model.AcademyYearName,
+                Model.SemesterName,
+                Model.ClassName,
+                Model.GroupNumber
+            }.Where(x => !string.IsNullOrWhiteSpace(x))))),
+                onSelect: function (ctx) {
+                    fillOfferingSummary(ctx.item);
+                    clearLookup('period-edit');
+                    clearLookup('session-edit');
+                    clearLookup('slot-edit');
+                    clearSlotSummary();
+                },
+                onClear: function () {
+                    clearOfferingSummary();
+                    clearLookup('period-edit');
+                    clearLookup('session-edit');
+                    clearLookup('slot-edit');
+                    clearSlotSummary();
+                }
+            });
+
+            AdminLookup.create({
+                key: 'period-edit',
+                input: '#periodInput',
+                hidden: '#periodId',
+                menu: '#periodDropdown',
+                url: '@Url.Action("GetBySemester", "Period", new { area = "Admin" })',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return { semesterId: $('#offeringSemesterId').val() || null };
+                },
+                valueField: 'id',
+                textField: 'name',
+                initialValue: '@Model.PeriodId',
+                initialText: @Html.Raw(JsonSerializer.Serialize(Model.PeriodName ?? "")),
+                beforeSearch: function () {
+                    return !!$('#offeringSemesterId').val();
+                },
+                onSelect: function () {
+                    clearLookup('session-edit');
+                    clearLookup('slot-edit');
+                    clearSlotSummary();
+                },
+                onClear: function () {
+                    clearLookup('session-edit');
+                    clearLookup('slot-edit');
+                    clearSlotSummary();
+                }
+            });
+
+            AdminLookup.create({
+                key: 'session-edit',
+                input: '#sessionInput',
+                hidden: '#sessionId',
+                menu: '#sessionDropdown',
+                url: '@Url.Action("GetByPeriod", "Session", new { area = "Admin" })',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return { periodId: $('#periodId').val() || null };
+                },
+                valueField: 'id',
+                textField: 'name',
+                initialValue: '@Model.SessionId',
+                initialText: @Html.Raw(JsonSerializer.Serialize(Model.SessionName ?? "")),
+                beforeSearch: function () {
+                    return !!$('#periodId').val();
+                },
+                onSelect: function () {
+                    clearLookup('slot-edit');
+                    clearSlotSummary();
+                },
+                onClear: function () {
+                    clearLookup('slot-edit');
+                    clearSlotSummary();
+                }
+            });
+
+            AdminLookup.create({
+                key: 'slot-edit',
+                input: '#slotInput',
+                hidden: '#slotId',
+                menu: '#slotDropdown',
+                url: '@Url.Action("GetBySession", "Slot", new { area = "Admin" })',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return { sessionId: $('#sessionId').val() || null };
+                },
+                valueField: 'id',
+                textField: 'name',
+                initialValue: '@Model.SlotId',
+                initialText: @Html.Raw(JsonSerializer.Serialize(Model.SlotName ?? "")),
+                beforeSearch: function () {
+                    return !!$('#sessionId').val();
+                },
+                onSelect: function (ctx) {
+                    fillSlotSummary(ctx.item);
+                },
+                onClear: function () {
+                    clearSlotSummary();
+                }
+            });
+
+            AdminLookup.create({
+                key: 'building-edit',
+                input: '#buildingInput',
+                hidden: '#buildingId',
+                menu: '#buildingDropdown',
+                url: '@Url.Action("Search", "Building", new { area = "Admin" })',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
+                initialValue: @Html.Raw(JsonSerializer.Serialize(Model.BuildingId ?? "")),
+                initialText: @Html.Raw(JsonSerializer.Serialize(Model.BuildingName ?? "")),
+                onSelect: function (ctx) {
+                    $('#buildingId').val(ctx.value || (ctx.item && ctx.item.id) || '');
+                    const roomLookup = AdminLookup.get('room-edit');
+                    if (roomLookup) roomLookup.clear();
+                    syncRoomState();
+                },
+                onClear: function () {
+                    $('#buildingId').val('');
+                    const roomLookup = AdminLookup.get('room-edit');
+                    if (roomLookup) roomLookup.clear();
+                    syncRoomState();
+                }
+            });
+
+            AdminLookup.create({
+                key: 'room-edit',
+                input: '#roomInput',
+                hidden: '#roomId',
+                menu: '#roomDropdown',
+                url: '@Url.Action("SearchByBuilding", "Room", new { area = "Admin" })',
+                queryParam: 'keyword',
+                extraParams: function () {
+                    return { buildingId: $('#buildingId').val() || null };
+                },
+                valueField: 'id',
+                textField: function (item) {
+                    return (item.buildingId || '') + '.' + (item.name || '');
+                },
+                searchTransform: function (keyword) {
+                    const text = (keyword || '').trim();
+                    return text.includes('.') ? text.split('.').pop() : text;
+                },
+                initialValue: '@Model.RoomId',
+                initialText: @Html.Raw(JsonSerializer.Serialize(
+        string.Join(".", new[] { Model.BuildingId, Model.RoomName }.Where(x => !string.IsNullOrWhiteSpace(x)))
+            )),
+                beforeSearch: function () {
+                    if (!$('#buildingId').val()) {
+                        syncRoomState();
+                        return false;
+                    }
+                    return true;
+                }
+            });
+
+            syncRoomState();
+        });
+    </script>
+}

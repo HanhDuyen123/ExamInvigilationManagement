@@ -1,0 +1,35 @@
+﻿<div class="d-flex flex-wrap align-items-center gap-3">
+
+    <div class="lookup-modern" style="width:260px;">
+        <input id="subjectInput" class="input-modern search-input" placeholder="Môn học..." />
+        <div id="subjectDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+        <input type="hidden" id="subjectId" />
+    </div>
+
+    <div class="lookup-modern" style="width:260px;">
+        <input id="userInput" class="input-modern search-input" placeholder="Giảng viên..." />
+        <div id="userDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+        <input type="hidden" id="userId" />
+    </div>
+
+    <div>
+        <select id="semesterType" class="select-modern crud-filter">
+            <option value="">-- Học kỳ --</option>
+            <option value="1">HK1</option>
+            <option value="2">HK2</option>
+            <option value="3">HK Hè</option>
+        </select>
+    </div>
+
+    <input id="className" class="input-modern search-input crud-filter" placeholder="Tên lớp..." />
+    <input id="groupNumber" class="input-modern search-input crud-filter" placeholder="Nhóm..." />
+
+    <div class="ms-auto">
+        <select id="pageSize" class="select-modern">
+            <option value="5">5 / trang</option>
+            <option value="10">10 / trang</option>
+            <option value="20">20 / trang</option>
+        </select>
+    </div>
+
+</div>

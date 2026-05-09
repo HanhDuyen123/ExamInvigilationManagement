@@ -1,0 +1,60 @@
+@model ExamInvigilationManagement.Application.DTOs.InvigilatorSubstitution.InvigilatorSubstitutionIndexPageDto
+
+@{
+    ViewData["Title"] = "Đề xuất thay thế giám thị";
+    var items = Model.PagedItems;
+}
+
+<div class="role-page">
+    <div class="role-header mb-4">
+        <div>
+            <h3 class="title-gradient">Đề xuất thay thế giám thị</h3>
+            <div class="subtitle">Theo dõi các đề xuất từ giảng viên đã từ chối lịch coi thi</div>
+        </div>
+    </div>
+
+    <form method="get" class="filter-glass mb-4">
+        <div class="d-flex flex-wrap gap-3 align-items-end">
+            <div style="width:280px"><label class="form-label">Tìm nhanh</label><input name="Keyword" value="@Model.Search.Keyword" class="input-modern" placeholder="Mã môn, lớp, giảng viên..." /></div>
+            <div style="width:190px"><label class="form-label">Trạng thái</label><select name="Status" class="select-modern"><option value="">Tất cả</option><option selected="@(Model.Search.Status == "Đã đề xuất")">Đã đề xuất</option><option selected="@(Model.Search.Status == "Đã duyệt")">Đã duyệt</option><option selected="@(Model.Search.Status == "Từ chối duyệt")">Từ chối duyệt</option></select></div>
+            <div style="width:160px"><label class="form-label">Từ ngày thi</label><input type="date" name="FromDate" value="@Model.Search.FromDate?.ToString("yyyy-MM-dd")" class="input-modern" /></div>
+            <div style="width:160px"><label class="form-label">Đến ngày thi</label><input type="date" name="ToDate" value="@Model.Search.ToDate?.ToString("yyyy-MM-dd")" class="input-modern" /></div>
+            <div style="width:140px"><label class="form-label">Số dòng</label><select name="pageSize" class="select-modern"><option selected="@(items.PageSize == 10)" value="10">10 / trang</option><option selected="@(items.PageSize == 20)" value="20">20 / trang</option><option selected="@(items.PageSize == 50)" value="50">50 / trang</option></select></div>
+            <button class="btn-submit" type="submit"><i class="bi bi-search"></i> Lọc</button>
+        </div>
+    </form>
+
+    <div class="table-modern"><div class="table-inner full-width">
+        <table class="table modern-table">
+            <thead><tr><th>Mã môn</th><th>Môn học</th><th>Lớp/Nhóm</th><th>Ngày thi</th><th>Ca/Phòng</th><th>Người từ chối</th><th>Người thay thế</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+            <tbody>
+            @if (items.Items.Any())
+            {
+                foreach (var item in items.Items)
+                {
+                    <tr>
+                        <td>@item.SubjectId</td><td>@item.SubjectName</td><td>@item.ClassName / @item.GroupNumber</td><td>@item.ExamDate.ToString("dd/MM/yyyy")</td><td>@item.SlotName (@item.TimeStart.ToString("HH\\:mm"))<br /><span class="text-muted">@item.RoomDisplay</span></td><td>@item.RequestUserName</td><td>@item.SubstituteUserName</td><td><span class="badge rounded-pill @(item.Status == "Đã duyệt" ? "bg-success" : item.Status == "Từ chối duyệt" ? "bg-danger" : "bg-warning text-dark")">@item.Status</span></td><td><a asp-action="Details" asp-route-id="@item.SubstitutionId" class="btn-icon detail"><i class="bi bi-eye"></i></a></td>
+                    </tr>
+                }
+            }
+            else
+            {
+                <tr><td colspan="9" class="text-center py-4">Chưa có đề xuất thay thế phù hợp</td></tr>
+            }
+            </tbody>
+        </table>
+        @await Html.PartialAsync("_Pagination", items)
+    </div></div>
+</div>
+
+@section Scripts {
+    <script>
+        window.CrudPage = {
+            loadData: function (page) {
+                const url = new URL(window.location.href);
+                url.searchParams.set('page', page || 1);
+                window.location.href = url.toString();
+            }
+        };
+    </script>
+}

@@ -1,0 +1,102 @@
+@model ExamInvigilationManagement.Application.DTOs.Import.ImportPageDto
+
+@{
+    ViewData["Title"] = Model.ModuleTitle;
+}
+
+<div class="role-page import-page">
+    <div class="role-header mb-4">
+        <div>
+            <h3 class="title-gradient">@Model.ModuleTitle</h3>
+            <div class="subtitle">Tải template đúng cấu trúc, nhập dữ liệu, sau đó upload để hệ thống validate toàn bộ trước khi lưu.</div>
+        </div>
+        <a href="@Model.BackUrl" class="btn btn-create"><i class="bi bi-arrow-left"></i><span>Quay lại</span></a>
+    </div>
+
+    <div class="import-flow mb-4">
+        <div class="import-step"><strong>1</strong><span>Tải template</span><small>Dòng 1 là header, dòng 2 là ví dụ, dòng 3 là mô tả.</small></div>
+        <div class="import-step"><strong>2</strong><span>Nhập dữ liệu</span><small>Nhập dữ liệu từ dòng 4. Hệ thống tự bỏ qua dòng ví dụ/mô tả.</small></div>
+        <div class="import-step"><strong>3</strong><span>Upload và validate</span><small>Nếu có lỗi, hệ thống không lưu bất kỳ dòng nào.</small></div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="form-card import-card">
+                <h5><i class="bi bi-file-earmark-spreadsheet"></i> File import</h5>
+                <p class="text-muted">Chỉ hỗ trợ file `.xlsx`. Hệ thống sẽ kiểm tra khóa ngoại, trùng dữ liệu, định dạng ngày và các ràng buộc cơ bản.</p>
+
+                <a href="@Model.TemplateUrl" class="btn btn-outline-primary rounded-3 mb-3">
+                    <i class="bi bi-download"></i> Tải template mẫu
+                </a>
+
+                <form asp-action="Upload" asp-controller="BulkImport" method="post" enctype="multipart/form-data">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="module" value="@Model.Module" />
+                    <label class="form-label">Chọn file .xlsx</label>
+                    <input type="file" name="file" class="form-control mb-3" accept=".xlsx" required />
+                    <button type="submit" class="btn-submit w-100 justify-content-center">
+                        <i class="bi bi-upload"></i> Kiểm tra và import
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="form-card import-card">
+                <h5><i class="bi bi-list-check"></i> Cấu trúc template</h5>
+                <div class="table-responsive">
+                    <table class="table modern-table import-column-table mb-0">
+                        <thead><tr><th>Cột</th><th>Bắt buộc</th><th>Mô tả</th><th>Ví dụ</th></tr></thead>
+                        <tbody>
+                        @foreach (var col in Model.Columns)
+                        {
+                            <tr>
+                                <td class="fw-bold">@col.Header</td>
+                                <td>@(col.Required ? "Có" : "Không")</td>
+                                <td>@col.Description</td>
+                                <td><code>@col.Example</code></td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.Result != null)
+    {
+        <div class="form-card import-result mt-4">
+            @if (Model.Result.Success)
+            {
+                <div class="alert alert-success mb-3"><i class="bi bi-check-circle"></i> Import thành công @Model.Result.InsertedRows dòng.</div>
+            }
+            else
+            {
+                <div class="alert alert-danger mb-3"><i class="bi bi-exclamation-triangle"></i> File có @Model.Result.Errors.Count lỗi. Chưa có dữ liệu nào được lưu.</div>
+                <div class="table-responsive">
+                    <table class="table modern-table import-error-table mb-0">
+                        <thead><tr><th>Dòng Excel</th><th>Cột</th><th>Giá trị</th><th>Lỗi</th></tr></thead>
+                        <tbody>
+                        @foreach (var err in Model.Result.Errors)
+                        {
+                            <tr><td>@err.RowNumber</td><td>@err.Column</td><td><code>@err.Value</code></td><td>@err.Message</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+<style>
+    .import-flow { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; }
+    .import-step { display:grid; gap:3px; padding:15px; border-radius:18px; background:var(--surface-1); border:1px solid var(--line-soft); box-shadow:var(--card-shadow); }
+    .import-step strong { width:30px; height:30px; display:grid; place-items:center; border-radius:10px; color:#fff; background:linear-gradient(135deg,var(--app-primary),var(--app-primary-2)); }
+    .import-step span { font-weight:900; color:var(--text-strong); }
+    .import-step small { color:var(--text-muted); }
+    .import-card h5 { display:flex; align-items:center; gap:8px; margin-bottom:10px; color:var(--text-strong); font-weight:900; }
+    .import-column-table td, .import-error-table td { vertical-align:top; }
+    .import-error-table code, .import-column-table code { white-space:normal; }
+</style>

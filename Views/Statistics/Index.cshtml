@@ -1,0 +1,358 @@
+@model ExamInvigilationManagement.Application.DTOs.Statistics.StatisticsDashboardDto
+@using System.Globalization
+
+@{
+    ViewData["Title"] = "Thống kê";
+    var isAdmin = Model.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase);
+    Layout = isAdmin ? "_Layout" : "_AcademicLayout";
+    var maxPeriod = Math.Max(1, Model.SchedulesByPeriod.Any() ? Model.SchedulesByPeriod.Max(x => x.Value) : 1);
+    var maxReject = Math.Max(1, Model.RejectionsBySession.Any() ? Model.RejectionsBySession.Max(x => x.Value) : 1);
+    var scheduleTotal = Math.Max(0, Model.ScheduleStatus.Sum(x => x.Value));
+    var responseTotal = Math.Max(0, Model.ResponseStatus.Sum(x => x.Value));
+    var chartColors = new[] { "#4f46e5", "#16a34a", "#f59e0b", "#ef4444", "#06b6d4", "#8b5cf6" };
+    var responseColors = new[] { "#16a34a", "#ef4444", "#94a3b8" };
+}
+
+<div class="role-page statistics-page">
+    <div class="role-header mb-4">
+        <div>
+            <h3 class="title-gradient">Thống kê và báo cáo</h3>
+            <div class="subtitle">Góc nhìn @Model.ScopeName.ToLowerInvariant() về lịch thi, phân công coi thi và phản hồi giảng viên</div>
+        </div>
+        <div class="d-flex flex-wrap gap-2">
+            <a class="btn btn-outline-primary rounded-3" asp-action="Preview" asp-route-academyYearId="@Model.Filter.AcademyYearId" asp-route-semesterId="@Model.Filter.SemesterId" asp-route-periodId="@Model.Filter.PeriodId" asp-route-fromDate="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" asp-route-toDate="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")">
+                <i class="bi bi-eye"></i> Xem trước báo cáo
+            </a>
+        </div>
+    </div>
+
+    <form method="get" class="filter-glass mb-4" id="statisticsFilter">
+        <div class="d-flex flex-wrap align-items-end gap-3">
+            <div class="lookup-modern position-relative" style="width:210px;">
+                <label class="form-label mb-1">Năm học</label>
+                <input id="yearInput" class="input-modern" placeholder="Chọn năm học..." autocomplete="off" />
+                <div id="yearDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="yearId" name="AcademyYearId" value="@Model.Filter.AcademyYearId" />
+            </div>
+            <div class="lookup-modern position-relative" style="width:210px;">
+                <label class="form-label mb-1">Học kỳ</label>
+                <input id="semesterInput" class="input-modern" placeholder="Chọn học kỳ..." autocomplete="off" />
+                <div id="semesterDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="semesterId" name="SemesterId" value="@Model.Filter.SemesterId" />
+            </div>
+            <div class="lookup-modern position-relative" style="width:210px;">
+                <label class="form-label mb-1">Đợt thi</label>
+                <input id="periodInput" class="input-modern" placeholder="Chọn đợt thi..." autocomplete="off" />
+                <div id="periodDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="periodId" name="PeriodId" value="@Model.Filter.PeriodId" />
+            </div>
+            <div style="width:170px;">
+                <label class="form-label mb-1">Từ ngày</label>
+                <input type="date" name="FromDate" value="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" class="input-modern" />
+            </div>
+            <div style="width:170px;">
+                <label class="form-label mb-1">Đến ngày</label>
+                <input type="date" name="ToDate" value="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")" class="input-modern" />
+            </div>
+            <button class="btn-submit" type="submit"><i class="bi bi-funnel"></i> Lọc thống kê</button>
+            <a class="btn btn-light rounded-3" asp-action="Index">Xóa lọc</a>
+        </div>
+    </form>
+
+    <div class="stats-metric-grid compact mb-4">
+        @foreach (var metric in Model.Metrics)
+        {
+            <div class="stat-metric stat-@metric.Tone">
+                <div class="stat-icon"><i class="bi @metric.Icon"></i></div>
+                <div>
+                    <div class="stat-label">@metric.Label</div>
+                    <div class="stat-value">@metric.Value</div>
+                    <div class="stat-hint">@metric.Hint</div>
+                </div>
+            </div>
+        }
+    </div>
+
+    <div class="stats-layout mb-4">
+        <section class="stat-panel chart-panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="panel-title">Cơ cấu trạng thái lịch thi</div>
+                    @* <div class="panel-subtitle">Donut chart phù hợp để nhìn tỷ trọng từng trạng thái trong tổng số lịch thi.</div> *@
+                </div>
+                <span class="panel-total">@scheduleTotal.ToString("N0") lịch</span>
+            </div>
+            @if (Model.ScheduleStatus.Any())
+            {
+                <div class="donut-chart-wrap">
+                    <svg class="donut-chart" viewBox="0 0 120 120" role="img" aria-label="Cơ cấu trạng thái lịch thi">
+                        <circle class="donut-bg" cx="60" cy="60" r="42"></circle>
+                        @{
+                            decimal scheduleOffset = 0;
+                            var circumference = 263.89m;
+                            var scheduleIndex = 0;
+                        }
+                        @foreach (var item in Model.ScheduleStatus)
+                        {
+                            var segment = scheduleTotal == 0 ? 0 : Math.Round(item.Value * circumference / scheduleTotal, 2);
+                            var rest = Math.Max(0, circumference - segment);
+                            var color = chartColors[scheduleIndex % chartColors.Length];
+                            <circle class="donut-segment"
+                                    cx="60" cy="60" r="42"
+                                    stroke="@color"
+                                    stroke-dasharray="@segment.ToString(CultureInfo.InvariantCulture) @rest.ToString(CultureInfo.InvariantCulture)"
+                                    stroke-dashoffset="@((-scheduleOffset).ToString(CultureInfo.InvariantCulture))"></circle>
+                            scheduleOffset += segment;
+                            scheduleIndex++;
+                        }
+                    </svg>
+                    <div class="donut-center">
+                        <strong>@scheduleTotal.ToString("N0")</strong>
+                        <span>Tổng lịch</span>
+                    </div>
+                </div>
+                <div class="chart-legend">
+                    @for (var i = 0; i < Model.ScheduleStatus.Count; i++)
+                    {
+                        var item = Model.ScheduleStatus[i];
+                        <div class="legend-row">
+                            <span class="legend-dot" style="background:@chartColors[i % chartColors.Length]"></span>
+                            <span class="legend-label">@item.Label</span>
+                            <strong>@item.Value.ToString("N0")</strong>
+                            <small>@item.Rate%</small>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="empty-stat">Không có dữ liệu</div>
+            }
+        </section>
+
+        <section class="stat-panel chart-panel accent-panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="panel-title">Cơ cấu phản hồi giảng viên</div>
+                    @* <div class="panel-subtitle">Donut chart giúp nhận ra ngay tỷ lệ xác nhận, từ chối và chưa phản hồi.</div> *@
+                </div>
+                <span class="panel-total">@responseTotal.ToString("N0") phản hồi</span>
+            </div>
+            @if (Model.ResponseStatus.Any() && responseTotal > 0)
+            {
+                <div class="donut-chart-wrap response-donut">
+                    <svg class="donut-chart" viewBox="0 0 120 120" role="img" aria-label="Cơ cấu phản hồi giảng viên">
+                        <circle class="donut-bg" cx="60" cy="60" r="42"></circle>
+                        @{
+                            decimal responseOffset = 0;
+                            var responseCircumference = 263.89m;
+                        }
+                        @for (var i = 0; i < Model.ResponseStatus.Count; i++)
+                        {
+                            var item = Model.ResponseStatus[i];
+                            var segment = Math.Round(item.Value * responseCircumference / responseTotal, 2);
+                            var rest = Math.Max(0, responseCircumference - segment);
+                            <circle class="donut-segment"
+                                    cx="60" cy="60" r="42"
+                                    stroke="@responseColors[i % responseColors.Length]"
+                                    stroke-dasharray="@segment.ToString(CultureInfo.InvariantCulture) @rest.ToString(CultureInfo.InvariantCulture)"
+                                    stroke-dashoffset="@((-responseOffset).ToString(CultureInfo.InvariantCulture))"></circle>
+                            responseOffset += segment;
+                        }
+                    </svg>
+                    <div class="donut-center">
+                        <strong>@responseTotal.ToString("N0")</strong>
+                        <span>Phân công</span>
+                    </div>
+                </div>
+                <div class="response-summary-grid">
+                    @for (var i = 0; i < Model.ResponseStatus.Count; i++)
+                    {
+                        var item = Model.ResponseStatus[i];
+                        <div class="response-tile" style="--tile-color:@responseColors[i % responseColors.Length]">
+                            <span>@item.Label</span>
+                            <strong>@item.Value.ToString("N0")</strong>
+                            <small>@item.Rate%</small>
+                        </div>
+                    }
+                </div>
+            }
+            else
+            {
+                <div class="empty-stat">Chưa có dữ liệu phản hồi</div>
+            }
+        </section>
+    </div>
+
+    <div class="stats-layout mb-4">
+        <section class="stat-panel bar-panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="panel-title">Số lịch thi theo đợt</div>
+                    <div class="panel-subtitle">Bar ngang phù hợp để so sánh quy mô giữa nhiều đợt thi.</div>
+                </div>
+            </div>
+            @foreach (var item in Model.SchedulesByPeriod)
+            {
+                <div class="bar-row"><div class="bar-label">@item.Label</div><div class="bar-track"><div class="bar-fill" style="width:@(item.Value * 100m / maxPeriod)%"></div></div><strong>@item.Value</strong></div>
+            }
+            @if (!Model.SchedulesByPeriod.Any()) { <div class="empty-stat">Không có dữ liệu</div> }
+        </section>
+
+        <section class="stat-panel bar-panel risk-panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="panel-title">Từ chối theo buổi/ca</div>
+                    <div class="panel-subtitle">Bar ngang giúp phát hiện nhanh khung giờ có nhiều rủi ro thiếu giám thị.</div>
+                </div>
+            </div>
+            @foreach (var item in Model.RejectionsBySession)
+            {
+                <div class="bar-row danger"><div class="bar-label">@item.Label</div><div class="bar-track"><div class="bar-fill" style="width:@(item.Value * 100m / maxReject)%"></div></div><strong>@item.Value</strong></div>
+            }
+            @if (!Model.RejectionsBySession.Any()) { <div class="empty-stat">Chưa ghi nhận từ chối</div> }
+        </section>
+    </div>
+
+    <div class="stats-layout mb-4">
+        <section class="stat-panel wide-panel workload-panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="panel-title">Hiệu suất coi thi của giảng viên</div>
+                    <div class="panel-subtitle">Dữ liệu này cần đọc số chi tiết nên giữ dạng bảng, kèm thanh tiến độ tỷ lệ xác nhận.</div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table modern-table mb-0">
+                    <thead><tr><th>Giảng viên</th><th>Phân công</th><th>Xác nhận</th><th>Từ chối</th><th>Chưa phản hồi</th><th>Tỷ lệ xác nhận</th></tr></thead>
+                    <tbody>
+                    @foreach (var item in Model.LecturerWorkloads)
+                    {
+                        <tr>
+                            <td>@item.LecturerName</td>
+                            <td>@item.AssignedCount</td>
+                            <td>@item.ConfirmedCount</td>
+                            <td>@item.RejectedCount</td>
+                            <td>@item.PendingCount</td>
+                            <td>
+                                <div class="rate-cell">
+                                    <div class="rate-track"><div class="rate-fill" style="width:@item.ConfirmationRate.ToString(CultureInfo.InvariantCulture)%"></div></div>
+                                    <span>@item.ConfirmationRate%</span>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.LecturerWorkloads.Any()) { <tr><td colspan="6" class="text-center py-4">Không có dữ liệu</td></tr> }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <div class="stats-layout">
+        <section class="stat-panel wide-panel coverage-panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="panel-title">Độ phủ giám thị theo ca thi</div>
+                    <div class="panel-subtitle">Bảng phù hợp vì cần đối chiếu đợt, buổi, ca và tỷ lệ phủ cụ thể.</div>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table class="table modern-table mb-0">
+                    <thead><tr><th>Đợt thi</th><th>Buổi</th><th>Ca</th><th>Số lịch</th><th>Đủ 2 giám thị</th><th>Tỷ lệ phủ</th></tr></thead>
+                    <tbody>
+                    @foreach (var item in Model.SlotCoverage)
+                    {
+                        <tr>
+                            <td>@item.PeriodName</td>
+                            <td>@item.SessionName</td>
+                            <td>@item.SlotName</td>
+                            <td>@item.ScheduleCount</td>
+                            <td>@item.FullCoveredCount</td>
+                            <td>
+                                <div class="rate-cell">
+                                    <div class="rate-track"><div class="rate-fill primary" style="width:@item.CoverageRate.ToString(CultureInfo.InvariantCulture)%"></div></div>
+                                    <span>@item.CoverageRate%</span>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                    @if (!Model.SlotCoverage.Any()) { <tr><td colspan="6" class="text-center py-4">Không có dữ liệu</td></tr> }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+</div>
+
+<style>
+    .stats-metric-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px; }
+    .stats-metric-grid.compact { margin-top:-2px; }
+    .stat-metric { display:flex; gap:12px; align-items:center; background:rgba(255,255,255,.86); border:1px solid rgba(79,70,229,.08); border-radius:18px; padding:14px 16px; box-shadow:0 12px 28px rgba(15,23,42,.045); }
+    .stat-icon { width:46px; height:46px; border-radius:15px; display:grid; place-items:center; color:#4f46e5; background:#eef2ff; font-size:1.28rem; flex:0 0 auto; }
+    .stat-success .stat-icon { color:#15803d; background:#dcfce7; }
+    .stat-info .stat-icon { color:#0369a1; background:#e0f2fe; }
+    .stat-warning .stat-icon { color:#b45309; background:#fef3c7; }
+    .stat-label { color:#64748b; font-size:.86rem; }
+    .stat-value { font-size:1.45rem; font-weight:800; color:#0f172a; line-height:1.1; }
+    .stat-hint { color:#64748b; font-size:.85rem; }
+    .stats-layout { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; align-items:start; }
+    .stat-panel { background:rgba(255,255,255,.92); border:1px solid rgba(79,70,229,.1); border-radius:24px; padding:20px; box-shadow:0 16px 40px rgba(15,23,42,.06); overflow:hidden; }
+    .wide-panel { grid-column:1 / -1; }
+    .accent-panel { background:linear-gradient(135deg,#eef2ff,#fff); }
+    .risk-panel { background:linear-gradient(135deg,#fff7ed,#fff); }
+    .panel-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:18px; }
+    .panel-title { font-weight:800; color:#172033; margin-bottom:4px; }
+    .panel-subtitle { color:#64748b; font-size:.86rem; line-height:1.55; max-width:520px; }
+    .panel-total { border-radius:999px; background:#f1f5f9; color:#334155; font-size:.82rem; font-weight:700; padding:6px 10px; white-space:nowrap; }
+    .chart-panel { min-height:420px; display:flex; flex-direction:column; }
+    .donut-chart-wrap { position:relative; width:min(260px,72vw); height:min(260px,72vw); margin:2px auto 18px; }
+    .donut-chart { width:100%; height:100%; overflow:visible; }
+    .donut-bg { fill:none; stroke:#e2e8f0; stroke-width:16; }
+    .donut-segment { fill:none; stroke-width:16; stroke-linecap:round; transform:rotate(-90deg); transform-origin:60px 60px; transition:stroke-dasharray .25s ease; }
+    .donut-center { position:absolute; inset:0; display:grid; place-content:center; text-align:center; pointer-events:none; }
+    .donut-center strong { color:#0f172a; font-size:2.15rem; line-height:1; font-weight:900; }
+    .donut-center span { color:#64748b; font-size:.9rem; margin-top:6px; }
+    .chart-legend { display:grid; gap:10px; margin-top:auto; }
+    .legend-row { display:grid; grid-template-columns:auto minmax(0,1fr) auto auto; align-items:center; gap:10px; border:1px solid rgba(148,163,184,.18); border-radius:14px; padding:10px 12px; background:rgba(255,255,255,.74); }
+    .legend-dot { width:11px; height:11px; border-radius:999px; box-shadow:0 0 0 4px rgba(148,163,184,.12); }
+    .legend-label { color:#334155; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .legend-row strong { color:#0f172a; }
+    .legend-row small { color:#64748b; min-width:46px; text-align:right; }
+    .response-summary-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:auto; }
+    .response-tile { border-radius:18px; padding:14px; background:white; border:1px solid rgba(148,163,184,.16); box-shadow:inset 4px 0 0 var(--tile-color); }
+    .response-tile span { display:block; color:#64748b; font-size:.84rem; }
+    .response-tile strong { display:block; color:#0f172a; font-size:1.65rem; line-height:1.1; margin:5px 0; }
+    .response-tile small { color:var(--tile-color); font-weight:800; }
+    .bar-panel { min-height:auto; }
+    .bar-row { display:grid; grid-template-columns:minmax(120px,190px) minmax(120px,1fr) auto; align-items:center; gap:12px; margin-bottom:14px; }
+    .bar-label { color:#475569; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .bar-track, .rate-track { height:10px; background:#e2e8f0; border-radius:999px; overflow:hidden; }
+    .progress-bar, .bar-fill { height:100%; background:linear-gradient(90deg,#4f46e5,#06b6d4); border-radius:999px; }
+    .bar-row.danger .bar-fill { background:linear-gradient(90deg,#ef4444,#f97316); }
+    .bar-row strong { color:#0f172a; min-width:34px; text-align:right; }
+    .rate-cell { display:grid; grid-template-columns:minmax(90px,1fr) 52px; align-items:center; gap:10px; min-width:170px; }
+    .rate-fill { height:100%; background:linear-gradient(90deg,#16a34a,#86efac); border-radius:999px; }
+    .rate-fill.primary { background:linear-gradient(90deg,#4f46e5,#06b6d4); }
+    .rate-cell span { color:#334155; font-weight:700; font-size:.88rem; }
+    .empty-stat { color:#94a3b8; text-align:center; padding:24px; }
+    @@media (max-width: 991.98px) { .stats-layout { grid-template-columns:1fr; } .chart-panel { min-height:auto; } .response-summary-grid { grid-template-columns:1fr; } }
+    @@media (max-width: 575.98px) { .panel-heading { flex-direction:column; } .bar-row { grid-template-columns:1fr; gap:6px; } .bar-row strong { text-align:left; } .rate-cell { grid-template-columns:1fr; } }
+</style>
+
+@section Scripts {
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+    <script>
+        $(function () {
+            function val(selector) { return $(selector).val() || null; }
+            function submitOnSelect() { $('#statisticsFilter').trigger('submit'); }
+            function clearBelow(level) {
+                const map = { year: ['semester', 'period'], semester: ['period'] };
+                (map[level] || []).forEach(k => { const lookup = AdminLookup.get('st-' + k); if (lookup) lookup.clear(); });
+            }
+            AdminLookup.create({ key:'st-year', input:'#yearInput', hidden:'#yearId', menu:'#yearDropdown', url:'@Url.Action("AcademyYears", "Lookup", new { area = "" })', valueField:'id', textField:'name', onSelect:function(){clearBelow('year');submitOnSelect();}, onClear:function(){clearBelow('year');submitOnSelect();} });
+            AdminLookup.create({ key:'st-semester', input:'#semesterInput', hidden:'#semesterId', menu:'#semesterDropdown', url:'@Url.Action("Semesters", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { academyYearId: val('#yearId') }}, beforeSearch:function(){return !!val('#yearId')}, onSelect:function(){clearBelow('semester');submitOnSelect();}, onClear:function(){clearBelow('semester');submitOnSelect();} });
+            AdminLookup.create({ key:'st-period', input:'#periodInput', hidden:'#periodId', menu:'#periodDropdown', url:'@Url.Action("Periods", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { semesterId: val('#semesterId') }}, beforeSearch:function(){return !!val('#semesterId')}, onSelect:submitOnSelect, onClear:submitOnSelect });
+        });
+    </script>
+}

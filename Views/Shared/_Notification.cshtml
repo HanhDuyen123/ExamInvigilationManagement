@@ -1,0 +1,52 @@
+﻿@{
+    var type = TempData["Notify.Type"]?.ToString();
+    var message = TempData["Notify.Message"]?.ToString();
+}
+
+@if (!string.IsNullOrEmpty(message))
+{
+    <div id="app-toast"
+         class="toast-modern @type">
+        <div class="toast-icon">
+            @if (type == "success")
+            {
+                <i class="bi bi-check-lg"></i>
+            }
+            else if (type == "error")
+            {
+                <i class="bi bi-x-lg"></i>
+            }
+            else if (type == "warning")
+            {
+                <i class="bi bi-exclamation-lg"></i>
+            }
+            else
+            {
+                <i class="bi bi-info-lg"></i>
+            }
+        </div>
+        <div class="toast-content">
+            <div class="toast-message">@message</div>
+        </div>
+        <div class="toast-progress"></div>
+    </div>
+}
+
+<script>
+    window.AppNotify = window.AppNotify || {
+        show: function (type, message) {
+            if (!message) return;
+            const old = document.getElementById('app-toast');
+            if (old) old.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'app-toast';
+            toast.className = 'toast-modern ' + (type || 'info');
+            const icon = type === 'success' ? 'bi-check-lg' : type === 'error' ? 'bi-x-lg' : type === 'warning' ? 'bi-exclamation-lg' : 'bi-info-lg';
+            toast.innerHTML = '<div class="toast-icon"><i class="bi ' + icon + '"></i></div><div class="toast-content"><div class="toast-message"></div></div><div class="toast-progress"></div>';
+            toast.querySelector('.toast-message').textContent = message;
+            document.body.appendChild(toast);
+            window.setTimeout(function () { toast.remove(); }, 4200);
+        }
+    };
+</script>

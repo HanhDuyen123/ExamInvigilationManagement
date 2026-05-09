@@ -1,0 +1,26 @@
+﻿@model ExamInvigilationManagement.ViewModel.LookupFieldViewModel
+
+<div class="lookup-modern position-relative">
+    @if (!string.IsNullOrWhiteSpace(Model.Label))
+    {
+        <label class="form-label">@Model.Label</label>
+    }
+
+    <div class="d-flex gap-2 align-items-center">
+        <input id="@Model.InputId"
+               class="@Model.InputClass"
+               placeholder="@Model.Placeholder"
+               autocomplete="off"
+               value="@Model.InitialText" />
+
+        @if (Model.ShowButton)
+        {
+            <button type="button" id="@Model.ButtonId" class="btn btn-outline-secondary">
+                ▼
+            </button>
+        }
+    </div>
+
+    <div id="@Model.MenuId" class="dropdown-menu autocomplete-menu w-100"></div>
+    <input type="hidden" id="@Model.HiddenId" name="@Model.HiddenName" value="@Model.InitialValue" />
+</div>
