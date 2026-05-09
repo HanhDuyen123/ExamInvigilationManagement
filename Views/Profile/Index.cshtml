@@ -41,6 +41,7 @@
     </div>
 
     <form asp-action="Update" method="post" class="profile-edit-card">
+        @Html.AntiForgeryToken()
         <div class="profile-form-grid">
             <div class="form-group">
                 <label class="form-label">Tên đăng nhập</label>

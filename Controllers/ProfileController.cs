@@ -2,7 +2,9 @@
 using ExamInvigilationManagement.Application.Interfaces.Service;
 using ExamInvigilationManagement.ViewModel;
 using ExamInvigilationManagement.Common.Helpers;
+using ExamInvigilationManagement.Common.Security;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -29,6 +31,8 @@ public class ProfileController : Controller
     }
 
     [HttpPost]
+    [ValidateAntiForgeryToken]
+    [RequireRecentAuthentication]
     public async Task<IActionResult> Update(UpdateProfileDto dto)
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
@@ -41,6 +45,7 @@ public class ProfileController : Controller
     }
 
     [HttpGet]
+    [RequireRecentAuthentication]
     public IActionResult ChangePassword()
     {
         return View();
@@ -48,6 +53,7 @@ public class ProfileController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
+    [RequireRecentAuthentication]
     public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
@@ -66,6 +72,7 @@ public class ProfileController : Controller
             });
 
             TempData.SetNotification("success", "Đổi mật khẩu thành công. Vui lòng đăng nhập lại để tiếp tục.");
+            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Login", "Account");
         }
         catch

@@ -1,6 +1,7 @@
 ﻿using ExamInvigilationManagement.Application.DTOs.Admin.User;
 using ExamInvigilationManagement.Application.Interfaces.Service;
 using ExamInvigilationManagement.Common.Helpers;
+using ExamInvigilationManagement.Common.Security;
 using ExamInvigilationManagement.ViewModel;
 using Microsoft.AspNetCore.Mvc;
 
@@ -65,6 +66,7 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         }
 
         [HttpGet]
+        [RequireRecentAuthentication]
         public async Task<IActionResult> Create()
         {
             await FillLookupsAsync();
@@ -73,6 +75,7 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequireRecentAuthentication]
         public async Task<IActionResult> Create(UserDto dto)
         {
             await FillLookupsAsync(dto);
@@ -94,6 +97,7 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         }
 
         [HttpGet]
+        [RequireRecentAuthentication]
         public async Task<IActionResult> Edit(int id)
         {
             var data = await _service.GetByIdAsync(id);
@@ -109,6 +113,7 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequireRecentAuthentication]
         public async Task<IActionResult> Edit(UserDto dto)
         {
             await FillLookupsAsync(dto);
@@ -131,6 +136,7 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [RequireRecentAuthentication]
         public async Task<IActionResult> Delete(int id)
         {
             try

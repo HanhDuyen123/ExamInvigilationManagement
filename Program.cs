@@ -13,6 +13,9 @@ using ExamInvigilationManagement.Application.Interfaces.Repositories;
 using ExamInvigilationManagement.Application.Interfaces.Common;
 using ExamInvigilationManagement.Infrastructure.UI;
 using ExamInvigilationManagement.Hubs;
+using ExamInvigilationManagement.Common.Security;
+using ExamInvigilationManagement.Infrastructure.Security;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +26,8 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<AuthCookieEvents>();
+builder.Services.AddScoped<RequireRecentAuthenticationFilter>();
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
@@ -86,6 +91,7 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     {
         options.LoginPath = "/Account/Login";
         options.AccessDeniedPath = "/Account/Denied";
+        options.EventsType = typeof(AuthCookieEvents);
 
         options.Cookie.HttpOnly = true;
         options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
@@ -95,7 +101,29 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.SlidingExpiration = true;
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(AuthPolicies.CanManageSystem, policy => policy.RequireRole("Admin"));
+    options.AddPolicy(AuthPolicies.CanManageExams, policy => policy.RequireRole("Admin", "Thư ký khoa"));
+    options.AddPolicy(AuthPolicies.CanAssignInvigilators, policy => policy.RequireRole("Thư ký khoa"));
+    options.AddPolicy(AuthPolicies.CanApproveSchedule, policy => policy.RequireRole("Trưởng khoa", "Thư ký khoa"));
+    options.AddPolicy(AuthPolicies.CanViewSensitiveData, policy => policy.RequireRole("Admin", "Trưởng khoa", "Thư ký khoa"));
+});
+
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth-sensitive", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            factory: _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 8,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
 
 //builder.Services
 //    .AddControllersWithViews()
@@ -149,6 +177,8 @@ app.Use(async (context, next) =>
 app.UseStaticFiles();
 
 app.UseRouting();
+
+app.UseRateLimiter();
 
 app.UseAuthentication();
 
