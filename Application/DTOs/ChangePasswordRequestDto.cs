@@ -8,7 +8,8 @@ namespace ExamInvigilationManagement.Application.DTOs
         [Required(ErrorMessage = "Vui lòng nhập mật khẩu hiện tại.")]
         public string CurrentPassword { get; set; } = string.Empty;
         [Required(ErrorMessage = "Vui lòng nhập mật khẩu mới.")]
-        [MinLength(6, ErrorMessage = "Mật khẩu mới tối thiểu 6 ký tự.")]
+        [MinLength(8, ErrorMessage = "Mật khẩu mới tối thiểu 8 ký tự.")]
+        [RegularExpression(@"^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z\d]).+$", ErrorMessage = "Mật khẩu phải gồm chữ cái, số và ký tự đặc biệt.")]
         public string NewPassword { get; set; } = string.Empty;
         [Required(ErrorMessage = "Vui lòng xác nhận mật khẩu mới.")]
         [Compare(nameof(NewPassword), ErrorMessage = "Mật khẩu xác nhận không khớp.")]

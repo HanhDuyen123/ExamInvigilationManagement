@@ -88,10 +88,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.AccessDeniedPath = "/Account/Denied";
 
         options.Cookie.HttpOnly = true;
-        options.Cookie.SecurePolicy = CookieSecurePolicy.None;
+        options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
+        options.Cookie.SameSite = SameSiteMode.Lax;
 
         options.ExpireTimeSpan = TimeSpan.FromHours(2);
-        options.SlidingExpiration = false;
+        options.SlidingExpiration = true;
     });
 
 builder.Services.AddAuthorization();
@@ -138,6 +139,13 @@ if (!app.Environment.IsDevelopment())
 //}
 
 app.UseHttpsRedirection();
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    await next();
+});
 app.UseStaticFiles();
 
 app.UseRouting();

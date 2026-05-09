@@ -24,7 +24,7 @@ namespace ExamInvigilationManagement.Controllers
         [HttpGet]
         public IActionResult Login(string? returnUrl = null)
         {
-            ViewBag.ReturnUrl = returnUrl;
+            ViewBag.ReturnUrl = GetSafeReturnUrl(returnUrl);
             return View();
         }
 
@@ -32,9 +32,12 @@ namespace ExamInvigilationManagement.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginRequestDto model, string? returnUrl = null)
         {
+            returnUrl = GetSafeReturnUrl(returnUrl);
             ViewBag.ReturnUrl = returnUrl;
             if (!ModelState.IsValid)
                 return View(model);
+
+            model.UserName = model.UserName?.Trim() ?? string.Empty;
 
             var domainUser = await _authService.LoginAsync(model.UserName, model.Password);
 
@@ -49,7 +52,6 @@ namespace ExamInvigilationManagement.Controllers
                 new Claim(ClaimTypes.Name, domainUser.UserName),
                 new Claim(ClaimTypes.NameIdentifier, domainUser.Id.ToString()),
 
-                // 🔥 QUAN TRỌNG: PHÂN QUYỀN
                 new Claim(ClaimTypes.Role, domainUser.Role?.Name ?? "")
             };
 
@@ -61,7 +63,8 @@ namespace ExamInvigilationManagement.Controllers
             var authProperties = new AuthenticationProperties
             {
                 IsPersistent = true,
-                ExpiresUtc = DateTimeOffset.UtcNow.AddHours(2)
+                ExpiresUtc = DateTimeOffset.UtcNow.AddHours(2),
+                AllowRefresh = true
             };
 
             await HttpContext.SignInAsync(
@@ -70,7 +73,7 @@ namespace ExamInvigilationManagement.Controllers
                 authProperties
             );
 
-            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+            if (!string.IsNullOrWhiteSpace(returnUrl))
                 return Redirect(returnUrl);
 
             return RedirectToAction("Index", "Dashboard");
@@ -92,9 +95,11 @@ namespace ExamInvigilationManagement.Controllers
         public async Task<IActionResult> ForgotPassword(ForgotPasswordViewModel model)
         {
 
-            Console.WriteLine("VÀO CONTROLLER RỒI NHỚ MEOMEO");
             if (!ModelState.IsValid)
                 return View(model);
+
+            model.Username = model.Username?.Trim() ?? string.Empty;
+            model.Email = model.Email?.Trim() ?? string.Empty;
 
             var requestDto = new ForgotPasswordRequestDto
             {
@@ -175,6 +180,13 @@ namespace ExamInvigilationManagement.Controllers
         {
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Login");
+        }
+
+        private string? GetSafeReturnUrl(string? returnUrl)
+        {
+            return !string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl)
+                ? returnUrl
+                : null;
         }
     }
 }

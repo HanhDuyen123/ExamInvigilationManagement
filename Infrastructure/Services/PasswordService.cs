@@ -20,8 +20,10 @@ namespace ExamInvigilationManagement.Infrastructure.Services
 
         public bool VerifyPassword(string password, string hash)
         {
-            return _hasher.VerifyHashedPassword(null!, hash, password)
-                == PasswordVerificationResult.Success;
+            var result = _hasher.VerifyHashedPassword(null!, hash, password);
+
+            return result == PasswordVerificationResult.Success
+                || result == PasswordVerificationResult.SuccessRehashNeeded;
         }
     }
 }

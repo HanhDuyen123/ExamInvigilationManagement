@@ -5,6 +5,9 @@ using ExamInvigilationManagement.Application.Interfaces.Service;
 using ExamInvigilationManagement.Domain.Entities;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.WebUtilities;
+using System.Security.Cryptography;
+using System.Text.RegularExpressions;
 
 public class AuthService : IAuthService
 {
@@ -33,6 +36,8 @@ public class AuthService : IAuthService
     // ================= LOGIN =================
     public async Task<User?> LoginAsync(string username, string password)
     {
+        username = username?.Trim() ?? string.Empty;
+
         var user = await _repo.GetByUsernameAsync(username);
 
         if (user == null || !user.IsActive)
@@ -68,6 +73,9 @@ public class AuthService : IAuthService
     // ================= FORGOT PASSWORD =================
     public async Task ForgotPasswordAsync(ForgotPasswordRequestDto request)
     {
+        request.Username = request.Username?.Trim() ?? string.Empty;
+        request.Email = request.Email?.Trim() ?? string.Empty;
+
         var user = await _repo.GetByUsernameAndEmailAsync(
             request.Username,
             request.Email
@@ -76,7 +84,8 @@ public class AuthService : IAuthService
         if (user == null)
             return;
 
-        var token = Guid.NewGuid().ToString();
+        var tokenBytes = RandomNumberGenerator.GetBytes(32);
+        var token = WebEncoders.Base64UrlEncode(tokenBytes);
 
         await _repo.SaveResetTokenAsync(
             user.Id,
@@ -84,7 +93,10 @@ public class AuthService : IAuthService
             DateTime.Now.AddMinutes(15)
         );
 
-        var link = $"https://localhost:44351/Account/ResetPassword?token={token}";
+        var requestContext = _httpContext.HttpContext?.Request;
+        var link = requestContext == null
+            ? $"/Account/ResetPassword?token={Uri.EscapeDataString(token)}"
+            : $"{requestContext.Scheme}://{requestContext.Host}/Account/ResetPassword?token={Uri.EscapeDataString(token)}";
 
         try
         {
@@ -106,7 +118,9 @@ public class AuthService : IAuthService
     public async Task ResetPasswordAsync(ResetPasswordRequestDto request)
     {
         if (request.NewPassword != request.ConfirmPassword)
-            throw new Exception("Password not match");
+            throw new Exception("Mật khẩu xác nhận không khớp.");
+
+        ValidatePasswordPolicy(request.NewPassword);
 
         var tokenEntity = await _repo.GetValidTokenAsync(request.Token);
 
@@ -114,7 +128,7 @@ public class AuthService : IAuthService
             tokenEntity.IsUsed ||
             tokenEntity.ExpiredAt < DateTime.Now)
         {
-            throw new Exception("Invalid or expired token");
+            throw new Exception("Liên kết đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.");
         }
 
         var hash = _passwordService.HashPassword(request.NewPassword);
@@ -129,7 +143,7 @@ public class AuthService : IAuthService
         var user = await _repo.GetByIdAsync(request.UserId);
 
         if (user == null)
-            throw new Exception("User not found");
+            throw new Exception("Không tìm thấy tài khoản.");
 
         var isValid = _passwordService.VerifyPassword(
             request.CurrentPassword,
@@ -137,10 +151,12 @@ public class AuthService : IAuthService
         );
 
         if (!isValid)
-            throw new Exception("Wrong current password");
+            throw new Exception("Mật khẩu hiện tại không đúng.");
 
         if (request.NewPassword != request.ConfirmPassword)
-            throw new Exception("Password confirm not match");
+            throw new Exception("Mật khẩu xác nhận không khớp.");
+
+        ValidatePasswordPolicy(request.NewPassword);
 
         var hash = _passwordService.HashPassword(request.NewPassword);
 
@@ -159,5 +175,17 @@ public class AuthService : IAuthService
     public async Task LogoutAsync()
     {
         await _httpContext.HttpContext!.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+    }
+
+    private static void ValidatePasswordPolicy(string password)
+    {
+        if (string.IsNullOrWhiteSpace(password)
+            || password.Length < 8
+            || !Regex.IsMatch(password, "[A-Za-z]")
+            || !Regex.IsMatch(password, "[0-9]")
+            || !Regex.IsMatch(password, "[^A-Za-z0-9]"))
+        {
+            throw new Exception("Mật khẩu phải có ít nhất 8 ký tự, gồm chữ cái, số và ký tự đặc biệt.");
+        }
     }
 }

@@ -1,230 +1,331 @@
-﻿@model ExamInvigilationManagement.Application.DTOs.LoginRequestDto
+@model ExamInvigilationManagement.Application.DTOs.LoginRequestDto
 
 @{
     Layout = null;
+    var returnUrl = ViewBag.ReturnUrl as string;
 }
 
 <!DOCTYPE html>
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <title>Login UI</title>
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Đăng nhập | Exam Invigilation Management</title>
     <style>
-        /* giữ nguyên CSS của bạn */
         * {
-            margin: 0;
-            padding: 0;
             box-sizing: border-box;
-            font-family: "Segoe UI", sans-serif;
         }
 
         body {
-            height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            background: url("https://img.freepik.com/free-photo/abstract-smooth-empty-grey-studio-well-use-as-background-business-report-digital-website-template-backdrop_1258-53064.jpg?w=360") no-repeat center center;
-            background-size: cover;
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: #102a43;
+            background:
+                radial-gradient(circle at 12% 20%, rgba(17, 94, 89, 0.2), transparent 28%),
+                radial-gradient(circle at 88% 18%, rgba(37, 99, 235, 0.16), transparent 24%),
+                linear-gradient(135deg, #f8fafc 0%, #e0f2fe 52%, #f0fdfa 100%);
         }
 
-        .login-box {
-            width: 380px; /* giảm từ 520px */
-            padding: 40px 30px; /* giảm padding */
-            text-align: center;
-            background: rgba(255, 255, 255, 0.18);
-            backdrop-filter: blur(14px);
+        .auth-shell {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 440px;
+            align-items: stretch;
+        }
+
+        .brand-panel {
+            padding: 64px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .brand-mark {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: #0f766e;
+        }
+
+        .brand-logo {
+            width: 42px;
+            height: 42px;
+            border-radius: 14px;
+            display: grid;
+            place-items: center;
+            background: #0f766e;
+            color: #fff;
+            box-shadow: 0 16px 32px rgba(15, 118, 110, 0.22);
+        }
+
+        .hero-copy {
+            max-width: 640px;
+        }
+
+        .hero-copy h1 {
+            margin: 0 0 18px;
+            font-size: clamp(34px, 5vw, 62px);
+            line-height: 1.02;
+            letter-spacing: -0.055em;
+            color: #0f172a;
+        }
+
+        .hero-copy p {
+            margin: 0;
+            max-width: 520px;
+            color: #475569;
+            font-size: 17px;
+            line-height: 1.7;
+        }
+
+        .security-note {
+            display: flex;
+            gap: 12px;
+            max-width: 520px;
+            padding: 18px 20px;
+            border: 1px solid rgba(15, 118, 110, 0.14);
             border-radius: 20px;
+            background: rgba(255, 255, 255, 0.56);
+            color: #475569;
+            box-shadow: 0 24px 80px rgba(15, 23, 42, 0.08);
         }
 
-        .avatar {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 20px;
-            background: #0b5c6b;
-            border-radius: 50%;
+        .auth-panel {
             display: flex;
             align-items: center;
-            justify-content: center;
+            padding: 32px;
+            background: rgba(255, 255, 255, 0.72);
+            border-left: 1px solid rgba(148, 163, 184, 0.25);
+            backdrop-filter: blur(20px);
         }
 
-            .avatar svg {
-                width: 45px;
-                fill: white;
-            }
-
-
-        .input-group {
-            position: relative;
-            margin: 20px 0;
-        }
-
-            .input-group input {
-                width: 100%;
-                /* padding: 12px 40px; */
-                padding: 12px 45px 12px 40px;
-                font-size: 16px;
-                border: none;
-                border-bottom: 2px solid rgba(0,0,0,0.4);
-                background: transparent !important;
-                outline: none;
-            }
-
-            .input-group label {
-                position: absolute;
-                left: 40px;
-                top: 12px;
-                font-size: 14px;
-                color: rgba(0,0,0,0.6);
-                pointer-events: none;
-                transition: 0.3s ease;
-            }
-
-            .input-group input:focus + label,
-            .input-group input:valid + label {
-                top: -8px;
-                font-size: 12px;
-                color: #0b5c6b;
-            }
-
-            .input-group i {
-                position: absolute;
-                /* left: 10px; */
-                top: 12px;
-                font-size: 18px;
-                color: gray;
-            }
-
-        .btn {
+        .auth-card {
             width: 100%;
-            border: none;
-            border-radius: 8px;
-            background: #0b5c6b;
-            color: white;
-            margin-top: 20px;
-            padding: 12px;
-            font-size: 15px;
+            padding: 34px;
+            border-radius: 28px;
+            background: #ffffff;
+            box-shadow: 0 28px 90px rgba(15, 23, 42, 0.14);
         }
 
-        .forgot {
+        .auth-card h2 {
+            margin: 0 0 8px;
+            font-size: 28px;
+            letter-spacing: -0.035em;
+            color: #0f172a;
+        }
+
+        .auth-card .subtitle {
+            margin: 0 0 28px;
+            color: #64748b;
+            line-height: 1.55;
+        }
+
+        .validation-summary-errors,
+        .auth-alert {
+            margin: 0 0 18px;
+            padding: 13px 14px;
+            border-radius: 16px;
+            border: 1px solid rgba(220, 38, 38, 0.18);
+            background: #fef2f2;
+            color: #991b1b;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .validation-summary-errors ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .form-field {
+            margin-bottom: 18px;
+        }
+
+        .form-field label {
             display: block;
-            margin-top: 10px;
-            color: black;
-            text-decoration: none;
-            font-size: 13px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 650;
+            color: #334155;
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+
+        .input-wrap input {
+            width: 100%;
+            height: 48px;
+            padding: 0 44px 0 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 14px;
+            outline: none;
+            background: #f8fafc;
+            color: #0f172a;
+            font-size: 15px;
+            transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        .input-wrap input:focus {
+            border-color: #0f766e;
+            background: #fff;
+            box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
         }
 
         .toggle-password {
             position: absolute;
-            right: 0px;
+            right: 10px;
             top: 50%;
-            font-size: 14px; /* nhỏ lại */
+            transform: translateY(-50%);
+            border: 0;
+            background: transparent;
+            color: #0f766e;
             cursor: pointer;
-            color: gray;
-            z-index: 2;
-        }
-
-            .toggle-password:hover {
-                color: #0b5c6b;
-            }
-
-        .login-validation {
-            margin: 0 0 14px;
-            padding: 12px 14px;
-            border-radius: 14px;
-            background: rgba(254, 242, 242, 0.86);
-            border: 1px solid rgba(220, 38, 38, 0.18);
-            color: #991b1b;
-            text-align: left;
-            font-size: 13px;
-        }
-
-        .login-validation ul {
-            margin: 0;
-            padding-left: 18px;
+            font-weight: 650;
         }
 
         .field-validation-error {
             display: block;
             margin-top: 6px;
-            color: #991b1b;
-            text-align: left;
-            font-size: 12px;
+            color: #b91c1c;
+            font-size: 13px;
+        }
+
+        .form-row {
+            display: flex;
+            justify-content: flex-end;
+            margin: 2px 0 22px;
+        }
+
+        .link {
+            color: #0f766e;
+            text-decoration: none;
+            font-weight: 650;
+            font-size: 14px;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+
+        .btn-login {
+            width: 100%;
+            height: 50px;
+            border: 0;
+            border-radius: 16px;
+            color: #fff;
+            cursor: pointer;
+            font-size: 15px;
+            font-weight: 750;
+            background: linear-gradient(135deg, #0f766e, #0e7490);
+            box-shadow: 0 16px 34px rgba(15, 118, 110, 0.28);
+        }
+
+        .btn-login:hover {
+            filter: brightness(1.03);
+        }
+
+        .mobile-note {
+            display: none;
+            margin: 0 0 24px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        @@media (max-width: 860px) {
+            .auth-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .brand-panel {
+                display: none;
+            }
+
+            .auth-panel {
+                min-height: 100vh;
+                padding: 22px;
+                border-left: 0;
+            }
+
+            .auth-card {
+                padding: 26px;
+                border-radius: 24px;
+            }
+
+            .mobile-note {
+                display: block;
+            }
         }
     </style>
 </head>
-
 <body>
-
-    <div class="login-box">
-
-        <div class="avatar">
-            <svg viewBox="0 0 24 24">
-                <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5
-                     2.3-5 5 2.3 5 5 5zm0 2c-3.3
-                     0-10 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z" />
-            </svg>
-        </div>
-
-        @using (Html.BeginForm("Login", "Account", new { returnUrl = ViewBag.ReturnUrl }, FormMethod.Post))
-        {
-            @Html.AntiForgeryToken()
-            <input type="hidden" name="returnUrl" value="@ViewBag.ReturnUrl" />
-
-            <!-- ERROR -->
-            @Html.ValidationSummary(false, "", new { @class = "login-validation" })
-
-            <!-- USERNAME -->
-            <div class="input-group">
-                <i class="fa-solid fa-user"></i>
-                @Html.TextBoxFor(m => m.UserName, new { required = "required" })
-                <label>UserName</label>
-                @Html.ValidationMessageFor(m => m.UserName)
+    <main class="auth-shell">
+        <section class="brand-panel" aria-label="Giới thiệu hệ thống">
+            <div class="brand-mark">
+                <div class="brand-logo">EIM</div>
+                <span>Exam Invigilation Management</span>
             </div>
-
-            <!-- PASSWORD -->
-            <div class="input-group">
-                <i class="fa-solid fa-lock"></i>
-
-                @Html.PasswordFor(m => m.Password, new
-                    {
-                        required = "required",
-                        id = "passwordInput"
-                    })
-
-                @* <i class="fa-solid fa-eye toggle-password" onclick="togglePassword()"></i> *@
-
-                <label>Password</label>
-                <i class="fa-solid fa-eye toggle-password" onclick="togglePassword()"></i>
-                @Html.ValidationMessageFor(m => m.Password)
+            <div class="hero-copy">
+                <h1>Quản lý coi thi tập trung, bảo mật và rõ trách nhiệm.</h1>
+                <p>Theo dõi lịch thi, phân công cán bộ coi thi và xử lý nghiệp vụ học vụ trong một hệ thống thống nhất.</p>
             </div>
+            <div class="security-note">
+                <strong>Bảo mật:</strong>
+                <span>Phiên đăng nhập được bảo vệ bằng cookie HttpOnly, Secure và tự hết hạn sau thời gian sử dụng.</span>
+            </div>
+        </section>
 
-            <!-- FORGOT -->
-            <a href="@Url.Action("ForgotPassword", "Account")" class="forgot">
-                Quên mật khẩu?
-            </a>
+        <section class="auth-panel">
+            <div class="auth-card">
+                <p class="mobile-note">Exam Invigilation Management</p>
+                <h2>Đăng nhập</h2>
+                <p class="subtitle">Sử dụng tài khoản được cấp để truy cập hệ thống.</p>
 
-            <!-- BUTTON -->
-            <button type="submit" class="btn">LOGIN</button>
-        }
+                @using (Html.BeginForm("Login", "Account", FormMethod.Post))
+                {
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
 
-    </div>
+                    @Html.ValidationSummary(false, "", new { @class = "auth-alert" })
+
+                    <div class="form-field">
+                        <label for="UserName">Tên đăng nhập</label>
+                        <div class="input-wrap">
+                            @Html.TextBoxFor(m => m.UserName, new { autocomplete = "username", required = "required", placeholder = "Nhập tên đăng nhập" })
+                        </div>
+                        @Html.ValidationMessageFor(m => m.UserName)
+                    </div>
+
+                    <div class="form-field">
+                        <label for="passwordInput">Mật khẩu</label>
+                        <div class="input-wrap">
+                            @Html.PasswordFor(m => m.Password, new { autocomplete = "current-password", required = "required", id = "passwordInput", placeholder = "Nhập mật khẩu" })
+                            <button class="toggle-password" type="button" onclick="togglePassword()">Hiện</button>
+                        </div>
+                        @Html.ValidationMessageFor(m => m.Password)
+                    </div>
+
+                    <div class="form-row">
+                        <a href="@Url.Action("ForgotPassword", "Account")" class="link">Quên mật khẩu?</a>
+                    </div>
+
+                    <button type="submit" class="btn-login">Đăng nhập</button>
+                }
+            </div>
+        </section>
+    </main>
+
     <script>
         function togglePassword() {
-            var input = document.getElementById("passwordInput");
-            var icon = document.querySelector(".toggle-password");
+            const input = document.getElementById("passwordInput");
+            const button = document.querySelector(".toggle-password");
+            const show = input.type === "password";
 
-            if (input.type === "password") {
-                input.type = "text";
-                icon.classList.remove("fa-eye");
-                icon.classList.add("fa-eye-slash");
-            } else {
-                input.type = "password";
-                icon.classList.remove("fa-eye-slash");
-                icon.classList.add("fa-eye");
-            }
+            input.type = show ? "text" : "password";
+            button.textContent = show ? "Ẩn" : "Hiện";
         }
     </script>
 </body>
