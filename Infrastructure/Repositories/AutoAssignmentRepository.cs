@@ -99,7 +99,13 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .Where(x =>
                     x.ExamSchedule.SemesterId == semesterId &&
                     x.Assignee.FacultyId == facultyId &&
-                    x.Assignee.IsActive)
+                    x.Assignee.IsActive &&
+                    x.Status != "Từ chối" &&
+                    (x.InvigilatorResponses
+                        .Where(r => r.UserId == x.AssigneeId)
+                        .OrderByDescending(r => r.ResponseAt)
+                        .Select(r => r.Status)
+                        .FirstOrDefault() ?? string.Empty) != "Từ chối")
                 .GroupBy(x => x.AssigneeId)
                 .Select(g => new
                 {
@@ -179,10 +185,18 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .Where(x => scheduleIdList.Contains(x.ExamScheduleId))
                 .Select(x => new AutoAssignExistingAssignmentDto
                 {
+                    ExamInvigilatorId = x.ExamInvigilatorId,
                     ExamScheduleId = x.ExamScheduleId,
                     UserId = x.AssigneeId,
+                    PositionNo = x.PositionNo,
                     SlotId = x.ExamSchedule.SlotId,
-                    ExamDate = x.ExamSchedule.ExamDate
+                    ExamDate = x.ExamSchedule.ExamDate,
+                    InvigilatorStatus = x.Status,
+                    ResponseStatus = x.InvigilatorResponses
+                        .Where(r => r.UserId == x.AssigneeId)
+                        .OrderByDescending(r => r.ResponseAt)
+                        .Select(r => r.Status)
+                        .FirstOrDefault() ?? string.Empty
                 })
                 .ToListAsync(cancellationToken);
         }

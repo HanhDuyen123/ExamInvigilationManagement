@@ -8,7 +8,7 @@
     <div class="role-header mb-4">
         <div>
             <h3 class="title-gradient">Tự động phân công giám thị</h3>
-            <div class="subtitle">Chọn học kỳ và đợt thi, hệ thống sẽ tối ưu phân công bằng CP-SAT theo chuyên môn, lịch bận và tải coi thi</div>
+            <div class="subtitle">Chọn học kỳ và đợt thi, hệ thống sẽ tự động đề xuất giám thị phù hợp và giữ nguyên các phân công đã ổn định</div>
         </div>
 
         <a href="@Url.Action("Index", "ExamSchedule", new { area = "" })" class="btn btn-create">
@@ -20,9 +20,9 @@
     <div class="auto-assign-hero mb-4">
         <div class="auto-assign-hero-icon"><i class="bi bi-magic"></i></div>
         <div>
-            <div class="auto-assign-kicker">Quy tắc phân công</div>
-            <h4>CP-SAT 3 tầng: đúng lớp, đúng môn, emergency cùng khoa</h4>
-            <p>Hard constraint loại lịch sai trước; objective ưu tiên chuyên môn rồi mới cân bằng tải trong toàn đợt thi.</p>
+            <div class="auto-assign-kicker">Nguyên tắc xử lý</div>
+            <h4>Ưu tiên đúng chuyên môn, hạn chế xáo trộn lịch đã phân công</h4>
+            <p>Hệ thống chỉ bổ sung những lịch còn thiếu hoặc có giảng viên từ chối; các phân công đã ổn định sẽ được giữ nguyên.</p>
         </div>
     </div>
 
@@ -80,22 +80,22 @@
             <div class="auto-rule-card">
                 <div class="rule-number">1</div>
                 <div>
-                    <h6>Kiểm tra lịch bận</h6>
-                    <p>Không chọn giảng viên đã đăng ký bận hoặc đã có lịch cùng ca thi.</p>
+                    <h6>Giữ lịch đã ổn</h6>
+                    <p>Không thay đổi các giám thị đã xác nhận hoặc đang chờ phản hồi.</p>
                 </div>
             </div>
             <div class="auto-rule-card">
                 <div class="rule-number">2</div>
                 <div>
-                    <h6>Ưu tiên chuyên môn</h6>
-                    <p>Thứ tự ưu tiên: giảng viên phụ trách lớp, giảng viên từng dạy cùng môn, rồi emergency cùng khoa.</p>
+                    <h6>Ưu tiên phù hợp</h6>
+                    <p>Ưu tiên giảng viên phụ trách lớp, sau đó là giảng viên từng dạy cùng môn.</p>
                 </div>
             </div>
             <div class="auto-rule-card">
                 <div class="rule-number">3</div>
                 <div>
-                    <h6>Cân bằng toàn đợt</h6>
-                    <p>Sau khi xét chuyên môn, solver giảm thiếu giám thị, lệch tải và dồn lịch trong ngày.</p>
+                    <h6>Chia đều công việc</h6>
+                    <p>Cân nhắc số lịch đã nhận để tránh phân công quá nặng cho một số giảng viên.</p>
                 </div>
             </div>
         </div>
