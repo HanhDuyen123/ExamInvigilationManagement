@@ -156,9 +156,16 @@ namespace ExamInvigilationManagement.Controllers
 
             try
             {
-                await _authService.ForgotPasswordAsync(requestDto);
-                _logger.LogInformation("Forgot password requested. UserName={UserName}, Email={Email}, RemoteIp={RemoteIp}", model.Username, model.Email, HttpContext.Connection.RemoteIpAddress?.ToString());
-                TempData.SetNotification("success", "Link reset mật khẩu đã được gửi nếu thông tin hợp lệ.");
+                var isValid = await _authService.ForgotPasswordAsync(requestDto);
+                _logger.LogInformation("Forgot password requested. UserName={UserName}, Email={Email}, IsValid={IsValid}, RemoteIp={RemoteIp}", model.Username, model.Email, isValid, HttpContext.Connection.RemoteIpAddress?.ToString());
+
+                if (!isValid)
+                {
+                    TempData.SetNotification("error", "Tên đăng nhập hoặc email không đúng. Vui lòng kiểm tra lại thông tin.");
+                    return View(model);
+                }
+
+                TempData.SetNotification("success", "Thông tin hợp lệ. Liên kết đặt lại mật khẩu đã được gửi đến email của bạn.");
             }
             catch (Exception ex)
             {
@@ -209,7 +216,7 @@ namespace ExamInvigilationManagement.Controllers
                 await _authService.ResetPasswordAsync(requestDto);
                 _logger.LogInformation("Password reset completed. RemoteIp={RemoteIp}", HttpContext.Connection.RemoteIpAddress?.ToString());
                 TempData.SetNotification("success", "Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.");
-                return RedirectToAction("ResetPasswordSuccess");
+                return RedirectToAction("Login");
             }
             catch (Exception ex)
             {

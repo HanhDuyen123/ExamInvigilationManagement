@@ -3,6 +3,8 @@
 @{
     Layout = null;
     var returnUrl = ViewBag.ReturnUrl as string;
+    var notifyType = TempData["Notify.Type"] as string;
+    var notifyMessage = TempData["Notify.Message"] as string;
 }
 
 <!DOCTYPE html>
@@ -138,6 +140,26 @@
         .validation-summary-errors ul {
             margin: 0;
             padding-left: 18px;
+        }
+
+        .auth-notice {
+            margin: 0 0 18px;
+            padding: 13px 14px;
+            border-radius: 16px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .auth-notice.success {
+            border: 1px solid rgba(22, 163, 74, 0.2);
+            background: #f0fdf4;
+            color: #166534;
+        }
+
+        .auth-notice.error {
+            border: 1px solid rgba(220, 38, 38, 0.18);
+            background: #fef2f2;
+            color: #991b1b;
         }
 
         .form-field {
@@ -283,6 +305,11 @@
                 <p class="mobile-note">Exam Invigilation Management</p>
                 <h2>Đăng nhập</h2>
                 <p class="subtitle">Sử dụng tài khoản được cấp để truy cập hệ thống.</p>
+
+                @if (!string.IsNullOrWhiteSpace(notifyMessage))
+                {
+                    <div class="auth-notice @(notifyType == "success" ? "success" : "error")">@notifyMessage</div>
+                }
 
                 @using (Html.BeginForm("Login", "Account", FormMethod.Post))
                 {

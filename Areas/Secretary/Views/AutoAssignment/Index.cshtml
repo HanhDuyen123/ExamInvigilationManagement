@@ -8,7 +8,7 @@
     <div class="role-header mb-4">
         <div>
             <h3 class="title-gradient">Tự động phân công giám thị</h3>
-            <div class="subtitle">Chọn học kỳ và đợt thi, hệ thống sẽ phân công giám thị cùng khoa theo lịch bận và tải coi thi hiện tại</div>
+            <div class="subtitle">Chọn học kỳ và đợt thi, hệ thống sẽ tối ưu phân công bằng CP-SAT theo chuyên môn, lịch bận và tải coi thi</div>
         </div>
 
         <a href="@Url.Action("Index", "ExamSchedule", new { area = "" })" class="btn btn-create">
@@ -21,8 +21,8 @@
         <div class="auto-assign-hero-icon"><i class="bi bi-magic"></i></div>
         <div>
             <div class="auto-assign-kicker">Quy tắc phân công</div>
-            <h4>Ưu tiên đúng giảng viên phụ trách lớp, sau đó cân bằng tải trong khoa</h4>
-            <p>Chỉ xử lý các lịch thuộc khoa của thư ký, bỏ qua lịch đã ở trạng thái cuối và cập nhật lịch đủ giám thị sang trạng thái chờ duyệt.</p>
+            <h4>CP-SAT 3 tầng: đúng lớp, đúng môn, emergency cùng khoa</h4>
+            <p>Hard constraint loại lịch sai trước; objective ưu tiên chuyên môn rồi mới cân bằng tải trong toàn đợt thi.</p>
         </div>
     </div>
 
@@ -87,15 +87,15 @@
             <div class="auto-rule-card">
                 <div class="rule-number">2</div>
                 <div>
-                    <h6>Ưu tiên chủ nhiệm học phần</h6>
-                    <p>Nếu giảng viên phụ trách lớp khả dụng, hệ thống ưu tiên phân vào vị trí còn trống.</p>
+                    <h6>Ưu tiên chuyên môn</h6>
+                    <p>Thứ tự ưu tiên: giảng viên phụ trách lớp, giảng viên từng dạy cùng môn, rồi emergency cùng khoa.</p>
                 </div>
             </div>
             <div class="auto-rule-card">
                 <div class="rule-number">3</div>
                 <div>
-                    <h6>Cân bằng tải</h6>
-                    <p>Ứng viên còn lại được chấm điểm theo tải học kỳ, số lịch trong ngày và độ phù hợp.</p>
+                    <h6>Cân bằng toàn đợt</h6>
+                    <p>Sau khi xét chuyên môn, solver giảm thiếu giám thị, lệch tải và dồn lịch trong ngày.</p>
                 </div>
             </div>
         </div>

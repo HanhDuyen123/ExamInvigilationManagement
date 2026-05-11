@@ -109,6 +109,40 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .ToDictionaryAsync(x => x.UserId, x => x.Count, cancellationToken);
         }
 
+        public async Task<Dictionary<string, HashSet<int>>> GetSubjectLecturerMapAsync(
+            IEnumerable<string> subjectIds,
+            int facultyId,
+            CancellationToken cancellationToken = default)
+        {
+            var subjectIdList = subjectIds
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct()
+                .ToList();
+
+            if (subjectIdList.Count == 0)
+                return new Dictionary<string, HashSet<int>>();
+
+            var rows = await _db.CourseOfferings
+                .AsNoTracking()
+                .Where(x =>
+                    subjectIdList.Contains(x.SubjectId) &&
+                    x.User.FacultyId == facultyId &&
+                    x.User.IsActive &&
+                    x.User.Role.RoleName == "Giảng viên")
+                .Select(x => new
+                {
+                    x.SubjectId,
+                    x.UserId
+                })
+                .ToListAsync(cancellationToken);
+
+            return rows
+                .GroupBy(x => x.SubjectId)
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(x => x.UserId).ToHashSet());
+        }
+
         public async Task<List<AutoAssignBusySlotDto>> GetBusySlotsAsync(
             IEnumerable<int> userIds,
             IEnumerable<int> slotIds,

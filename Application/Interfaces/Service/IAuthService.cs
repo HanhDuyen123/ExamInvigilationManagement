@@ -8,7 +8,7 @@ namespace ExamInvigilationManagement.Application.Interfaces.Service
         Task<User?> LoginAsync(string username, string password);
         Task LogoutAsync();
 
-        Task ForgotPasswordAsync(ForgotPasswordRequestDto request);
+        Task<bool> ForgotPasswordAsync(ForgotPasswordRequestDto request);
         Task ResetPasswordAsync(ResetPasswordRequestDto request);
         Task<bool> IsValidTokenAsync(string token);
         Task ChangePasswordAsync(ChangePasswordRequestDto request);

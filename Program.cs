@@ -25,6 +25,9 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+var conn = builder.Configuration.GetConnectionString("DefaultConnection");
+Console.WriteLine(conn);
+
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<AuthCookieEvents>();
 builder.Services.AddScoped<RequireRecentAuthenticationFilter>();

@@ -71,7 +71,7 @@ public class AuthService : IAuthService
     }
 
     // ================= FORGOT PASSWORD =================
-    public async Task ForgotPasswordAsync(ForgotPasswordRequestDto request)
+    public async Task<bool> ForgotPasswordAsync(ForgotPasswordRequestDto request)
     {
         request.Username = request.Username?.Trim() ?? string.Empty;
         request.Email = request.Email?.Trim() ?? string.Empty;
@@ -82,7 +82,7 @@ public class AuthService : IAuthService
         );
 
         if (user == null)
-            return;
+            return false;
 
         var tokenBytes = RandomNumberGenerator.GetBytes(32);
         var token = WebEncoders.Base64UrlEncode(tokenBytes);
@@ -106,6 +106,7 @@ public class AuthService : IAuthService
                 $"Click vào link: {link}"
             );
             await _emailLogService.LogAsync(user.Id, request.Email, "Sent", null, "ResetPassword");
+            return true;
         }
         catch (Exception ex)
         {

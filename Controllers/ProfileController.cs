@@ -71,7 +71,7 @@ public class ProfileController : Controller
                 ConfirmPassword = model.ConfirmPassword
             });
 
-            TempData.SetNotification("success", "Đổi mật khẩu thành công. Vui lòng đăng nhập lại để tiếp tục.");
+            TempData.SetNotification("success", "Đổi mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới.");
             await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
             return RedirectToAction("Login", "Account");
         }

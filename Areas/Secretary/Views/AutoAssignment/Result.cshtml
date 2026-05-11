@@ -8,7 +8,7 @@
     <div class="role-header mb-4">
         <div>
             <h3 class="title-gradient">Kết quả tự động phân công</h3>
-            <div class="subtitle">Tổng hợp lịch đã xử lý, số giám thị được gán và các lịch còn thiếu</div>
+            <div class="subtitle">Tổng hợp nghiệm phân công theo chuyên môn, hard constraint và cân bằng tải toàn đợt</div>
         </div>
 
         <a href="@Url.Action("Index", "AutoAssignment", new { area = "Secretary" })" class="btn btn-create">
@@ -40,6 +40,10 @@
         <div class="auto-stat-card success">
             <span>Giám thị mới</span>
             <strong>@Model.AssignedInvigilators</strong>
+        </div>
+        <div class="auto-stat-card primary">
+            <span>Thuật toán</span>
+            <strong style="font-size: 18px; line-height: 1.25;">CP-SAT 3 tầng</strong>
         </div>
         <div class="auto-stat-card primary">
             <span>Đủ 2 giám thị</span>

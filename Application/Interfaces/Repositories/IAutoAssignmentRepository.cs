@@ -23,6 +23,11 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
             int facultyId,
             CancellationToken cancellationToken = default);
 
+        Task<Dictionary<string, HashSet<int>>> GetSubjectLecturerMapAsync(
+            IEnumerable<string> subjectIds,
+            int facultyId,
+            CancellationToken cancellationToken = default);
+
         Task<List<AutoAssignBusySlotDto>> GetBusySlotsAsync(
             IEnumerable<int> userIds,
             IEnumerable<int> slotIds,
