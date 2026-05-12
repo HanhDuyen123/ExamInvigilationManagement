@@ -29,7 +29,7 @@ namespace ExamInvigilationManagement.Application.Services
     ExamScheduleApprovalSearchDto search,
     int userId,
     int page = 1,
-    int pageSize = 10,
+    int pageSize = 5,
     CancellationToken cancellationToken = default)
         {
             var context = await GetUserContextOrThrowAsync(userId, cancellationToken);

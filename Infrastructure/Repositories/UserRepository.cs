@@ -78,6 +78,9 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             entity.Information.LastName = domain.Information.LastName;
             entity.Information.Phone = domain.Information.Phone;
             entity.Information.Address = domain.Information.Address;
+            entity.Information.Dob = domain.Information.Dob;
+            entity.Information.Gender = domain.Information.Gender;
+            entity.Information.Avt = domain.Information.Avt;
 
             await _context.SaveChangesAsync();
         }   

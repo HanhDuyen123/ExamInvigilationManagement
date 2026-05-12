@@ -47,12 +47,31 @@ namespace ExamInvigilationManagement.Application.Services
             if (user == null || user.Information == null)
                 return;
 
-            user.Information.FirstName = dto.FirstName;
-            user.Information.LastName = dto.LastName;
-            user.Information.Phone = dto.Phone;
-            user.Information.Address = dto.Address;
+            var gender = NormalizeGender(dto.Gender);
+            if (!string.IsNullOrWhiteSpace(dto.Gender) && string.IsNullOrWhiteSpace(gender))
+                throw new ArgumentException("Giới tính không hợp lệ.");
+
+            user.Information.FirstName = (dto.FirstName ?? string.Empty).Trim();
+            user.Information.LastName = (dto.LastName ?? string.Empty).Trim();
+            user.Information.Phone = string.IsNullOrWhiteSpace(dto.Phone) ? null : dto.Phone.Trim();
+            user.Information.Address = string.IsNullOrWhiteSpace(dto.Address) ? null : dto.Address.Trim();
+            user.Information.Dob = dto.Dob;
+            user.Information.Gender = gender;
+            if (!string.IsNullOrWhiteSpace(dto.Avt))
+                user.Information.Avt = dto.Avt;
 
             await _repo.UpdateProfileAsync(user);
+        }
+
+        private static string? NormalizeGender(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            return value.Trim().ToLowerInvariant() switch
+            {
+                "male" or "nam" => "Male",
+                "female" or "nữ" or "nu" => "Female",
+                _ => null
+            };
         }
     }
 }

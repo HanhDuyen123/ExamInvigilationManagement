@@ -9,11 +9,11 @@
     <thead>
         <tr>
             <th class="col-id">STT</th>
-            <th class="col-name">Mã môn</th>
+            <th class="col-code">Mã môn</th>
             <th class="col-name">Tên môn</th>
-            <th class="col-id">Credit</th>
-            <th class="col-name">Khoa</th>
-            <th class="col-action">Action</th>
+            <th class="col-short">Số tín chỉ</th>
+            <th class="col-faculty">Khoa</th>
+            <th class="col-action">Thao tác</th>
         </tr>
     </thead>
 
@@ -22,10 +22,10 @@
         {
             <tr>
                 <td class="col-id">@stt</td>
-                <td class="col-name">@item.Id</td>
+                <td class="col-code">@item.Id</td>
                 <td class="col-name">@item.Name</td>
-                <td class="col-id">@item.Credit</td>
-                <td class="col-name">@item.FacultyName</td>
+                <td class="col-short">@item.Credit</td>
+                <td class="col-faculty">@item.FacultyName</td>
 
                 <td class="col-action">
                     <div class="action-group">

@@ -21,8 +21,8 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         {
             var vm = new CrudIndexViewModel
             {
-                Title = "Faculty Management",
-                Subtitle = "Quản lý khoa trong hệ thống",
+                Title = "Khoa",
+                Subtitle = "Danh sách các khoa đang tham gia vào công tác đào tạo và coi thi.",
                 CreateUrl = Url.Action("Create", "Faculty", new { area = "Admin" }),
                 SearchPartialView = "_FacultySearch",
             };

@@ -26,7 +26,7 @@ namespace ExamInvigilationManagement.Areas.Secretary.Controllers
         public async Task<IActionResult> Index(
             [FromQuery] ExamScheduleApprovalSearchDto search,
             int page = 1,
-            int pageSize = 10,
+            int pageSize = 5,
             CancellationToken cancellationToken = default)
         {
             var userId = GetCurrentUserId();
@@ -41,7 +41,7 @@ namespace ExamInvigilationManagement.Areas.Secretary.Controllers
         public async Task<IActionResult> GetList(
             [FromQuery] ExamScheduleApprovalSearchDto search,
             int page = 1,
-            int pageSize = 10,
+            int pageSize = 5,
             CancellationToken cancellationToken = default)
         {
             var userId = GetCurrentUserId();
@@ -140,7 +140,9 @@ namespace ExamInvigilationManagement.Areas.Secretary.Controllers
             return Json(lecturers.Select(x => new
             {
                 id = x.Id,
-                name = x.FullName ?? x.UserName
+                name = string.IsNullOrWhiteSpace(x.FullName)
+                    ? x.UserName
+                    : $"{x.UserName} - {x.FullName}"
             }));
         }
 

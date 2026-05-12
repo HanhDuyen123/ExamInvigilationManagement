@@ -1,9 +1,14 @@
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@inject ExamInvigilationManagement.Application.Interfaces.Service.IUserService CurrentUserService
 @{
     var antiforgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
     var controller = ViewContext.RouteData.Values["controller"]?.ToString() ?? "";
     var area = ViewContext.RouteData.Values["area"]?.ToString() ?? "";
     bool IsActive(string c, string? a = null) => string.Equals(controller, c, StringComparison.OrdinalIgnoreCase) && (a == null || string.Equals(area, a, StringComparison.OrdinalIgnoreCase));
+    var currentUserIdRaw = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    var currentProfile = int.TryParse(currentUserIdRaw, out var currentUserId) ? await CurrentUserService.GetProfileAsync(currentUserId) : null;
+    var currentName = $"{currentProfile?.LastName} {currentProfile?.FirstName}".Trim();
+    var currentInitial = !string.IsNullOrWhiteSpace(currentName) ? currentName.Substring(0, 1).ToUpperInvariant() : "U";
 }
 <!DOCTYPE html>
 <html lang="vi">
@@ -12,6 +17,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="request-verification-token" content="@antiforgeryToken" />
     <title>@ViewData["Title"] - ExamInvigilationManagement</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
         (function () {
             var key = 'exam-ui-theme';
@@ -54,8 +62,17 @@
             @await Html.PartialAsync("_NotificationBell")
             <div class="dropdown">
                 <a class="user-pill dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-label="Tài khoản" aria-expanded="false">
-                    <span class="avatar-mini"><i class="bi bi-person"></i></span>
-                    <span class="d-none d-md-inline fw-semibold">@User.Identity?.Name</span>
+                    <span class="avatar-mini">
+                        @if (!string.IsNullOrWhiteSpace(currentProfile?.Avt))
+                        {
+                            <img src="@currentProfile.Avt" alt="Ảnh đại diện" />
+                        }
+                        else
+                        {
+                            <span>@currentInitial</span>
+                        }
+                    </span>
+                    <span class="d-none d-md-inline fw-semibold">@(string.IsNullOrWhiteSpace(currentName) ? User.Identity?.Name : currentName)</span>
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end">
                     <li><a class="dropdown-item" asp-area="" asp-controller="Profile" asp-action="Index"><i class="bi bi-person me-2"></i>Thông tin cá nhân</a></li>
@@ -77,8 +94,11 @@
             <nav>
                 <div class="sidebar-group">
                     <div class="sidebar-group-title">Tổng quan</div>
-                    <a asp-area="" asp-controller="Dashboard" asp-action="Index" aria-label="Dashboard" class="sidebar-link @(IsActive("Dashboard") ? "active" : "")">
-                        <i class="bi bi-grid-1x2"></i><span class="sidebar-text">Dashboard</span>
+                    <a asp-area="" asp-controller="Dashboard" asp-action="Index" aria-label="Tổng quan" class="sidebar-link @(IsActive("Dashboard") ? "active" : "")">
+                        <i class="bi bi-grid-1x2"></i><span class="sidebar-text">Tổng quan</span>
+                    </a>
+                    <a asp-area="" asp-controller="Statistics" asp-action="Index" aria-label="Thống kê" class="sidebar-link @(IsActive("Statistics") ? "active" : "")">
+                        <i class="bi bi-bar-chart-line"></i><span class="sidebar-text">Thống kê</span>
                     </a>
                     <a asp-area="" asp-controller="Notification" asp-action="Index" aria-label="Thông báo" class="sidebar-link @(IsActive("Notification") ? "active" : "")">
                         <i class="bi bi-bell"></i><span class="sidebar-text">Thông báo</span>
@@ -136,9 +156,12 @@
     @RenderSection("PageModals", required: false)
     <div class="offcanvas offcanvas-start admin-mobile-offcanvas" tabindex="-1" id="adminMobileMenu" aria-labelledby="adminMobileMenuLabel">
         <div class="offcanvas-header">
-            <div>
-                <h5 class="mb-1" id="adminMobileMenuLabel">Menu hệ thống</h5>
-                <div class="small text-muted">Điều hướng nhanh</div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="brand-mark mobile-offcanvas-logo"><img src="~/img/ntu-logo.svg" asp-append-version="true" alt="Logo Đại học Nha Trang" /></span>
+                <div>
+                    <h5 class="mb-1" id="adminMobileMenuLabel">TRƯỜNG ĐẠI HỌC NHA TRANG</h5>
+                    <div class="small text-muted">Hệ thống phân công giám thị coi thi</div>
+                </div>
             </div>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
@@ -148,7 +171,10 @@
                 <div class="sidebar-group">
                     <div class="sidebar-group-title">Tổng quan</div>
                     <a asp-area="" asp-controller="Dashboard" asp-action="Index" class="sidebar-link mb-2 @(IsActive("Dashboard") ? "active" : "")">
-                        <i class="bi bi-grid-1x2"></i><span class="sidebar-text">Dashboard</span>
+                        <i class="bi bi-grid-1x2"></i><span class="sidebar-text">Tổng quan</span>
+                    </a>
+                    <a asp-area="" asp-controller="Statistics" asp-action="Index" class="sidebar-link mb-2 @(IsActive("Statistics") ? "active" : "")">
+                        <i class="bi bi-bar-chart-line"></i><span class="sidebar-text">Thống kê</span>
                     </a>
                     <a asp-area="" asp-controller="Notification" asp-action="Index" class="sidebar-link mb-2 @(IsActive("Notification") ? "active" : "")">
                         <i class="bi bi-bell"></i><span class="sidebar-text">Thông báo</span>

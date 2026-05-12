@@ -27,8 +27,8 @@ namespace ExamInvigilationManagement.Controllers
 
             var vm = new CrudIndexViewModel
             {
-                Title = "Lecturer Busy Slot Management",
-                Subtitle = "Quản lý lịch bận giảng viên",
+                Title = "Lịch bận giảng viên",
+                Subtitle = "Ghi nhận những khoảng thời gian giảng viên không thể tham gia coi thi.",
                 CreateUrl = @Url.Action("Create", "BusySlot") ?? "#",
                 SearchPartialView = "_BusySlotSearch",
                 TableClass = "full-width",
@@ -72,7 +72,9 @@ namespace ExamInvigilationManagement.Controllers
             return Json(users.Select(x => new
             {
                 id = x.Id,
-                name = x.FullName ?? x.UserName
+                name = string.IsNullOrWhiteSpace(x.FullName)
+                    ? x.UserName
+                    : $"{x.UserName} - {x.FullName}"
             }));
         }
 

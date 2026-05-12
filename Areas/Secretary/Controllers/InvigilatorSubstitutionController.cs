@@ -18,7 +18,7 @@ namespace ExamInvigilationManagement.Areas.Secretary.Controllers
             _service = service;
         }
 
-        public async Task<IActionResult> Index(InvigilatorSubstitutionSearchDto search, int page = 1, int pageSize = 10, CancellationToken cancellationToken = default)
+        public async Task<IActionResult> Index(InvigilatorSubstitutionSearchDto search, int page = 1, int pageSize = 5, CancellationToken cancellationToken = default)
         {
             var userId = GetCurrentUserId();
             if (!userId.HasValue) return Unauthorized();

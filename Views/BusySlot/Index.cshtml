@@ -2,7 +2,7 @@
 @model CrudIndexViewModel
 
 @{
-    ViewData["Title"] = "Busy Slot";
+    ViewData["Title"] = "Lịch bận giảng viên";
     var showUserFilter = ViewBag.ShowUserFilter as bool? ?? false;
 }
 
@@ -95,13 +95,7 @@
                 },
                 valueField: 'id',
                 textField: 'name',
-                beforeSearch: function () {
-                    if (!$('#yearId').val()) {
-                        AppNotify.show('warning', 'Vui lòng chọn năm học trước.');
-                        return false;
-                    }
-                    return true;
-                },
+                beforeSearch: function () { return $('#yearId').val() ? true : 'Vui lòng chọn năm học'; },
                 onSelect: function () {
                     clearBelow('period');
                     CrudPage.loadData(1);
@@ -123,9 +117,7 @@
                 },
                 valueField: 'id',
                 textField: 'name',
-                beforeSearch: function () {
-                    return !!$('#semesterId').val();
-                },
+                beforeSearch: function () { return $('#yearId').val() && $('#semesterId').val() ? true : 'Vui lòng chọn năm học và học kỳ'; },
                 onSelect: function () {
                     clearBelow('session');
                     CrudPage.loadData(1);
@@ -147,9 +139,7 @@
                 },
                 valueField: 'id',
                 textField: 'name',
-                beforeSearch: function () {
-                    return !!$('#periodId').val();
-                },
+                beforeSearch: function () { return $('#periodId').val() ? true : 'Vui lòng chọn đợt thi'; },
                 onSelect: function () {
                     clearBelow('slot');
                     CrudPage.loadData(1);
@@ -171,9 +161,7 @@
                 },
                 valueField: 'id',
                 textField: 'name',
-                beforeSearch: function () {
-                    return !!$('#sessionId').val();
-                },
+                beforeSearch: function () { return $('#sessionId').val() ? true : 'Vui lòng chọn buổi thi'; },
                 onSelect: function () { CrudPage.loadData(1); },
                 onClear: function () { CrudPage.loadData(1); }
             });

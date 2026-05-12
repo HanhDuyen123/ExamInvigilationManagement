@@ -3,6 +3,15 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
+}
+
+.role-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
 .title-gradient {
@@ -128,7 +137,7 @@
     }
 
     .filter-toggle-btn.collapsed .toggle-icon {
-        transform: rotate(180deg);
+        transform: none;
     }
 
 /* khi thu gọn, giảm khoảng trống */
@@ -155,7 +164,7 @@
 .table-inner {
     width: 70%;
     margin: auto;
-    overflow-x: auto; /* chống vỡ layout */
+    overflow-x: visible;
 }
 
     /* dùng cho module nhiều cột */
@@ -165,13 +174,13 @@
     }
 
 .modern-table {
-     width: 100%; 
-    /* table-layout: fixed; */
+    width: 100%;
+    table-layout: auto;
     border-collapse: separate;
-    border-spacing: 0 5px; /* khoảng cách giữa các row */
+    border-spacing: 0 4px;
 }
     .modern-table.wide-table {
-        min-width: 1200px;
+        min-width: 0;
     }
 
     /* mỗi row */
@@ -201,14 +210,43 @@
 
     /* HEADER */
     .modern-table thead th {
-        padding: 14px;
+        padding: 10px 11px;
         font-size: 12px;
         text-transform: uppercase;
         color: #94a3b8;
+        white-space: nowrap;
     }
 
     .modern-table td {
-        padding: 12px 16px;
+        padding: 9px 11px;
+        vertical-align: middle;
+    }
+
+    .modern-table .col-id,
+    .modern-table .col-short,
+    .modern-table .col-status,
+    .modern-table .col-date,
+    .modern-table .col-action {
+        white-space: nowrap;
+        width: 1%;
+    }
+
+    .modern-table .col-id { min-width: 54px; text-align: center; }
+    .modern-table .col-short { min-width: 74px; text-align: center; }
+    .modern-table .col-status { min-width: 96px; text-align: center; }
+    .modern-table .col-date { min-width: 104px; text-align: center; }
+    .modern-table .col-action { min-width: 84px; }
+    .modern-table .col-code { width: 1%; min-width: 92px; white-space: nowrap; }
+    .modern-table .col-year { width: 1%; min-width: 104px; white-space: nowrap; }
+    .modern-table .col-phone { width: 1%; min-width: 112px; white-space: nowrap; }
+    .modern-table .col-role { min-width: 120px; }
+    .modern-table .col-person { min-width: 150px; }
+    .modern-table .col-faculty { min-width: 150px; }
+    .modern-table .col-email { min-width: 180px; }
+    .modern-table .col-name { min-width: 180px; }
+
+    .modern-table .badge {
+        white-space: nowrap;
     }
 
     .modern-table tbody tr:hover {

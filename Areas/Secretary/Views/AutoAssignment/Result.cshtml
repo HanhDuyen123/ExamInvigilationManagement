@@ -11,10 +11,16 @@
             <div class="subtitle">Tổng hợp lịch đã xử lý, giám thị mới được bổ sung và các lịch còn thiếu</div>
         </div>
 
-        <a href="@Url.Action("Index", "AutoAssignment", new { area = "Secretary" })" class="btn btn-create">
-            <i class="bi bi-arrow-repeat"></i>
-            <span>Chạy lại</span>
-        </a>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="@Url.Action("Index", "ExamSchedule", new { area = "" })" class="btn btn-outline-primary rounded-3">
+                <i class="bi bi-calendar-week"></i>
+                <span>Đến lịch thi</span>
+            </a>
+            <a href="@Url.Action("Index", "AutoAssignment", new { area = "Secretary" })" class="btn btn-create">
+                <i class="bi bi-arrow-repeat"></i>
+                <span>Chạy lại</span>
+            </a>
+        </div>
     </div>
 
     <div class="alert @(Model.Success ? "alert-success" : "alert-danger") mb-4">
@@ -77,7 +83,7 @@
                     {
                         @foreach (var item in Model.Details)
                         {
-                            <tr>
+                            <tr class="auto-result-row">
                                 <td class="cell-code">@item.ExamScheduleId</td>
                                 <td class="cell-wrap">@item.SubjectName</td>
                                 <td class="cell-wrap">@item.ClassName</td>
@@ -114,6 +120,8 @@
             </table>
         </div>
     </div>
+
+    <div class="auto-result-pagination pagination justify-content-center mt-3" id="autoResultPagination"></div>
 </div>
 
 <style>
@@ -167,3 +175,29 @@
         font-style: normal;
     }
 </style>
+
+<script>
+    (function () {
+        const rows = Array.from(document.querySelectorAll('.auto-result-row'));
+        const pager = document.getElementById('autoResultPagination');
+        const pageSize = 5;
+        if (!pager || rows.length <= pageSize) return;
+
+        function render(page) {
+            const totalPages = Math.ceil(rows.length / pageSize);
+            rows.forEach((row, index) => row.style.display = Math.floor(index / pageSize) + 1 === page ? '' : 'none');
+            let html = '';
+            if (page > 1) html += `<button type="button" class="page-link" data-page="${page - 1}">‹</button>`;
+            for (let i = 1; i <= totalPages; i++) html += `<button type="button" class="page-link ${i === page ? 'active' : ''}" data-page="${i}">${i}</button>`;
+            if (page < totalPages) html += `<button type="button" class="page-link" data-page="${page + 1}">›</button>`;
+            pager.innerHTML = html;
+        }
+
+        pager.addEventListener('click', function (event) {
+            const page = Number(event.target.dataset.page || 0);
+            if (page) render(page);
+        });
+
+        render(1);
+    })();
+</script>

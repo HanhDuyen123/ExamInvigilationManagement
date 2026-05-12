@@ -40,9 +40,29 @@
         </span>
     </div>
 
-    <form asp-action="Update" method="post" class="profile-edit-card">
+    <form asp-area="" asp-controller="Profile" asp-action="Update" method="post" enctype="multipart/form-data" class="profile-edit-card">
         @Html.AntiForgeryToken()
         <div class="profile-form-grid">
+            <div class="form-group profile-avatar-upload">
+                <label class="form-label">Ảnh đại diện</label>
+                <div class="avatar-upload-row">
+                    <div class="profile-avatar small-preview" id="avatarPreview">
+                        @if (!string.IsNullOrWhiteSpace(Model.Avt))
+                        {
+                            <img src="@Model.Avt" alt="Ảnh đại diện hiện tại" />
+                        }
+                        else
+                        {
+                            <span>@avatarText</span>
+                        }
+                    </div>
+                    <div class="flex-grow-1">
+                        <input type="file" class="form-control" name="avatarFile" id="avatarFile" accept="image/png,image/jpeg,image/webp" />
+                        <div class="form-text">JPG, PNG hoặc WEBP, tối đa 2MB.</div>
+                    </div>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label class="form-label">Tên đăng nhập</label>
                 <input class="input-modern" value="@Model.UserName" disabled />
@@ -70,7 +90,16 @@
 
             <div class="form-group">
                 <label class="form-label">Giới tính</label>
-                <input class="input-modern" name="Gender" value="@Model.Gender" />
+                <div class="radio-card-group">
+                    <label class="radio-card">
+                        <input type="radio" name="Gender" value="Male" checked="@(string.Equals(Model.Gender, "Male", StringComparison.OrdinalIgnoreCase))" />
+                        <span>Nam</span>
+                    </label>
+                    <label class="radio-card">
+                        <input type="radio" name="Gender" value="Female" checked="@(string.Equals(Model.Gender, "Female", StringComparison.OrdinalIgnoreCase))" />
+                        <span>Nữ</span>
+                    </label>
+                </div>
             </div>
 
             <div class="form-group">
@@ -182,6 +211,49 @@
         grid-column: span 2;
     }
 
+    .profile-avatar-upload {
+        grid-column: 1 / -1;
+    }
+
+    .avatar-upload-row {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 12px;
+        border: 1px solid var(--line-soft);
+        border-radius: 16px;
+        background: var(--surface-3);
+    }
+
+    .profile-avatar.small-preview {
+        width: 58px;
+        height: 58px;
+        border-radius: 18px;
+        font-size: 22px;
+        flex: 0 0 auto;
+    }
+
+    .radio-card-group {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .radio-card {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-height: 38px;
+        padding: 8px 11px;
+        border: 1px solid var(--line-medium);
+        border-radius: 12px;
+        color: var(--text-main);
+        background: var(--surface-2);
+        font-weight: 750;
+    }
+
+    .radio-card input { accent-color: var(--app-primary); }
+
     .profile-actions {
         display: flex;
         justify-content: flex-end;
@@ -200,3 +272,14 @@
         .profile-actions { justify-content: stretch; flex-direction: column; }
     }
 </style>
+
+<script>
+    document.getElementById('avatarFile')?.addEventListener('change', function () {
+        const file = this.files && this.files[0];
+        if (!file || !file.type.startsWith('image/')) return;
+        const preview = document.getElementById('avatarPreview');
+        if (!preview) return;
+        const url = URL.createObjectURL(file);
+        preview.innerHTML = '<img src="' + url + '" alt="Ảnh đại diện xem trước" />';
+    });
+</script>

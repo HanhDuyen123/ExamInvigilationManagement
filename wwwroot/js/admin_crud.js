@@ -19,6 +19,7 @@
         }, options || {});
 
         restoreState();
+        normalizePageSizeSelect();
         bindEvents();
         ensureClearFiltersButton();
 
@@ -118,7 +119,7 @@
         currentPage = Number(page || 1) || 1;
         const data = {
             page: currentPage,
-            pageSize: config.pageSize ? $(config.pageSize).val() : 10
+            pageSize: config.pageSize ? $(config.pageSize).val() : 5
         };
 
         if (config.searchBox) {
@@ -132,6 +133,7 @@
 
         $.get(config.api, data, function (res) {
             $(config.tableId).html(res);
+            if (window.AppEnhanceActionButtons) window.AppEnhanceActionButtons();
             $(config.tableId).fadeTo(100, 1);
         });
     }
@@ -219,6 +221,26 @@
                 form.trigger('submit');
             });
         }
+    }
+
+    function normalizePageSizeSelect() {
+        if (!config.pageSize) return;
+
+        const $select = $(config.pageSize);
+        if (!$select.length) return;
+
+        const allowed = [5, 10, 20, 50, 100];
+        let current = Number($select.val() || 5);
+        if (!allowed.includes(current)) current = 5;
+
+        $select.empty();
+        allowed.forEach(function (size) {
+            $select.append($('<option>', {
+                value: size,
+                text: size + '/trang',
+                selected: size === current
+            }));
+        });
     }
 
     function ensureClearFiltersButton() {

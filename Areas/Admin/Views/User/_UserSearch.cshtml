@@ -1,43 +1,44 @@
-﻿<div class="d-flex flex-wrap align-items-center gap-3">
+<div class="role-filter-compact">
+    <div class="role-filter-main user-search-grid">
+        <div class="search-modern search-field search-field-wide">
+            <i class="bi bi-search"></i>
+            <input type="text" id="keyword" class="crud-filter" placeholder="Tìm tài khoản..." />
+        </div>
 
-    <div class="search-modern">
-        <i class="bi bi-search"></i>
-        <input type="text" id="keyword" class="crud-filter" placeholder="Tìm tài khoản..." />
+        <div class="lookup-modern position-relative search-field">
+            <input id="roleInput" class="input-modern" placeholder="Chọn vai trò..." autocomplete="off" />
+            <div id="roleDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+            <input type="hidden" id="roleId" />
+        </div>
+
+        <div class="lookup-modern position-relative search-field">
+            <input id="informationInput" class="input-modern" placeholder="Chọn mã - họ tên..." autocomplete="off" />
+            <div id="informationDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+            <input type="hidden" id="informationId" />
+        </div>
+
+        <div class="lookup-modern position-relative search-field">
+            <input id="facultyInput" class="input-modern" placeholder="Chọn khoa..." autocomplete="off" />
+            <div id="facultyDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+            <input type="hidden" id="facultyId" />
+        </div>
+
+        <div class="search-field">
+            <select id="status" class="select-modern crud-filter">
+                <option value="">-- Trạng thái --</option>
+                <option value="true">Đang hoạt động</option>
+                <option value="false">Ngưng hoạt động</option>
+            </select>
+        </div>
+
+        <div class="search-field search-page-size">
+            <select id="pageSize" class="select-modern">
+                <option value="5" selected>5/trang</option>
+                <option value="10">10/trang</option>
+                <option value="20">20/trang</option>
+                <option value="50">50/trang</option>
+                <option value="100">100/trang</option>
+            </select>
+        </div>
     </div>
-
-    <div class="lookup-modern position-relative" style="width: 240px;">
-        <input id="roleInput" class="input-modern" placeholder="Chọn vai trò..." autocomplete="off" />
-        <div id="roleDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
-        <input type="hidden" id="roleId" />
-    </div>
-
-    <div class="lookup-modern position-relative" style="width: 260px;">
-        <input id="informationInput" class="input-modern" placeholder="Chọn họ tên..." autocomplete="off" />
-        <div id="informationDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
-        <input type="hidden" id="informationId" />
-    </div>
-
-    <div class="lookup-modern position-relative" style="width: 240px;">
-        <input id="facultyInput" class="input-modern" placeholder="Chọn khoa..." autocomplete="off" />
-        <div id="facultyDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
-        <input type="hidden" id="facultyId" />
-    </div>
-
-    <div>
-        <select id="status" class="select-modern crud-filter">
-            <option value="">-- Trạng thái --</option>
-            <option value="true">Đang hoạt động</option>
-            <option value="false">Ngưng hoạt động</option>
-        </select>
-    </div>
-
-    <div class="ms-auto">
-        <select id="pageSize" class="select-modern">
-            <option value="5">5 / trang</option>
-            <option value="10">10 / trang</option>
-            <option value="20">20 / trang</option>
-            <option value="50">50 / trang</option>
-        </select>
-    </div>
-
 </div>

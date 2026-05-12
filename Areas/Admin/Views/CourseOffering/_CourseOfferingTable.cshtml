@@ -9,14 +9,14 @@
     <thead>
         <tr>
             <th class="col-id">STT</th>
-            <th class="col-name">Mã HP</th>
+            <th class="col-code">Mã HP</th>
             <th class="col-name">Tên học phần</th>
-            <th class="col-name">Giảng viên</th>
-            <th class="col-id">Học kỳ</th>
-            <th class="col-id">Năm học</th>
-            <th class="col-id">Lớp</th>
-            <th class="col-id">Nhóm</th>
-            <th class="col-action">Action</th>
+            <th class="col-person">Giảng viên</th>
+            <th class="col-short">Học kỳ</th>
+            <th class="col-year">Năm học</th>
+            <th class="col-short">Lớp</th>
+            <th class="col-short">Nhóm</th>
+            <th class="col-action">Thao tác</th>
         </tr>
     </thead>
 
@@ -27,13 +27,13 @@
             {
                 <tr>
                     <td class="col-id">@stt</td>
-                    <td class="col-name">@item.SubjectId</td>
+                    <td class="col-code">@item.SubjectId</td>
                     <td class="col-name">@item.SubjectName</td>
-                    <td class="col-name">@item.UserName</td>
-                    <td class="col-id">@item.SemesterName</td>
-                    <td class="col-id">@item.AcademicYearName</td>
-                    <td class="col-id">@item.ClassName</td>
-                    <td class="col-id">@item.GroupNumber</td>
+                    <td class="col-person">@item.UserName</td>
+                    <td class="col-short">@item.SemesterName</td>
+                    <td class="col-year">@item.AcademicYearName</td>
+                    <td class="col-short">@item.ClassName</td>
+                    <td class="col-short">@item.GroupNumber</td>
 
                     <td class="col-action">
                         <div class="action-group">

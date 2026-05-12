@@ -1,9 +1,7 @@
 ﻿@{
-    ViewData["Title"] = "Dashboard";
+    ViewData["Title"] = "Tổng quan";
 
     var role = (ViewBag.RoleName as string ?? "").Trim();
-    var fullName = User.Identity?.Name ?? "Người dùng";
-
     bool isAdmin = role.Equals("Admin", StringComparison.OrdinalIgnoreCase);
     bool isLecturer = role.Equals("Giảng viên", StringComparison.OrdinalIgnoreCase);
     bool isSecretary = role.Equals("Thư ký khoa", StringComparison.OrdinalIgnoreCase);
@@ -12,57 +10,9 @@
     Layout = isAdmin ? "_Layout" : "_AcademicLayout";
 }
 
-@if (isAdmin)
+@if (!isAdmin)
 {
     <div class="container-fluid">
-        <div class="dashboard-hero mb-4">
-            <div class="hero-badge">
-                <i class="bi bi-shield-check"></i>
-                <span>Admin Dashboard</span>
-            </div>
-
-            <h1 class="hero-title">Xin chào, @fullName 👋</h1>
-
-            <p class="hero-desc">
-                Bạn đang đăng nhập với quyền <strong>Admin</strong>. Tại đây bạn có thể theo dõi và quản lý toàn bộ hệ thống.
-            </p>
-        </div>
-    </div>
-}
-else
-{
-    <div class="container-fluid">
-
-        <!-- HERO -->
-        <div class="dashboard-hero mb-4">
-            <div class="hero-badge">
-                <i class="bi bi-stars"></i>
-                <span>Dashboard</span>
-            </div>
-
-            <h1 class="hero-title">Xin chào, @fullName 👋</h1>
-
-            <p class="hero-desc">
-                @if (isLecturer)
-                {
-                    <text>Bạn đang đăng nhập với quyền <strong>Giảng viên</strong>. Theo dõi lịch thi, phân công và thông báo liên quan.</text>
-                }
-                else if (isSecretary)
-                {
-                    <text>Bạn đang đăng nhập với quyền <strong>Thư ký khoa</strong>. Quản lý lịch thi, điều phối và phân công coi thi.</text>
-                }
-                else if (isDean)
-                {
-                    <text>Bạn đang đăng nhập với quyền <strong>Trưởng khoa</strong>. Duyệt lịch thi, theo dõi báo cáo và điều hành nghiệp vụ.</text>
-                }
-                else
-                {
-                    <text>Chào mừng bạn đến với hệ thống quản lý coi thi.</text>
-                }
-            </p>
-        </div>
-
-        <!-- QUICK ACTION -->
         <div class="section-title mb-3">
             <h5 class="mb-0 fw-bold">Chức năng chính</h5>
             <span class="text-muted">Hiển thị theo quyền truy cập</span>
@@ -155,12 +105,12 @@ else
 @if (isAdmin)
 {
     <div class="container-fluid">
-        <div class="dashboard-grid">
-            <a asp-area="" asp-controller="Statistics" asp-action="Index" class="dash-card stats-card">
-                <div class="card-icon"><i class="bi bi-bar-chart-line-fill"></i></div>
-                <div class="card-title">Thống kê hệ thống</div>
-                <div class="card-desc">Quan sát tổng quan lịch thi, độ phủ phân công, phản hồi và hiệu suất vận hành toàn hệ thống.</div>
-            </a>
+        <div class="system-overview-card">
+            <div class="overview-icon"><i class="bi bi-shield-check"></i></div>
+            <div>
+                <h3 class="mb-2">Hệ thống quản lý phân công giám thị coi thi</h3>
+                <p class="mb-0 text-muted">Nền tảng hỗ trợ quản trị dữ liệu đào tạo, lịch thi, phòng thi, lịch bận, phân công giám thị, duyệt lịch và theo dõi phản hồi. Các chức năng quản trị được đặt ở sidebar để thao tác nhanh và nhất quán.</p>
+            </div>
         </div>
     </div>
 }
@@ -211,6 +161,29 @@ else
         display: grid;
         grid-template-columns: repeat(auto-fit,minmax(220px,1fr));
         gap: 18px;
+    }
+
+    .system-overview-card {
+        display: flex;
+        gap: 18px;
+        align-items: flex-start;
+        padding: 28px;
+        border-radius: 24px;
+        background: var(--surface-1, rgba(255,255,255,.9));
+        border: 1px solid var(--line-soft, rgba(79,70,229,.1));
+        box-shadow: var(--card-shadow, 0 18px 48px rgba(15,23,42,.06));
+    }
+
+    .overview-icon {
+        width: 58px;
+        height: 58px;
+        display: grid;
+        place-items: center;
+        flex: 0 0 auto;
+        border-radius: 18px;
+        color: #fff;
+        background: linear-gradient(135deg, var(--app-primary, #2563eb), var(--app-primary-2, #4f46e5));
+        font-size: 1.5rem;
     }
 
     .dash-card {

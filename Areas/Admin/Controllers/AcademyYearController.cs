@@ -21,8 +21,8 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         {
             var vm = new CrudIndexViewModel
             {
-                Title = "Academy Year Management",
-                Subtitle = "Quản lý năm học & kỳ thi",
+                Title = "Năm học",
+                Subtitle = "Sắp xếp năm học, học kỳ, đợt thi và các ca thi đi kèm.",
                 CreateUrl = @Url.Action("Create", "AcademyYear", new { area = "Admin" }),
                 SearchPartialView = "_AcademyYearSearch",
                 TableClass = "full-width"

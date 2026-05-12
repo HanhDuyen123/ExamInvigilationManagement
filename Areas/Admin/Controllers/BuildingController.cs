@@ -21,8 +21,8 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         {
             var vm = new CrudIndexViewModel
             {
-                Title = "Building Management",
-                Subtitle = "Quản lý tòa nhà",
+                Title = "Giảng đường",
+                Subtitle = "Các khu giảng đường dùng để tổ chức lớp học và kỳ thi.",
                 CreateUrl = Url.Action("Create", "Building", new { area = "Admin" }),
                 SearchPartialView = "_BuildingSearch"
             };

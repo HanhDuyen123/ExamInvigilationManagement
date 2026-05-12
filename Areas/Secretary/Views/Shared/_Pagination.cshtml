@@ -1,31 +1,23 @@
-﻿@using ExamInvigilationManagement.Common
+@using ExamInvigilationManagement.Common
 @model IPagedResult
 
-<nav class="mt-3">
+<nav class="mt-3" aria-label="Phân trang">
     <ul class="pagination">
-
-        <li class="page-item @(Model.Page == 1 ? "disabled" : "")">
-            <a class="page-link" href="#" onclick="CrudPage.loadData(1)">«</a>
-        </li>
-
-        <li class="page-item @(Model.Page == 1 ? "disabled" : "")">
-            <a class="page-link" href="#" onclick="CrudPage.loadData(@(Model.Page - 1))">‹</a>
-        </li>
+        @if (Model.Page > 1)
+        {
+            <li class="page-item"><a class="page-link" href="#" data-page="1" onclick="CrudPage.loadData(1); return false;" title="Trang đầu">«</a></li>
+            <li class="page-item"><a class="page-link" href="#" data-page="@(Model.Page - 1)" onclick="CrudPage.loadData(@(Model.Page - 1)); return false;" title="Trang trước">‹</a></li>
+        }
 
         @for (int i = 1; i <= Model.TotalPages; i++)
         {
-            <li class="page-item @(i == Model.Page ? "active" : "")">
-                <a class="page-link" href="#" onclick="CrudPage.loadData(@i)">@i</a>
-            </li>
+            <li class="page-item @(i == Model.Page ? "active" : "")"><a class="page-link" href="#" data-page="@i" onclick="CrudPage.loadData(@i); return false;">@i</a></li>
         }
 
-        <li class="page-item @(Model.Page == Model.TotalPages ? "disabled" : "")">
-            <a class="page-link" href="#" onclick="CrudPage.loadData(@(Model.Page + 1))">›</a>
-        </li>
-
-        <li class="page-item @(Model.Page == Model.TotalPages ? "disabled" : "")">
-            <a class="page-link" href="#" onclick="CrudPage.loadData(@Model.TotalPages)">»</a>
-        </li>
-
+        @if (Model.Page < Model.TotalPages)
+        {
+            <li class="page-item"><a class="page-link" href="#" data-page="@(Model.Page + 1)" onclick="CrudPage.loadData(@(Model.Page + 1)); return false;" title="Trang sau">›</a></li>
+            <li class="page-item"><a class="page-link" href="#" data-page="@Model.TotalPages" onclick="CrudPage.loadData(@Model.TotalPages); return false;" title="Trang cuối">»</a></li>
+        }
     </ul>
 </nav>

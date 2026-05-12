@@ -24,7 +24,8 @@
             onClear: null,
             onOpen: null,
             onClose: null,
-            beforeSearch: null
+            beforeSearch: null,
+            blockedMessage: 'Vui lòng chọn dữ liệu liên quan trước'
         }, options || {});
 
         if (!cfg.key) cfg.key = cfg.input;
@@ -74,9 +75,35 @@
 
         function canSearch(keyword) {
             if (typeof cfg.beforeSearch === 'function') {
-                return cfg.beforeSearch(keyword, api) !== false;
+                const result = cfg.beforeSearch(keyword, api);
+                if (result === false || typeof result === 'string') {
+                    showBlockedMessage(typeof result === 'string' ? result : cfg.blockedMessage);
+                    return false;
+                }
             }
             return true;
+        }
+
+        function showBlockedMessage(message) {
+            api._currentItems = [];
+            currentIndex = -1;
+            close();
+            const $wrap = $input.closest('.lookup-modern');
+            let $message = $wrap.find('.lookup-blocked-message').first();
+
+            if (!$message.length) {
+                $message = $('<div class="lookup-blocked-message" role="alert"></div>');
+                $wrap.append($message);
+            }
+
+            $message.text(message || cfg.blockedMessage).show();
+            $input.addClass('lookup-blocked-input');
+
+        }
+
+        function clearBlockedMessage() {
+            $input.removeClass('lookup-blocked-input');
+            $input.closest('.lookup-modern').find('.lookup-blocked-message').hide();
         }
 
         function render(items) {
@@ -137,6 +164,7 @@
 
         function fetchData(keyword = '') {
             if (!canSearch(keyword)) return;
+            clearBlockedMessage();
 
             const requestUrl = resolveUrl();
             if (!requestUrl) return;
@@ -157,6 +185,7 @@
 
         function open(keyword = '') {
             if (!canSearch(keyword)) return;
+            clearBlockedMessage();
 
             isOpen = true;
 
@@ -185,6 +214,7 @@
         function setValue(value, text) {
             $hidden.val(value ?? '');
             $input.val(text ?? '');
+            clearBlockedMessage();
         }
 
         function clear() {
@@ -292,11 +322,16 @@
             });
 
             $input.on(`input${ns}`, function () {
+                clearBlockedMessage();
                 if (isInitializing) return;
 
                 if (!$input.val().trim()) {
                     clear();
                 }
+            });
+
+            $input.on(`blur${ns}`, function () {
+                setTimeout(clearBlockedMessage, 120);
             });
 
             $menu.on(`click${ns}`, '.lookup-item', function () {
@@ -356,8 +391,13 @@
         return instances.get(key);
     }
 
+    function require(selector, message) {
+        return $(selector).val() ? true : message;
+    }
+
     return {
         create: create,
-        get: get
+        get: get,
+        require: require
     };
 })();

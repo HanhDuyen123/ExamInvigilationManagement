@@ -70,8 +70,8 @@ namespace ExamInvigilationManagement.Controllers
 
             var vm = new CrudIndexViewModel
             {
-                Title = "Exam Schedule Management",
-                Subtitle = "Quản lý lịch thi",
+                Title = "Lịch thi",
+                Subtitle = "Theo dõi thời gian, phòng thi và giám thị cho từng buổi thi.",
                 CreateUrl = Url.Action("Create", "ExamSchedule") ?? "#",
                 SearchPartialView = "_ExamScheduleSearch",
                 TableClass = "full-width",
@@ -180,7 +180,9 @@ namespace ExamInvigilationManagement.Controllers
             return Json(users.Select(x => new
             {
                 id = x.Id,
-                name = x.FullName ?? x.UserName
+                name = string.IsNullOrWhiteSpace(x.FullName)
+                    ? x.UserName
+                    : $"{x.UserName} - {x.FullName}"
             }));
         }
 

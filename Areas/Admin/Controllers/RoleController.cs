@@ -21,8 +21,8 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         {
             var vm = new CrudIndexViewModel
             {
-                Title = "Role Management",
-                Subtitle = "Quản lý phân quyền hệ thống",
+                Title = "Vai trò",
+                Subtitle = "Nhóm quyền quyết định người dùng có thể xem và thao tác những gì.",
                 CreateUrl = Url.Action("Create", "Role", new { area = "Admin" }),
                 SearchPartialView = "_RoleSearch"
             };

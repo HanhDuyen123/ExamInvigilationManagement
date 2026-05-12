@@ -21,14 +21,14 @@
     <thead>
         <tr>
             <th class="col-id">STT</th>
-            <th class="col-name">Họ tên</th>
-            <th class="col-name">Email</th>
-            <th class="col-name">Điện thoại</th>
+            <th class="col-person">Họ tên</th>
+            <th class="col-email">Email</th>
+            <th class="col-phone">Điện thoại</th>
             <th class="col-name">Địa chỉ</th>
-            <th class="col-id">Giới tính</th>
-            <th class="col-id">Ngày sinh</th>
-            <th class="col-name">Position</th>
-            <th class="col-action">Action</th>
+            <th class="col-short">Giới tính</th>
+            <th class="col-date">Ngày sinh</th>
+            <th class="col-role">Chức vụ</th>
+            <th class="col-action">Thao tác</th>
         </tr>
     </thead>
 
@@ -37,13 +37,13 @@
         {
             <tr>
                 <td class="col-id">@stt</td>
-                <td class="col-name">@item.LastName @item.FirstName</td>
-                <td class="col-name">@item.Email</td>
-                <td class="col-name">@item.Phone</td>
+                <td class="col-person">@item.LastName @item.FirstName</td>
+                <td class="col-email">@item.Email</td>
+                <td class="col-phone">@item.Phone</td>
                 <td class="col-name">@item.Address</td>
-                <td class="col-id">@GetGenderText(item.Gender)</td>
-                <td class="col-id">@(item.Dob.HasValue ? item.Dob.Value.ToString("dd/MM/yyyy") : "")</td>
-                <td class="col-name">@item.PositionName</td>
+                <td class="col-short">@GetGenderText(item.Gender)</td>
+                <td class="col-date">@(item.Dob.HasValue ? item.Dob.Value.ToString("dd/MM/yyyy") : "")</td>
+                <td class="col-role">@item.PositionName</td>
                 <td class="col-action">
                     <div class="action-group">
                         <a href="/Admin/Information/Edit/@item.Id" class="btn-icon edit">

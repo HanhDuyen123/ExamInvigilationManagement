@@ -2,7 +2,7 @@
 @model CrudIndexViewModel
 
 @{
-    ViewData["Title"] = "Exam Schedule Management";
+    ViewData["Title"] = "Lịch thi";
     var showFacultyFilter = ViewBag.ShowFacultyFilter as bool? ?? false;
     var showUserFilter = ViewBag.ShowUserFilter as bool? ?? false;
     var showStatusFilter = ViewBag.ShowStatusFilter as bool? ?? false;
@@ -443,9 +443,7 @@
                 },
                 valueField: 'id',
                 textField: 'name',
-                beforeSearch: function () {
-                    return !!val('#yearId');
-                },
+                beforeSearch: function () { return val('#yearId') ? true : 'Vui lòng chọn năm học'; },
                 onSelect: function () {
                     clearBelow('semester');
                     CrudPage.loadData(1);
@@ -468,9 +466,7 @@
                 },
                 valueField: 'id',
                 textField: 'name',
-                beforeSearch: function () {
-                    return !!val('#semesterId');
-                },
+                beforeSearch: function () { return val('#yearId') && val('#semesterId') ? true : 'Vui lòng chọn năm học và học kỳ'; },
                 onSelect: function () {
                     clearBelow('period');
                     CrudPage.loadData(1);
@@ -493,9 +489,7 @@
                 },
                 valueField: 'id',
                 textField: 'name',
-                beforeSearch: function () {
-                    return !!val('#periodId');
-                },
+                beforeSearch: function () { return val('#periodId') ? true : 'Vui lòng chọn đợt thi'; },
                 onSelect: function () {
                     clearBelow('session');
                     CrudPage.loadData(1);
@@ -518,9 +512,7 @@
                 },
                 valueField: 'id',
                 textField: 'name',
-                beforeSearch: function () {
-                    return !!val('#sessionId');
-                },
+                beforeSearch: function () { return val('#sessionId') ? true : 'Vui lòng chọn buổi thi'; },
                 onSelect: function () {
                     CrudPage.loadData(1);
                 },
@@ -580,9 +572,7 @@
                 },
                 valueField: 'id',
                 textField: 'name',
-                beforeSearch: function () {
-                    return !!val('#buildingId');
-                },
+                beforeSearch: function () { return val('#buildingId') ? true : 'Vui lòng chọn giảng đường'; },
                 onSelect: function () {
                     CrudPage.loadData(1);
                 },

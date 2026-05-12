@@ -31,8 +31,8 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         {
             var model = new CrudIndexViewModel
             {
-                Title = "Course Offering Management",
-                Subtitle = "Quản lý học phần mở",
+                Title = "Học phần mở",
+                Subtitle = "Theo dõi các lớp học phần đang được tổ chức trong từng học kỳ.",
                 CreateUrl = Url.Action("Create", "CourseOffering", new { area = "Admin" }),
                 SearchPartialView = "_CourseOfferingSearch",
                 TableClass = "full-width",

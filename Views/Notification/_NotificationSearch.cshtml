@@ -1,16 +1,15 @@
 @model ExamInvigilationManagement.Application.DTOs.Notification.NotificationIndexPageDto
 
-<div class="notification-search d-grid gap-3">
-    <div class="row g-3 align-items-end">
-        <div class="col-lg-3 col-md-6">
-            <label class="form-label">Từ khóa</label>
-            <input id="keyword" value="@Model.Search.Keyword" class="input-modern notification-filter"
-                   placeholder="Tiêu đề, nội dung, loại thông báo..." />
+<div class="role-filter-compact notification-search">
+    <div class="role-filter-main notification-search-main">
+        <div class="search-field search-field-wide">
+            <label class="form-label mb-1">Từ khóa</label>
+            <input id="keyword" value="@Model.Search.Keyword" class="input-modern notification-filter" placeholder="Tiêu đề, nội dung, loại thông báo..." />
         </div>
 
         @if (Model.IsAdmin)
         {
-            <div class="col-lg-3 col-md-6">
+            <div class="search-field search-field-wide lookup-modern position-relative">
                 @await Html.PartialAsync("_LookupField", new ExamInvigilationManagement.ViewModel.LookupFieldViewModel
                 {
                     Label = "Người nhận",
@@ -25,7 +24,7 @@
             </div>
         }
 
-        <div class="col-lg-3 col-md-6">
+        <div class="search-field search-field-wide lookup-modern position-relative">
             @await Html.PartialAsync("_LookupField", new ExamInvigilationManagement.ViewModel.LookupFieldViewModel
             {
                 Label = "Người gửi",
@@ -39,22 +38,18 @@
             })
         </div>
 
-        <div class="col-lg-3 col-md-6">
-            <label class="form-label">Phân loại</label>
+        <div class="search-field">
+            <label class="form-label mb-1">Phân loại</label>
             <select id="type" class="select-modern notification-filter w-100">
                 @foreach (var opt in Model.TypeOptions)
                 {
-                    <option value="@opt.Value" selected="@(string.Equals(Model.Search.Type, opt.Value, StringComparison.OrdinalIgnoreCase))">
-                        @opt.Label
-                    </option>
+                    <option value="@opt.Value" selected="@(string.Equals(Model.Search.Type, opt.Value, StringComparison.OrdinalIgnoreCase))">@opt.Label</option>
                 }
             </select>
         </div>
-    </div>
 
-    <div class="row g-3 align-items-end">
-        <div class="col-lg-2 col-md-6">
-            <label class="form-label">Trạng thái</label>
+        <div class="search-field">
+            <label class="form-label mb-1">Trạng thái</label>
             <select id="isRead" class="select-modern notification-filter w-100">
                 <option value="">Tất cả</option>
                 <option value="false" selected="@(Model.Search.IsRead == false)">Chưa đọc</option>
@@ -62,30 +57,40 @@
             </select>
         </div>
 
-        <div class="col-lg-2 col-md-6">
-            <label class="form-label">Từ ngày gửi</label>
+        <div class="search-field">
+            <label class="form-label mb-1">Từ ngày gửi</label>
             <input type="date" id="fromDate" value="@Model.Search.FromDate?.ToString("yyyy-MM-dd")" class="input-modern notification-filter" />
         </div>
 
-        <div class="col-lg-2 col-md-6">
-            <label class="form-label">Đến ngày gửi</label>
+        <div class="search-field">
+            <label class="form-label mb-1">Đến ngày gửi</label>
             <input type="date" id="toDate" value="@Model.Search.ToDate?.ToString("yyyy-MM-dd")" class="input-modern notification-filter" />
         </div>
 
-        <div class="col-lg-2 col-md-6 ms-auto">
-            <label class="form-label">Số dòng / trang</label>
-            <select id="pageSize" class="select-modern w-100">
-                <option value="5">5 / trang</option>
-                <option value="10" selected="@(Model.PageSize == 10)">10 / trang</option>
-                <option value="20" selected="@(Model.PageSize == 20)">20 / trang</option>
-                <option value="50" selected="@(Model.PageSize == 50)">50 / trang</option>
-            </select>
+         <div class="search-field search-page-size">
+             <label class="form-label mb-1">Số dòng</label>
+             <select id="pageSize" class="select-modern w-100">
+                 <option value="5" selected="@(Model.PageSize == 5)">5/trang</option> 
+                 <option value="10" selected="@(Model.PageSize == 10)">10/trang</option> 
+                 <option value="20" selected="@(Model.PageSize == 20)">20/trang</option> 
+                 <option value="50" selected="@(Model.PageSize == 50)">50/trang</option> 
+                 <option value="100" selected="@(Model.PageSize == 100)">100/trang</option> 
+             </select>
         </div>
 
-        <div class="col-lg-2 col-md-12 d-flex gap-2 filter-action-cell">
-            <a href="@Url.Action("Index", "Notification")" class="btn btn-outline-secondary crud-clear-filters">
-                Xóa lọc
-            </a>
+        @* <div class="search-field search-page-size"> *@
+        @*     <label class="form-label mb-1 d-block">Số dòng</label> *@
+        @*     <select id="pageSize" class="select-modern"> *@
+        @*         <option value="5">5 / trang</option> *@
+        @*         <option value="10">10 / trang</option> *@
+        @*         <option value="20">20 / trang</option> *@
+        @*         <option value="50">50 / trang</option> *@
+        @*     </select> *@
+        @* </div> *@
+        <div class="role-filter-tools">
+            <button type="button" class="btn btn-outline-secondary crud-clear-filters"><i class="bi bi-x-circle"></i> Xóa lọc</button>
         </div>
     </div>
+
+    
 </div>

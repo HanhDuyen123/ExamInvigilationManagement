@@ -17,20 +17,11 @@
         </a>
     </div>
 
-    <div class="auto-assign-hero mb-4">
-        <div class="auto-assign-hero-icon"><i class="bi bi-magic"></i></div>
-        <div>
-            <div class="auto-assign-kicker">Nguyên tắc xử lý</div>
-            <h4>Ưu tiên đúng chuyên môn, hạn chế xáo trộn lịch đã phân công</h4>
-            <p>Hệ thống chỉ bổ sung những lịch còn thiếu hoặc có giảng viên từ chối; các phân công đã ổn định sẽ được giữ nguyên.</p>
-        </div>
-    </div>
-
     <form asp-area="Secretary" asp-controller="AutoAssignment" asp-action="Run" method="post" class="auto-assign-layout">
         @Html.AntiForgeryToken()
 
         <div class="form-card auto-assign-form-card">
-            <div asp-validation-summary="ModelOnly" class="text-danger auto-assign-full"></div>
+            <div asp-validation-summary="All" class="alert alert-danger auto-assign-full auto-assign-validation"></div>
 
             <div class="auto-assign-section auto-assign-full">
                 <div class="section-icon"><i class="bi bi-funnel"></i></div>
@@ -51,16 +42,14 @@
                 <label class="form-label mb-1">Học kỳ <span class="text-danger">*</span></label>
                 <input id="semesterInput" class="input-modern" placeholder="Chọn học kỳ..." autocomplete="off" />
                 <div id="semesterDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
-                <input type="hidden" id="SemesterId" name="SemesterId" value="@(Model.SemesterId > 0 ? Model.SemesterId.ToString() : "")" />
-                <span asp-validation-for="SemesterId" class="text-danger small"></span>
+                <input type="hidden" id="SemesterId" name="SemesterId" value="@(Model.SemesterId.GetValueOrDefault() > 0 ? Model.SemesterId.ToString() : "")" />
             </div>
 
             <div class="lookup-modern position-relative auto-assign-full">
                 <label class="form-label mb-1">Đợt thi <span class="text-danger">*</span></label>
                 <input id="periodInput" class="input-modern" placeholder="Chọn đợt thi..." autocomplete="off" />
                 <div id="periodDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
-                <input type="hidden" id="PeriodId" name="PeriodId" value="@(Model.PeriodId > 0 ? Model.PeriodId.ToString() : "")" />
-                <span asp-validation-for="PeriodId" class="text-danger small"></span>
+                <input type="hidden" id="PeriodId" name="PeriodId" value="@(Model.PeriodId.GetValueOrDefault() > 0 ? Model.PeriodId.ToString() : "")" />
             </div>
 
             <div class="auto-assign-note auto-assign-full">
@@ -73,30 +62,6 @@
                     <i class="bi bi-play-circle"></i>
                     Chạy tự động phân công
                 </button>
-            </div>
-        </div>
-
-        <div class="auto-assign-side">
-            <div class="auto-rule-card">
-                <div class="rule-number">1</div>
-                <div>
-                    <h6>Giữ lịch đã ổn</h6>
-                    <p>Không thay đổi các giám thị đã xác nhận hoặc đang chờ phản hồi.</p>
-                </div>
-            </div>
-            <div class="auto-rule-card">
-                <div class="rule-number">2</div>
-                <div>
-                    <h6>Ưu tiên phù hợp</h6>
-                    <p>Ưu tiên giảng viên phụ trách lớp, sau đó là giảng viên từng dạy cùng môn.</p>
-                </div>
-            </div>
-            <div class="auto-rule-card">
-                <div class="rule-number">3</div>
-                <div>
-                    <h6>Chia đều công việc</h6>
-                    <p>Cân nhắc số lịch đã nhận để tránh phân công quá nặng cho một số giảng viên.</p>
-                </div>
             </div>
         </div>
     </form>
@@ -139,9 +104,10 @@
 
     .auto-assign-layout {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) 340px;
+        grid-template-columns: minmax(0, 760px);
         gap: 18px;
         align-items: start;
+        justify-content: center;
     }
 
     .auto-assign-form-card {
@@ -149,6 +115,8 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 15px 16px;
     }
+
+    .auto-assign-validation.validation-summary-valid { display: none; }
 
     .auto-assign-full { grid-column: 1 / -1; }
 
@@ -272,7 +240,7 @@
                 valueField: 'id',
                 textField: 'name',
                 extraParams: function () { return { academyYearId: val('#yearId') }; },
-                beforeSearch: function () { return !!val('#yearId'); },
+                beforeSearch: function () { return val('#yearId') ? true : 'Vui lòng chọn năm học'; },
                 onSelect: function () { clearLookup('auto-period'); },
                 onClear: function () { clearLookup('auto-period'); }
             });
@@ -286,7 +254,22 @@
                 valueField: 'id',
                 textField: 'name',
                 extraParams: function () { return { semesterId: val('#SemesterId') }; },
-                beforeSearch: function () { return !!val('#SemesterId'); }
+                beforeSearch: function () { return val('#yearId') && val('#SemesterId') ? true : 'Vui lòng chọn năm học và học kỳ'; }
+            });
+
+            $('form.auto-assign-layout').on('submit', function (e) {
+                const errors = [];
+                if (!val('#SemesterId')) errors.push('Vui lòng chọn học kỳ.');
+                if (!val('#PeriodId')) errors.push('Vui lòng chọn đợt thi.');
+                if (!errors.length) return true;
+
+                e.preventDefault();
+                const $summary = $('.auto-assign-validation');
+                $summary.removeClass('validation-summary-valid').addClass('validation-summary-errors')
+                    .html('<ul><li>' + errors.join('</li><li>') + '</li></ul>')
+                    .show();
+                if (window.AppNotify) window.AppNotify.show('warning', errors[0]);
+                return false;
             });
         });
     </script>

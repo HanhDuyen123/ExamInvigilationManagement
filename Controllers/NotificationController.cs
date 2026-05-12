@@ -22,7 +22,7 @@ namespace ExamInvigilationManagement.Controllers
         public async Task<IActionResult> Index(
             [FromQuery] NotificationSearchDto search,
             int page = 1,
-            int pageSize = 10,
+            int pageSize = 5,
             CancellationToken cancellationToken = default)
         {
             var userId = GetCurrentUserId();
@@ -48,7 +48,7 @@ namespace ExamInvigilationManagement.Controllers
         public async Task<IActionResult> GetList(
             [FromQuery] NotificationSearchDto search,
             int page = 1,
-            int pageSize = 10,
+            int pageSize = 5,
             CancellationToken cancellationToken = default)
         {
             var userId = GetCurrentUserId();

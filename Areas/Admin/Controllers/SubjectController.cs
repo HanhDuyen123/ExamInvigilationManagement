@@ -31,8 +31,8 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         {
             var model = new CrudIndexViewModel
             {
-                Title = "Subject Management",
-                Subtitle = "Quản lý môn học",
+                Title = "Môn học",
+                Subtitle = "Danh sách môn học và khoa phụ trách trong chương trình đào tạo.",
                 CreateUrl = Url.Action("Create", "Subject", new { area = "Admin" }),
                 SearchPartialView = "_SubjectSearch",
                 ImportUrl = Url.Action("Index", "BulkImport", new { area = "", module = "subject" })

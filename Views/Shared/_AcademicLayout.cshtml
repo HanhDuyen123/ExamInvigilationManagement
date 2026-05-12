@@ -1,4 +1,5 @@
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
+@inject ExamInvigilationManagement.Application.Interfaces.Service.IUserService CurrentUserService
 @{
     var antiforgeryToken = Antiforgery.GetAndStoreTokens(Context).RequestToken;
 
@@ -12,6 +13,10 @@
     // Dashboard: ẩn sidebar + toggle
     bool isDashboardPage = string.Equals(controller, "Dashboard", StringComparison.OrdinalIgnoreCase);
     bool showSidebar = !isDashboardPage;
+    var currentUserIdRaw = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    var currentProfile = int.TryParse(currentUserIdRaw, out var currentUserId) ? await CurrentUserService.GetProfileAsync(currentUserId) : null;
+    var currentName = $"{currentProfile?.LastName} {currentProfile?.FirstName}".Trim();
+    var currentInitial = !string.IsNullOrWhiteSpace(currentName) ? currentName.Substring(0, 1).ToUpperInvariant() : "U";
 }
 
 <!DOCTYPE html>
@@ -21,6 +26,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="request-verification-token" content="@antiforgeryToken" />
     <title>@ViewData["Title"] - ExamInvigilationManagement</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
         (function () {
             var key = 'exam-ui-theme';
@@ -56,7 +64,7 @@
 
         body.app-shell-body {
             margin: 0;
-            font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+            font-family: "Inter", "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
             color: var(--text);
             background: radial-gradient(circle at top left, rgba(99, 102, 241, 0.16), transparent 28%), radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 22%), linear-gradient(135deg, #eef2ff 0%, #f8fafc 46%, #ffffff 100%);
         }
@@ -106,7 +114,8 @@
         }
 
             .brand-text .title {
-                font-size: 1.02rem;
+                font-family: "Be Vietnam Pro", "Segoe UI", sans-serif;
+                font-size: 1rem;
                 font-weight: 900;
                 letter-spacing: .02em;
                 white-space: nowrap;
@@ -115,8 +124,9 @@
             }
 
             .brand-text .subtitle {
-                font-size: 0.8rem;
-                font-weight: 600;
+                font-family: "Be Vietnam Pro", "Segoe UI", sans-serif;
+                font-size: 0.78rem;
+                font-weight: 700;
                 color: var(--muted);
             }
 
@@ -394,7 +404,7 @@
         .admin-main {
             flex: 1 1 auto;
             min-width: 0;
-            padding: 28px 18px 34px;
+            padding: 16px 14px 24px;
             transition: margin-left 0.28s ease;
         }
 
@@ -405,7 +415,7 @@
             box-shadow: var(--shadow);
             backdrop-filter: blur(14px);
             -webkit-backdrop-filter: blur(14px);
-            padding: 28px;
+            padding: 18px;
         }
 
         .admin-shell.no-sidebar {
@@ -549,8 +559,17 @@
 
             <div class="dropdown">
                 <a class="user-pill dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-label="Tài khoản" aria-expanded="false">
-                    <span class="avatar-mini"><i class="bi bi-person"></i></span>
-                    <span class="d-none d-md-inline fw-semibold">@User.Identity?.Name</span>
+                    <span class="avatar-mini">
+                        @if (!string.IsNullOrWhiteSpace(currentProfile?.Avt))
+                        {
+                            <img src="@currentProfile.Avt" alt="Ảnh đại diện" />
+                        }
+                        else
+                        {
+                            <span>@currentInitial</span>
+                        }
+                    </span>
+                    <span class="d-none d-md-inline fw-semibold">@(string.IsNullOrWhiteSpace(currentName) ? User.Identity?.Name : currentName)</span>
                 </a>
 
                 <ul class="dropdown-menu dropdown-menu-end">
@@ -586,8 +605,8 @@
                     <div class="sidebar-group">
                         <div class="sidebar-group-title">Nghiệp vụ chính</div>
 
-                        <a asp-area="" asp-controller="Dashboard" asp-action="Index" aria-label="Dashboard" title="Dashboard" data-title="Dashboard" class="sidebar-link @(IsActive("Dashboard") ? "active" : "")">
-                            <i class="bi bi-grid-1x2"></i><span class="sidebar-text">Dashboard</span>
+                        <a asp-area="" asp-controller="Dashboard" asp-action="Index" aria-label="Tổng quan" title="Tổng quan" data-title="Tổng quan" class="sidebar-link @(IsActive("Dashboard") ? "active" : "")">
+                            <i class="bi bi-grid-1x2"></i><span class="sidebar-text">Tổng quan</span>
                         </a>
 
                         <a asp-area="" asp-controller="ExamSchedule" asp-action="Index" aria-label="Lịch thi" title="Lịch thi" data-title="Lịch thi" class="sidebar-link @(IsActive("ExamSchedule") ? "active" : "")">
@@ -663,16 +682,19 @@
     {
         <div class="offcanvas offcanvas-start" tabindex="-1" id="roleMobileMenu">
             <div class="offcanvas-header border-bottom">
-                <div>
-                    <h5 class="mb-1">Menu nghiệp vụ</h5>
-                    <div class="small text-muted">@roleName</div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="brand-mark mobile-offcanvas-logo"><img src="~/img/ntu-logo.svg" asp-append-version="true" alt="Logo Đại học Nha Trang" /></span>
+                    <div>
+                        <h5 class="mb-1">TRƯỜNG ĐẠI HỌC NHA TRANG</h5>
+                        <div class="small text-muted">Hệ thống phân công giám thị coi thi - @roleName</div>
+                    </div>
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
             </div>
 
             <div class="offcanvas-body">
                 <a asp-area="" asp-controller="Dashboard" asp-action="Index" class="sidebar-link mb-2">
-                    <i class="bi bi-grid-1x2"></i><span>Dashboard</span>
+                    <i class="bi bi-grid-1x2"></i><span>Tổng quan</span>
                 </a>
 
                 <a asp-area="" asp-controller="ExamSchedule" asp-action="Index" class="sidebar-link mb-2">

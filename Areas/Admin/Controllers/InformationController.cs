@@ -25,8 +25,8 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         {
             var model = new CrudIndexViewModel
             {
-                Title = "Information Management",
-                Subtitle = "Quản lý hồ sơ thông tin cá nhân",
+                Title = "Thông tin cá nhân",
+                Subtitle = "Lưu trữ hồ sơ liên hệ và thông tin cơ bản của từng người dùng.",
                 CreateUrl = Url.Action("Create", "Information", new { area = "Admin" }),
                 SearchPartialView = "_InformationSearch",
                 TableClass = "full-width",
@@ -59,6 +59,7 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
                 var kw = keyword.Trim();
                 data = data
                     .Where(x =>
+                        x.Id.ToString().Contains(kw, StringComparison.OrdinalIgnoreCase) ||
                         $"{x.LastName} {x.FirstName}".Contains(kw, StringComparison.OrdinalIgnoreCase))
                     .ToList();
             }
@@ -66,7 +67,7 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
             return Json(data.Select(x => new
             {
                 id = x.Id,
-                fullName = $"{x.LastName} {x.FirstName}"
+                fullName = $"{x.Id} - {x.LastName} {x.FirstName}"
             }));
         }
 

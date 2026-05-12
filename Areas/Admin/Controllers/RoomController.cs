@@ -23,8 +23,8 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         {
             var model = new CrudIndexViewModel
             {
-                Title = "Room Management",
-                Subtitle = "Quản lý phòng học",
+                Title = "Phòng thi",
+                Subtitle = "Thông tin phòng, sức chứa và giảng đường để xếp lịch thi phù hợp.",
                 CreateUrl = Url.Action("Create", "Room", new { area = "Admin" }),
                 SearchPartialView = "_RoomSearch"
             };

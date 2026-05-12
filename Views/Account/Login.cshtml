@@ -12,7 +12,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng nhập | Exam Invigilation Management</title>
+    <title>Đăng nhập | Hệ thống quản lý coi thi</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@600;700;800;900&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         * {
             box-sizing: border-box;
@@ -21,7 +24,7 @@
         body {
             margin: 0;
             min-height: 100vh;
-            font-family: "Segoe UI", Arial, sans-serif;
+            font-family: "Inter", "Segoe UI", Arial, sans-serif;
             color: #102a43;
             background:
                 radial-gradient(circle at 12% 20%, rgba(17, 94, 89, 0.2), transparent 28%),
@@ -37,7 +40,7 @@
         }
 
         .brand-panel {
-            padding: 64px;
+            padding: 46px 56px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -50,16 +53,17 @@
             font-weight: 700;
             letter-spacing: -0.02em;
             color: #0f766e;
+            font-family: "Be Vietnam Pro", "Segoe UI", sans-serif;
         }
 
         .brand-logo {
-            width: 42px;
-            height: 42px;
-            border-radius: 14px;
-            display: grid;
-            place-items: center;
-            background: #0f766e;
-            color: #fff;
+            width: 78px;
+            height: 78px;
+            border-radius: 50%;
+            display: block;
+            object-fit: contain;
+            background: #fff;
+            border: 1px solid rgba(15, 118, 110, 0.16);
             box-shadow: 0 16px 32px rgba(15, 118, 110, 0.22);
         }
 
@@ -68,8 +72,8 @@
         }
 
         .hero-copy h1 {
-            margin: 0 0 18px;
-            font-size: clamp(34px, 5vw, 62px);
+            margin: 0 0 14px;
+            font-size: clamp(32px, 4.4vw, 54px);
             line-height: 1.02;
             letter-spacing: -0.055em;
             color: #0f172a;
@@ -83,22 +87,10 @@
             line-height: 1.7;
         }
 
-        .security-note {
-            display: flex;
-            gap: 12px;
-            max-width: 520px;
-            padding: 18px 20px;
-            border: 1px solid rgba(15, 118, 110, 0.14);
-            border-radius: 20px;
-            background: rgba(255, 255, 255, 0.56);
-            color: #475569;
-            box-shadow: 0 24px 80px rgba(15, 23, 42, 0.08);
-        }
-
         .auth-panel {
             display: flex;
             align-items: center;
-            padding: 32px;
+            padding: 24px 32px;
             background: rgba(255, 255, 255, 0.72);
             border-left: 1px solid rgba(148, 163, 184, 0.25);
             backdrop-filter: blur(20px);
@@ -106,29 +98,29 @@
 
         .auth-card {
             width: 100%;
-            padding: 34px;
-            border-radius: 28px;
+            padding: 28px 32px;
+            border-radius: 24px;
             background: #ffffff;
             box-shadow: 0 28px 90px rgba(15, 23, 42, 0.14);
         }
 
         .auth-card h2 {
-            margin: 0 0 8px;
-            font-size: 28px;
+            margin: 0 0 6px;
+            font-size: 26px;
             letter-spacing: -0.035em;
             color: #0f172a;
         }
 
         .auth-card .subtitle {
-            margin: 0 0 28px;
+            margin: 0 0 20px;
             color: #64748b;
             line-height: 1.55;
         }
 
         .validation-summary-errors,
         .auth-alert {
-            margin: 0 0 18px;
-            padding: 13px 14px;
+            margin: 0 0 14px;
+            padding: 10px 12px;
             border-radius: 16px;
             border: 1px solid rgba(220, 38, 38, 0.18);
             background: #fef2f2;
@@ -143,8 +135,8 @@
         }
 
         .auth-notice {
-            margin: 0 0 18px;
-            padding: 13px 14px;
+            margin: 0 0 14px;
+            padding: 10px 12px;
             border-radius: 16px;
             font-size: 14px;
             line-height: 1.5;
@@ -163,12 +155,12 @@
         }
 
         .form-field {
-            margin-bottom: 18px;
+            margin-bottom: 14px;
         }
 
         .form-field label {
             display: block;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
             font-size: 14px;
             font-weight: 650;
             color: #334155;
@@ -180,7 +172,7 @@
 
         .input-wrap input {
             width: 100%;
-            height: 48px;
+            height: 44px;
             padding: 0 44px 0 14px;
             border: 1px solid #cbd5e1;
             border-radius: 14px;
@@ -219,7 +211,7 @@
         .form-row {
             display: flex;
             justify-content: flex-end;
-            margin: 2px 0 22px;
+            margin: 0 0 16px;
         }
 
         .link {
@@ -235,7 +227,7 @@
 
         .btn-login {
             width: 100%;
-            height: 50px;
+            height: 46px;
             border: 0;
             border-radius: 16px;
             color: #fff;
@@ -268,13 +260,13 @@
 
             .auth-panel {
                 min-height: 100vh;
-                padding: 22px;
+                padding: 16px;
                 border-left: 0;
             }
 
             .auth-card {
-                padding: 26px;
-                border-radius: 24px;
+                padding: 24px;
+                border-radius: 22px;
             }
 
             .mobile-note {
@@ -287,22 +279,17 @@
     <main class="auth-shell">
         <section class="brand-panel" aria-label="Giới thiệu hệ thống">
             <div class="brand-mark">
-                <div class="brand-logo">EIM</div>
-                <span>Exam Invigilation Management</span>
+                <img class="brand-logo" src="~/img/ntu-logo.svg" alt="NTU" />
+                <span>TRƯỜNG ĐẠI HỌC NHA TRANG<br /><small>Hệ thống quản lý coi thi</small></span>
             </div>
             <div class="hero-copy">
                 <h1>Quản lý coi thi tập trung, bảo mật và rõ trách nhiệm.</h1>
                 <p>Theo dõi lịch thi, phân công cán bộ coi thi và xử lý nghiệp vụ học vụ trong một hệ thống thống nhất.</p>
             </div>
-            <div class="security-note">
-                <strong>Bảo mật:</strong>
-                <span>Phiên đăng nhập được bảo vệ bằng cookie HttpOnly, Secure và tự hết hạn sau thời gian sử dụng.</span>
-            </div>
         </section>
 
         <section class="auth-panel">
             <div class="auth-card">
-                <p class="mobile-note">Exam Invigilation Management</p>
                 <h2>Đăng nhập</h2>
                 <p class="subtitle">Sử dụng tài khoản được cấp để truy cập hệ thống.</p>
 

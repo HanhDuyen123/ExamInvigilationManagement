@@ -32,16 +32,55 @@ public class ProfileController : Controller
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    [RequireRecentAuthentication]
-    public async Task<IActionResult> Update(UpdateProfileDto dto)
+    public async Task<IActionResult> Update(UpdateProfileDto dto, IFormFile? avatarFile)
     {
         int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
 
-        await _service.UpdateProfileAsync(userId, dto);
+        try
+        {
+            if (avatarFile != null && avatarFile.Length > 0)
+                dto.Avt = await SaveAvatarAsync(userId, avatarFile);
+
+            await _service.UpdateProfileAsync(userId, dto);
+        }
+        catch (Exception ex)
+        {
+            TempData.SetNotification("error", ex.Message);
+            return RedirectToAction("Index");
+        }
 
         TempData.SetNotification("success", "Cập nhật hồ sơ thành công.");
 
         return RedirectToAction("Index");
+    }
+
+    private async Task<string> SaveAvatarAsync(int userId, IFormFile file)
+    {
+        var allowed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            [".jpg"] = ".jpg",
+            [".jpeg"] = ".jpg",
+            [".png"] = ".png",
+            [".webp"] = ".webp"
+        };
+
+        var ext = Path.GetExtension(file.FileName);
+        if (!allowed.TryGetValue(ext, out var safeExt))
+            throw new InvalidOperationException("Ảnh đại diện chỉ hỗ trợ JPG, PNG hoặc WEBP.");
+
+        if (file.Length > 2 * 1024 * 1024)
+            throw new InvalidOperationException("Ảnh đại diện không được vượt quá 2MB.");
+
+        var root = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "avatars");
+        Directory.CreateDirectory(root);
+
+        var fileName = $"user-{userId}-{Guid.NewGuid():N}{safeExt}";
+        var path = Path.Combine(root, fileName);
+
+        await using var stream = System.IO.File.Create(path);
+        await file.CopyToAsync(stream);
+
+        return $"/uploads/avatars/{fileName}";
     }
 
     [HttpGet]

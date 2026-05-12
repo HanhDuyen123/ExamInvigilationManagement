@@ -9,12 +9,12 @@
     <thead>
         <tr>
             <th class="col-id">STT</th>
-            <th class="col-name">Username</th>
-            <th class="col-name">Họ tên</th>
-            <th class="col-name">Role</th>
-            <th class="col-name">Khoa</th>
-            <th class="col-id">Trạng thái</th>
-            <th class="col-action">Action</th>
+            <th class="col-code">Tên đăng nhập</th>
+            <th class="col-person">Họ tên</th>
+            <th class="col-role">Vai trò</th>
+            <th class="col-faculty">Khoa</th>
+            <th class="col-status">Trạng thái</th>
+            <th class="col-action">Thao tác</th>
         </tr>
     </thead>
 
@@ -23,18 +23,18 @@
         {
             <tr>
                 <td class="col-id">@stt</td>
-                <td class="col-name">@item.UserName</td>
-                <td class="col-name">@item.FullName</td>
-                <td class="col-name">@item.RoleName</td>
-                <td class="col-name">@item.FacultyName</td>
-                <td class="col-id">
+                <td class="col-code">@item.UserName</td>
+                <td class="col-person">@item.FullName</td>
+                <td class="col-role">@item.RoleName</td>
+                <td class="col-faculty">@item.FacultyName</td>
+                <td class="col-status">
                     @if (item.IsActive)
                     {
-                        <span class="badge bg-success">Active</span>
+                        <span class="badge bg-success">Đang dùng</span>
                     }
                     else
                     {
-                        <span class="badge bg-danger">Inactive</span>
+                        <span class="badge bg-danger">Đã khóa</span>
                     }
                 </td>
                 <td class="col-action">

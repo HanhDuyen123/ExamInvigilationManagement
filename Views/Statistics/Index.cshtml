@@ -26,7 +26,7 @@
         </div>
     </div>
 
-    <form method="get" class="filter-glass mb-4" id="statisticsFilter">
+    <form method="get" class="filter-glass mb-4" id="statisticsFilter" action="@Url.Action("Index", "Statistics")">
         <div class="d-flex flex-wrap align-items-end gap-3">
             <div class="lookup-modern position-relative" style="width:210px;">
                 <label class="form-label mb-1">Năm học</label>
@@ -54,8 +54,7 @@
                 <label class="form-label mb-1">Đến ngày</label>
                 <input type="date" name="ToDate" value="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")" class="input-modern" />
             </div>
-            <button class="btn-submit" type="submit"><i class="bi bi-funnel"></i> Lọc thống kê</button>
-            <a class="btn btn-light rounded-3" asp-action="Index">Xóa lọc</a>
+            <button class="btn btn-outline-secondary crud-clear-filters" type="button"><i class="bi bi-x-circle"></i> Xóa lọc</button>
         </div>
     </form>
 
@@ -344,15 +343,80 @@
     <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
     <script>
         $(function () {
+            let statisticsTimer = null;
             function val(selector) { return $(selector).val() || null; }
-            function submitOnSelect() { $('#statisticsFilter').trigger('submit'); }
+            function submitOnSelect() { scheduleLoad(); }
             function clearBelow(level) {
                 const map = { year: ['semester', 'period'], semester: ['period'] };
                 (map[level] || []).forEach(k => { const lookup = AdminLookup.get('st-' + k); if (lookup) lookup.clear(); });
             }
-            AdminLookup.create({ key:'st-year', input:'#yearInput', hidden:'#yearId', menu:'#yearDropdown', url:'@Url.Action("AcademyYears", "Lookup", new { area = "" })', valueField:'id', textField:'name', onSelect:function(){clearBelow('year');submitOnSelect();}, onClear:function(){clearBelow('year');submitOnSelect();} });
-            AdminLookup.create({ key:'st-semester', input:'#semesterInput', hidden:'#semesterId', menu:'#semesterDropdown', url:'@Url.Action("Semesters", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { academyYearId: val('#yearId') }}, beforeSearch:function(){return !!val('#yearId')}, onSelect:function(){clearBelow('semester');submitOnSelect();}, onClear:function(){clearBelow('semester');submitOnSelect();} });
-            AdminLookup.create({ key:'st-period', input:'#periodInput', hidden:'#periodId', menu:'#periodDropdown', url:'@Url.Action("Periods", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { semesterId: val('#semesterId') }}, beforeSearch:function(){return !!val('#semesterId')}, onSelect:submitOnSelect, onClear:submitOnSelect });
+
+            function bindStatisticsFilters() {
+                AdminLookup.create({ key:'st-year', input:'#yearInput', hidden:'#yearId', menu:'#yearDropdown', url:'@Url.Action("AcademyYears", "Lookup", new { area = "" })', valueField:'id', textField:'name', onSelect:function(){clearBelow('year');submitOnSelect();}, onClear:function(){clearBelow('year');submitOnSelect();} });
+                AdminLookup.create({ key:'st-semester', input:'#semesterInput', hidden:'#semesterId', menu:'#semesterDropdown', url:'@Url.Action("Semesters", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { academyYearId: val('#yearId') }}, beforeSearch:function(){return val('#yearId') ? true : 'Vui lòng chọn năm học'}, onSelect:function(){clearBelow('semester');submitOnSelect();}, onClear:function(){clearBelow('semester');submitOnSelect();} });
+                AdminLookup.create({ key:'st-period', input:'#periodInput', hidden:'#periodId', menu:'#periodDropdown', url:'@Url.Action("Periods", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { semesterId: val('#semesterId') }}, beforeSearch:function(){return val('#yearId') && val('#semesterId') ? true : 'Vui lòng chọn năm học và học kỳ'}, onSelect:submitOnSelect, onClear:submitOnSelect });
+                restoreStatisticsLookupText();
+
+                $('#statisticsFilter').off('submit.statistics').on('submit.statistics', function (e) {
+                    e.preventDefault();
+                    loadStatistics();
+                });
+
+                $('#statisticsFilter input[type="date"]').off('change.statistics').on('change.statistics', scheduleLoad);
+                $('#statisticsFilter .crud-clear-filters').off('click.statistics').on('click.statistics', function () {
+                    $('#statisticsFilter input').val('');
+                    loadStatistics('@Url.Action("Index", "Statistics")');
+                });
+            }
+
+            function scheduleLoad() {
+                clearTimeout(statisticsTimer);
+                statisticsTimer = setTimeout(loadStatistics, 250);
+            }
+
+            function loadStatistics(url) {
+                const $page = $('.statistics-page');
+                const requestUrl = url || ($('#statisticsFilter').attr('action') + '?' + $('#statisticsFilter').serialize());
+                $page.fadeTo(100, .45);
+
+                $.get(requestUrl, function (html) {
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    const next = doc.querySelector('.statistics-page');
+                    if (!next) { window.location.href = requestUrl; return; }
+                    $('.statistics-page').replaceWith(next);
+                    window.history.replaceState({}, '', requestUrl);
+                    bindStatisticsFilters();
+                    $('.statistics-page').fadeTo(100, 1);
+                });
+            }
+
+            function applyLookupText(key, hiddenSelector, items) {
+                const id = val(hiddenSelector);
+                if (!id) return;
+                const found = (items || []).find(x => String(x.id) === String(id));
+                const lookup = AdminLookup.get(key);
+                if (found && lookup) lookup.setValue(found.id, found.name || found.text || '');
+            }
+
+            function restoreStatisticsLookupText() {
+                if (val('#yearId')) {
+                    $.get('@Url.Action("AcademyYears", "Lookup", new { area = "" })', function (years) {
+                        applyLookupText('st-year', '#yearId', years);
+                        if (val('#semesterId')) {
+                            $.get('@Url.Action("Semesters", "Lookup", new { area = "" })', { academyYearId: val('#yearId') }, function (semesters) {
+                                applyLookupText('st-semester', '#semesterId', semesters);
+                                if (val('#periodId')) {
+                                    $.get('@Url.Action("Periods", "Lookup", new { area = "" })', { semesterId: val('#semesterId') }, function (periods) {
+                                        applyLookupText('st-period', '#periodId', periods);
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            }
+
+            bindStatisticsFilters();
         });
     </script>
 }

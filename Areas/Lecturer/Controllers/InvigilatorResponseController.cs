@@ -28,7 +28,7 @@ namespace ExamInvigilationManagement.Areas.Lecturer.Controllers
         public async Task<IActionResult> GetList(
             InvigilatorAssignmentSearchDto search,
             int page = 1,
-            int pageSize = 10,
+            int pageSize = 5,
             string viewMode = "table",
             CancellationToken cancellationToken = default)
         {

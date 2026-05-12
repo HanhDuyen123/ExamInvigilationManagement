@@ -33,8 +33,8 @@ namespace ExamInvigilationManagement.Application.Services
                 throw new InvalidOperationException("Không có giảng viên hợp lệ trong khoa để phân công.");
 
             var schedules = (await _repository.GetSchedulesAsync(
-                    request.SemesterId,
-                    request.PeriodId,
+                    request.SemesterId!.Value,
+                    request.PeriodId!.Value,
                     facultyId.Value,
                     cancellationToken))
                 .ToList();
@@ -69,7 +69,7 @@ namespace ExamInvigilationManagement.Application.Services
                 cancellationToken);
 
             var lecturerLoads = await _repository.GetLecturerLoadsAsync(
-                request.SemesterId,
+                request.SemesterId!.Value,
                 facultyId.Value,
                 cancellationToken);
 
@@ -330,11 +330,11 @@ namespace ExamInvigilationManagement.Application.Services
 
         private static void ValidateRequest(AutoAssignRequestDto request)
         {
-            if (request.SemesterId <= 0)
-                throw new ArgumentException("SemesterId không hợp lệ.");
+            if (!request.SemesterId.HasValue || request.SemesterId.Value <= 0)
+                throw new ArgumentException("Vui lòng chọn học kỳ.");
 
-            if (request.PeriodId <= 0)
-                throw new ArgumentException("PeriodId không hợp lệ.");
+            if (!request.PeriodId.HasValue || request.PeriodId.Value <= 0)
+                throw new ArgumentException("Vui lòng chọn đợt thi.");
 
             if (request.AssignerId <= 0)
                 throw new ArgumentException("AssignerId không hợp lệ.");

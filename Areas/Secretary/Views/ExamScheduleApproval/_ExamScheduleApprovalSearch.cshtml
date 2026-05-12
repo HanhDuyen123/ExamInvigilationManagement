@@ -65,9 +65,11 @@
         <div class="search-field search-page-size">
             <label class="form-label mb-1">Số dòng</label>
             <select id="approvalPageSize" class="select-modern">
-                <option value="5">5</option>
-                <option value="10" selected>10</option>
-                <option value="20">20</option>
+                <option value="5" selected="@(Model.PageSize == 5)">5/trang</option>
+                <option value="10" selected="@(Model.PageSize == 10)">10/trang</option>
+                <option value="20" selected="@(Model.PageSize == 20)">20/trang</option>
+                <option value="50" selected="@(Model.PageSize == 50)">50/trang</option>
+                <option value="100" selected="@(Model.PageSize == 100)">100/trang</option>
             </select>
         </div>
     </div>
@@ -76,12 +78,9 @@
         <button class="btn btn-sm role-filter-toggle collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#approvalAdvancedFilters" aria-expanded="false" aria-controls="approvalAdvancedFilters">
             <i class="bi bi-sliders"></i> Bộ lọc nâng cao <i class="bi bi-chevron-down toggle-chevron"></i>
         </button>
-        <button type="button" id="approvalSearchBtn" class="btn btn-sm btn-submit">
-            <i class="bi bi-search"></i> Tìm kiếm
+        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 crud-clear-filters">
+            <i class="bi bi-x-circle"></i> Xóa lọc
         </button>
-        <a href="@Url.Action("Index", "ExamScheduleApproval", new { area = "Secretary" })" class="btn btn-sm btn-outline-secondary rounded-pill px-3 crud-clear-filters">
-            Xóa lọc
-        </a>
     </div>
 
     <div class="collapse" id="approvalAdvancedFilters">

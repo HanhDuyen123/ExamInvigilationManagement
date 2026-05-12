@@ -8,7 +8,7 @@ namespace ExamInvigilationManagement.Application.Interfaces.Service
            ExamScheduleApprovalSearchDto search,
            int userId,
            int page = 1,
-           int pageSize = 10,
+           int pageSize = 5,
            CancellationToken cancellationToken = default);
 
         Task<ExamScheduleApprovalBulkReviewResultDto> ReviewBulkAsync(

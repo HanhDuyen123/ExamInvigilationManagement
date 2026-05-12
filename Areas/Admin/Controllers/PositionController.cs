@@ -21,8 +21,8 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         {
             var vm = new CrudIndexViewModel
             {
-                Title = "Position Management",
-                Subtitle = "Quản lý chức vụ",
+                Title = "Chức vụ",
+                Subtitle = "Các chức vụ dùng để mô tả vai trò công tác của cán bộ, giảng viên.",
                 CreateUrl = Url.Action("Create", "Position", new { area = "Admin" }),
                 SearchPartialView = "_PositionSearch"
             };

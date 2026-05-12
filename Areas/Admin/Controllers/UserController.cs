@@ -32,8 +32,8 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         {
             var model = new CrudIndexViewModel
             {
-                Title = "Quản lý tài khoản",
-                Subtitle = "Quản lý người dùng trong hệ thống",
+                Title = "Tài khoản người dùng",
+                Subtitle = "Thiết lập tài khoản, vai trò và trạng thái đăng nhập cho người dùng.",
                 CreateUrl = Url.Action("Create", "User", new { area = "Admin" }),
                 SearchPartialView = "_UserSearch",
                 TableClass = "full-width",
@@ -173,7 +173,9 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
             return Json(lecturers.Select(x => new
             {
                 id = x.Id,
-                fullName = x.FullName
+                fullName = string.IsNullOrWhiteSpace(x.FullName)
+                    ? x.UserName
+                    : $"{x.UserName} - {x.FullName}"
             }));
         }
 

@@ -19,8 +19,8 @@
             <div style="width:190px"><label class="form-label">Trạng thái</label><select name="Status" class="select-modern"><option value="">Tất cả</option><option selected="@(Model.Search.Status == "Đã đề xuất")">Đã đề xuất</option><option selected="@(Model.Search.Status == "Đã duyệt")">Đã duyệt</option><option selected="@(Model.Search.Status == "Từ chối duyệt")">Từ chối duyệt</option></select></div>
             <div style="width:160px"><label class="form-label">Từ ngày thi</label><input type="date" name="FromDate" value="@Model.Search.FromDate?.ToString("yyyy-MM-dd")" class="input-modern" /></div>
             <div style="width:160px"><label class="form-label">Đến ngày thi</label><input type="date" name="ToDate" value="@Model.Search.ToDate?.ToString("yyyy-MM-dd")" class="input-modern" /></div>
-            <div style="width:140px"><label class="form-label">Số dòng</label><select name="pageSize" class="select-modern"><option selected="@(items.PageSize == 10)" value="10">10 / trang</option><option selected="@(items.PageSize == 20)" value="20">20 / trang</option><option selected="@(items.PageSize == 50)" value="50">50 / trang</option></select></div>
-            <button class="btn-submit" type="submit"><i class="bi bi-search"></i> Lọc</button>
+            <div style="width:140px"><label class="form-label">Số dòng</label><select name="pageSize" class="select-modern"><option selected="@(items.PageSize == 5)" value="5">5/trang</option><option selected="@(items.PageSize == 10)" value="10">10/trang</option><option selected="@(items.PageSize == 20)" value="20">20/trang</option><option selected="@(items.PageSize == 50)" value="50">50/trang</option><option selected="@(items.PageSize == 100)" value="100">100/trang</option></select></div>
+            <a asp-action="Index" class="btn btn-outline-secondary crud-clear-filters"><i class="bi bi-x-circle"></i> Xóa lọc</a>
         </div>
     </form>
 
@@ -56,5 +56,10 @@
                 window.location.href = url.toString();
             }
         };
+        let substitutionTimer;
+        $('.filter-glass input, .filter-glass select').on('input change', function () {
+            clearTimeout(substitutionTimer);
+            substitutionTimer = setTimeout(function () { $('.filter-glass form, form.filter-glass').trigger('submit'); }, 350);
+        });
     </script>
 }

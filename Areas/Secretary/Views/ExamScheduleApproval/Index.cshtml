@@ -47,7 +47,22 @@
     </div>
 
     <div class="filter-glass mb-4">
-        @await Html.PartialAsync("_ExamScheduleApprovalSearch", Model)
+        <div class="filter-head d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <div class="filter-head-icon"><i class="bi bi-funnel"></i></div>
+                <div>
+                    <div class="filter-head-title">Bộ lọc tìm kiếm</div>
+                    <div class="filter-head-subtitle">Có thể thu gọn để mở rộng vùng hiển thị dữ liệu</div>
+                </div>
+            </div>
+            <button type="button" class="btn filter-toggle-btn" data-bs-toggle="collapse" data-bs-target="#approvalSearchPanel" aria-expanded="true" aria-controls="approvalSearchPanel" id="approvalFilterToggleBtn">
+                <i class="bi bi-chevron-up me-1 toggle-icon" id="approvalFilterToggleIcon"></i>
+                <span class="toggle-text" id="approvalFilterToggleText">Thu gọn</span>
+            </button>
+        </div>
+        <div class="collapse show mt-3" id="approvalSearchPanel">
+            @await Html.PartialAsync("_ExamScheduleApprovalSearch", Model)
+        </div>
     </div>
     <div asp-validation-summary="All" class="text-danger mb-3"></div>
     <form asp-action="BulkApprove" asp-area="Secretary" method="post" id="approvalBulkForm">
@@ -68,16 +83,16 @@
         <input type="hidden" name="Search.RoomId" value="@Model.Search.RoomId" />
         <input type="hidden" name="Search.Status" value="@Model.Search.Status" />
 
-        <div class="form-card mb-4">
-            <div class="d-flex flex-wrap gap-3 align-items-start">
+        <div class="form-card action-note-card mb-4">
+            <div class="approval-action-grid">
                 <div class="flex-grow-1">
                     <label class="form-label">Ghi chú xử lý</label>
-                    <textarea asp-for="BulkNote" class="input-modern" rows="3" maxlength="500"
-                              placeholder="Ghi chú cho hành động duyệt / từ chối..."></textarea>
+                    <textarea asp-for="BulkNote" class="input-modern" rows="2" maxlength="500"
+                              placeholder="Bắt buộc nhập khi từ chối, có thể bỏ trống khi duyệt."></textarea>
                 </div>
 
                 <div class="ms-auto d-flex flex-column align-items-end gap-2">
-                    <div class="small text-muted">
+                    <div class="selected-count-pill">
                         Đã chọn: <strong id="approvalSelectedCount">0</strong> lịch thi
                     </div>
 
@@ -185,7 +200,18 @@
                 CrudPage.loadData(1);
             });
 
-            $('#approvalBulkForm').on('submit', function () {
+            let approvalAction = '';
+            $('#approvalApproveBtn').on('click', function () { approvalAction = 'approve'; });
+            $('#approvalRejectBtn').on('click', function () { approvalAction = 'reject'; });
+
+            $('#approvalBulkForm').on('submit', function (e) {
+                if (approvalAction === 'reject' && !($('#BulkNote').val() || '').trim()) {
+                    e.preventDefault();
+                    if (window.AppNotify) window.AppNotify.show('warning', 'Vui lòng nhập ghi chú khi từ chối lịch thi.');
+                    else alert('Vui lòng nhập ghi chú khi từ chối lịch thi.');
+                    $('#BulkNote').focus();
+                    return false;
+                }
                 syncSearchState();
             });
 
@@ -207,7 +233,7 @@
                 input: '#subjectInput',
                 hidden: '#subjectId',
                 menu: '#subjectDropdown',
-                url: '@Url.Action("SearchForExamSchedule", "Subject", new { area = "Admin" })',
+                url: '@Url.Action("Subjects", "Lookup", new { area = "" })',
                 queryParam: 'keyword',
                 valueField: 'id',
                 textField: 'name',
@@ -220,7 +246,7 @@
                 input: '#yearInput',
                 hidden: '#yearId',
                 menu: '#yearDropdown',
-                url: '@Url.Action("Search", "AcademyYear", new { area = "Admin" })',
+                url: '@Url.Action("AcademyYears", "Lookup", new { area = "" })',
                 queryParam: 'keyword',
                 valueField: 'id',
                 textField: 'name',
@@ -233,16 +259,14 @@
                 input: '#semesterInput',
                 hidden: '#semesterId',
                 menu: '#semesterDropdown',
-                url: '@Url.Action("GetByYear", "Semester", new { area = "Admin" })',
+                url: '@Url.Action("Semesters", "Lookup", new { area = "" })',
                 queryParam: 'keyword',
                 extraParams: function () {
                     return { academyYearId: val('#yearId') };
                 },
                 valueField: 'id',
                 textField: 'name',
-                beforeSearch: function () {
-                    return !!val('#yearId');
-                },
+                beforeSearch: function () { return AdminLookup.require('#yearId', 'Vui lòng chọn năm học'); },
                 onSelect: function () { clearBelow('semester'); syncSearchState(); CrudPage.loadData(1); },
                 onClear: function () { clearBelow('semester'); syncSearchState(); CrudPage.loadData(1); }
             });
@@ -252,16 +276,14 @@
                 input: '#periodInput',
                 hidden: '#periodId',
                 menu: '#periodDropdown',
-                url: '@Url.Action("GetBySemester", "Period", new { area = "Admin" })',
+                url: '@Url.Action("Periods", "Lookup", new { area = "" })',
                 queryParam: 'keyword',
                 extraParams: function () {
                     return { semesterId: val('#semesterId') };
                 },
                 valueField: 'id',
                 textField: 'name',
-                beforeSearch: function () {
-                    return !!val('#semesterId');
-                },
+                beforeSearch: function () { return val('#yearId') && val('#semesterId') ? true : 'Vui lòng chọn năm học và học kỳ'; },
                 onSelect: function () { clearBelow('period'); syncSearchState(); CrudPage.loadData(1); },
                 onClear: function () { clearBelow('period'); syncSearchState(); CrudPage.loadData(1); }
             });
@@ -271,16 +293,14 @@
                 input: '#sessionInput',
                 hidden: '#sessionId',
                 menu: '#sessionDropdown',
-                url: '@Url.Action("GetByPeriod", "Session", new { area = "Admin" })',
+                url: '@Url.Action("Sessions", "Lookup", new { area = "" })',
                 queryParam: 'keyword',
                 extraParams: function () {
                     return { periodId: val('#periodId') };
                 },
                 valueField: 'id',
                 textField: 'name',
-                beforeSearch: function () {
-                    return !!val('#periodId');
-                },
+                beforeSearch: function () { return AdminLookup.require('#periodId', 'Vui lòng chọn đợt thi'); },
                 onSelect: function () { clearBelow('session'); syncSearchState(); CrudPage.loadData(1); },
                 onClear: function () { clearBelow('session'); syncSearchState(); CrudPage.loadData(1); }
             });
@@ -290,16 +310,14 @@
                 input: '#slotInput',
                 hidden: '#slotId',
                 menu: '#slotDropdown',
-                url: '@Url.Action("GetBySession", "Slot", new { area = "Admin" })',
+                url: '@Url.Action("Slots", "Lookup", new { area = "" })',
                 queryParam: 'keyword',
                 extraParams: function () {
                     return { sessionId: val('#sessionId') };
                 },
                 valueField: 'id',
                 textField: 'name',
-                beforeSearch: function () {
-                    return !!val('#sessionId');
-                },
+                beforeSearch: function () { return AdminLookup.require('#sessionId', 'Vui lòng chọn buổi thi'); },
                 onSelect: function () { syncSearchState(); CrudPage.loadData(1); },
                 onClear: function () { syncSearchState(); CrudPage.loadData(1); }
             });
@@ -309,7 +327,7 @@
                 input: '#buildingInput',
                 hidden: '#buildingId',
                 menu: '#buildingDropdown',
-                url: '@Url.Action("Search", "Building", new { area = "Admin" })',
+                url: '@Url.Action("Buildings", "Lookup", new { area = "" })',
                 queryParam: 'keyword',
                 valueField: 'id',
                 textField: 'name',
@@ -322,16 +340,14 @@
                 input: '#roomInput',
                 hidden: '#roomId',
                 menu: '#roomDropdown',
-                url: '@Url.Action("SearchByBuilding", "Room", new { area = "Admin" })',
+                url: '@Url.Action("Rooms", "Lookup", new { area = "" })',
                 queryParam: 'keyword',
                 extraParams: function () {
                     return { buildingId: val('#buildingId') };
                 },
                 valueField: 'id',
                 textField: 'name',
-                beforeSearch: function () {
-                    return !!val('#buildingId');
-                },
+                beforeSearch: function () { return AdminLookup.require('#buildingId', 'Vui lòng chọn giảng đường'); },
                 onSelect: function () { syncSearchState(); CrudPage.loadData(1); },
                 onClear: function () { syncSearchState(); CrudPage.loadData(1); }
             });
@@ -382,6 +398,23 @@
                 toggleRowHighlight($(this));
                 refreshApprovalSelectionState();
             });
+
+            (function initApprovalSearchToggle() {
+                const panel = document.getElementById('approvalSearchPanel');
+                const btn = document.getElementById('approvalFilterToggleBtn');
+                const text = document.getElementById('approvalFilterToggleText');
+                const icon = document.getElementById('approvalFilterToggleIcon');
+                if (!panel || !btn || !text || !icon) return;
+                function setState(open) {
+                    text.textContent = open ? 'Thu gọn' : 'Mở rộng';
+                    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+                    icon.classList.toggle('bi-chevron-up', open);
+                    icon.classList.toggle('bi-chevron-down', !open);
+                }
+                panel.addEventListener('shown.bs.collapse', function () { setState(true); });
+                panel.addEventListener('hidden.bs.collapse', function () { setState(false); });
+                setState(panel.classList.contains('show'));
+            })();
         });
     </script>
 }
