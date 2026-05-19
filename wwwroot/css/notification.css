@@ -141,8 +141,73 @@
 }
 
 .notification-content-cell {
-    max-width: 360px;
+    min-width: 0;
+    max-width: none;
     white-space: pre-line;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+#notificationTableWrap {
+    overflow-x: visible !important;
+}
+
+.notification-table {
+    width: 100% !important;
+    min-width: 100% !important;
+    table-layout: fixed !important;
+}
+
+.notification-table th,
+.notification-table td {
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+    word-break: normal;
+}
+
+.notification-table .badge {
+    white-space: normal;
+    line-height: 1.2;
+}
+
+.notification-table .col-id {
+    width: 46px;
+    min-width: 46px;
+}
+
+.notification-table .col-title {
+    width: 16%;
+    min-width: 0;
+}
+
+.notification-table .col-message {
+    width: 27%;
+    min-width: 0;
+}
+
+.notification-table .col-type {
+    width: 9%;
+    min-width: 0;
+}
+
+.notification-table .col-date-time {
+    width: 11%;
+    min-width: 0;
+}
+
+.notification-table .col-person {
+    width: 11%;
+    min-width: 0;
+}
+
+.notification-table .col-status {
+    width: 9%;
+    min-width: 0;
+}
+
+.notification-table .col-action {
+    width: 72px;
+    min-width: 72px;
 }
 
 @keyframes notificationToastIn {

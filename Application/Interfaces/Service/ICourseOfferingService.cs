@@ -8,6 +8,7 @@ namespace ExamInvigilationManagement.Application.Interfaces.Service
         Task<PagedResult<CourseOfferingDto>> GetPagedAsync(
             string? subjectId,
             int? userId,
+            int? academyYearId,
             int? semesterType,
             string? className,
             string? groupNumber,

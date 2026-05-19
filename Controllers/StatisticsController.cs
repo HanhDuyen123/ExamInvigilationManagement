@@ -11,10 +11,12 @@ namespace ExamInvigilationManagement.Controllers
     public class StatisticsController : Controller
     {
         private readonly IStatisticsService _statisticsService;
+        private readonly IWebHostEnvironment _environment;
 
-        public StatisticsController(IStatisticsService statisticsService)
+        public StatisticsController(IStatisticsService statisticsService, IWebHostEnvironment environment)
         {
             _statisticsService = statisticsService;
+            _environment = environment;
         }
 
         [HttpGet]
@@ -76,8 +78,17 @@ namespace ExamInvigilationManagement.Controllers
             {
                 var model = await _statisticsService.GetDashboardAsync(userId.Value, GetCurrentRole(), filter, cancellationToken);
                 var timestamp = DateTime.Now.ToString("yyyyMMdd_HHmm");
-                if (format.Equals("csv", StringComparison.OrdinalIgnoreCase) || format.Equals("excel", StringComparison.OrdinalIgnoreCase))
+                if (format.Equals("csv", StringComparison.OrdinalIgnoreCase))
                     return File(_statisticsService.ExportCsv(model), "text/csv; charset=utf-8", $"thong-ke-coi-thi-{timestamp}.csv");
+
+                if (format.Equals("excel", StringComparison.OrdinalIgnoreCase) || format.Equals("xlsx", StringComparison.OrdinalIgnoreCase))
+                {
+                    var templatePath = Path.Combine(_environment.WebRootPath, "templates", "MAU BAO CAO THONG KE EXCEL.xlsx");
+                    return File(
+                        _statisticsService.ExportExcel(model, templatePath),
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        $"thong-ke-coi-thi-{timestamp}.xlsx");
+                }
 
                 return File(_statisticsService.ExportPdf(model), "application/pdf", $"thong-ke-coi-thi-{timestamp}.pdf");
             }

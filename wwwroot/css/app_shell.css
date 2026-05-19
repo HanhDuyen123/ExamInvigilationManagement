@@ -120,9 +120,9 @@ body.app-shell-body {
 
 .admin-shell {
     display: grid;
-    grid-template-columns: 292px minmax(0, 1fr);
+    grid-template-columns: 264px minmax(0, 1fr);
     min-height: calc(100vh - 68px);
-    --collapsed-sidebar-width: 88px;
+    --collapsed-sidebar-width: 72px;
     align-items: stretch;
 }
 
@@ -134,7 +134,7 @@ body.app-shell-body {
     overflow-x: hidden;
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
-    padding: 18px 14px 28px;
+    padding: 16px 10px 24px;
     border-right: 1px solid rgba(15, 23, 42, 0.06);
     background: rgba(255, 255, 255, 0.56);
     backdrop-filter: blur(18px);
@@ -488,7 +488,7 @@ body.modal-open {
     padding-right: 0 !important;
 }
 .admin-mobile-offcanvas {
-    width: min(92vw, 390px);
+    width: min(86vw, 320px);
     background: rgba(255, 255, 255, 0.90);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
@@ -502,7 +502,7 @@ body.modal-open {
     }
 
 .admin-mobile-menu {
-    padding: 14px 14px 18px;
+    padding: 12px 10px 16px;
 }
 
     .admin-mobile-menu .sidebar-group {
@@ -802,6 +802,9 @@ body.app-shell-body[data-theme="dark"] .alert-info {
 body.app-shell-body .modern-table {
     border-collapse: separate;
     border-spacing: 0 4px;
+    width: 100%;
+    min-width: max-content;
+    table-layout: auto;
 }
 
 body.app-shell-body .modern-table thead th {
@@ -822,7 +825,8 @@ body.app-shell-body .modern-table td {
     font-size: 12.8px;
     line-height: 1.35;
     vertical-align: middle;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
+    word-break: normal;
 }
 
 body.app-shell-body .modern-table .col-id,
@@ -833,7 +837,7 @@ body.app-shell-body .modern-table .col-action,
 body.app-shell-body .modern-table .col-code,
 body.app-shell-body .modern-table .col-year,
 body.app-shell-body .modern-table .col-phone {
-    width: 1%;
+    width: auto;
     white-space: nowrap;
     overflow-wrap: normal;
 }
@@ -943,12 +947,14 @@ body.app-shell-body .btn-submit {
     color: #fff;
     background: linear-gradient(135deg, var(--app-primary), var(--app-primary-2));
     border: 0;
-    min-height: 38px;
-    border-radius: 12px;
+    min-height: 34px;
+    border-radius: 10px;
+    padding: 7px 12px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 7px;
+    font-size: 13px;
     font-weight: 800;
 }
 
@@ -957,12 +963,14 @@ body.app-shell-body .btn-outline-secondary,
 body.app-shell-body .btn-light,
 body.app-shell-body .btn-back,
 body.app-shell-body .btn-cancel {
-    min-height: 38px;
-    border-radius: 12px !important;
+    min-height: 34px;
+    border-radius: 10px !important;
+    padding: 7px 12px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 7px;
+    font-size: 13px;
     font-weight: 800;
     color: var(--text-main);
     background: var(--surface-2);
@@ -1000,7 +1008,11 @@ body.app-shell-body .page-link {
     align-items: center;
     justify-content: center;
     width: auto;
-    min-width: 36px;
+    min-width: 30px;
+    min-height: 30px;
+    padding: 4px 9px;
+    border-radius: 9px;
+    font-size: 12px;
     white-space: nowrap;
     flex: 0 0 auto;
     color: var(--text-main);
@@ -1010,7 +1022,8 @@ body.app-shell-body .page-link {
 
 body.app-shell-body .pagination {
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 3px;
+    margin-bottom: 0;
 }
 
 body.app-shell-body .page-item {
@@ -1064,17 +1077,19 @@ body.app-shell-body .page-link[aria-current="page"] {
 }
 
 body.app-shell-body .table-inner.full-width:has(.schedule-table-compact) {
-    overflow-x: visible;
+    overflow-x: auto;
 }
 
 body.app-shell-body .table-inner,
 body.app-shell-body .table-responsive {
-    overflow-x: visible !important;
+    max-width: 100%;
+    overflow-x: auto !important;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
 }
 
 body.app-shell-body .modern-table {
-    min-width: 0 !important;
-    table-layout: fixed;
+    table-layout: auto;
 }
 
 body.app-shell-body .schedule-table-compact {
@@ -1164,6 +1179,20 @@ body.app-shell-body .schedule-table-compact .btn-icon {
     grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
 }
 
+.role-filter-main.email-notification-search-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    width: 100%;
+    max-width: 100%;
+}
+
+.role-filter-main.email-notification-search-grid .search-field-wide {
+    grid-column: span 2;
+}
+
+.role-filter-main.email-notification-search-grid .search-page-size {
+    justify-self: end;
+}
+
 .role-filter-main.user-search-grid {
     grid-template-columns: minmax(170px, 1.1fr) minmax(150px, .8fr) minmax(190px, 1fr) minmax(190px, 1fr) minmax(150px, .8fr) max-content;
 }
@@ -1171,6 +1200,10 @@ body.app-shell-body .schedule-table-compact .btn-icon {
 @media (max-width: 1200px) {
     .role-filter-main.user-search-grid {
         grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    }
+
+    .role-filter-main.email-notification-search-grid .search-field-wide {
+        grid-column: span 1;
     }
 }
 
@@ -1210,8 +1243,8 @@ body.app-shell-body .role-header-actions {
 }
 
 body.app-shell-body .role-header .btn-create {
-    min-height: 38px;
-    padding: 8px 14px;
+    min-height: 34px;
+    padding: 7px 12px;
 }
 
 body.app-shell-body .filter-glass {
@@ -1492,6 +1525,8 @@ html[data-theme="dark"] body.app-shell-body input[type="number"].form-control {
 
 .selected-count-pill {
     display: inline-flex;
+    align-items: center;
+    gap: 4px;
     justify-content: center;
     padding: 7px 11px;
     border-radius: 999px;
@@ -1500,6 +1535,14 @@ html[data-theme="dark"] body.app-shell-body input[type="number"].form-control {
     border: 1px solid var(--line-soft);
     font-size: 13px;
     font-weight: 800;
+}
+
+.approval-action-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .notification-search-grid > [class*="col-"] {

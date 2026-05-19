@@ -116,19 +116,21 @@
 .filter-toggle-btn {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 4px;
     border: 1px solid rgba(79, 70, 229, 0.14);
     background: rgba(255, 255, 255, 0.72);
     color: #4f46e5;
-    border-radius: 12px;
-    padding: 8px 14px;
-    font-weight: 700;
+    border-radius: 10px;
+    padding: 5px 10px;
+    min-height: 30px;
+    font-size: 12px;
+    font-weight: 800;
     transition: all 0.2s ease;
 }
 
     .filter-toggle-btn:hover {
         transform: translateY(-1px);
-        box-shadow: 0 10px 22px rgba(79, 70, 229, 0.12);
+        box-shadow: 0 8px 18px rgba(79, 70, 229, 0.10);
         background: rgba(255, 255, 255, 0.92);
     }
 
@@ -156,15 +158,18 @@
 
 /* ===== TABLE CORE ===== */
 .table-modern {
-    display: flex;
-    justify-content: center;
+    display: block;
+    width: 100%;
 }
 
 /* mặc định cho module nhỏ */
 .table-inner {
     width: 70%;
     margin: auto;
-    overflow-x: visible;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: visible;
+    -webkit-overflow-scrolling: touch;
 }
 
     /* dùng cho module nhiều cột */
@@ -175,12 +180,13 @@
 
 .modern-table {
     width: 100%;
+    min-width: max-content;
     table-layout: auto;
     border-collapse: separate;
     border-spacing: 0 4px;
 }
     .modern-table.wide-table {
-        min-width: 0;
+        min-width: max-content;
     }
 
     /* mỗi row */
@@ -228,7 +234,7 @@
     .modern-table .col-date,
     .modern-table .col-action {
         white-space: nowrap;
-        width: 1%;
+        width: auto;
     }
 
     .modern-table .col-id { min-width: 54px; text-align: center; }
@@ -236,9 +242,9 @@
     .modern-table .col-status { min-width: 96px; text-align: center; }
     .modern-table .col-date { min-width: 104px; text-align: center; }
     .modern-table .col-action { min-width: 84px; }
-    .modern-table .col-code { width: 1%; min-width: 92px; white-space: nowrap; }
-    .modern-table .col-year { width: 1%; min-width: 104px; white-space: nowrap; }
-    .modern-table .col-phone { width: 1%; min-width: 112px; white-space: nowrap; }
+    .modern-table .col-code { width: auto; min-width: 92px; white-space: nowrap; }
+    .modern-table .col-year { width: auto; min-width: 104px; white-space: nowrap; }
+    .modern-table .col-phone { width: auto; min-width: 112px; white-space: nowrap; }
     .modern-table .col-role { min-width: 120px; }
     .modern-table .col-person { min-width: 150px; }
     .modern-table .col-faculty { min-width: 150px; }
@@ -259,7 +265,7 @@
     /* BODY */
     .modern-table tbody td {
         background: #ffffff;
-        padding: 14px;
+        padding: 9px 11px;
         vertical-align: middle;
     }
 

@@ -4,6 +4,7 @@
     let deleteModal = null;
     let currentPage = 1;
     let restoring = false;
+    const stateTtlMs = 30 * 60 * 1000;
 
     function init(options) {
         config = $.extend({
@@ -15,6 +16,7 @@
             deleteName: '#deleteName',
             deleteModalId: '#deleteModal',
             extraData: null,
+            afterLoad: null,
             autoLoad: true
         }, options || {});
 
@@ -89,6 +91,10 @@
         let state;
         try { state = JSON.parse(raw); } catch { return; }
         if (!state || !state.filters) return;
+        if (!state.savedAt || Date.now() - Number(state.savedAt) > stateTtlMs) {
+            clearState();
+            return;
+        }
 
         restoring = true;
         getStateControls().forEach(function (el) {
@@ -134,6 +140,7 @@
         $.get(config.api, data, function (res) {
             $(config.tableId).html(res);
             if (window.AppEnhanceActionButtons) window.AppEnhanceActionButtons();
+            if (typeof config.afterLoad === 'function') config.afterLoad(res);
             $(config.tableId).fadeTo(100, 1);
         });
     }

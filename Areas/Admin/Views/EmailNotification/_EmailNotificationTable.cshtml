@@ -1,0 +1,71 @@
+@model ExamInvigilationManagement.Common.PagedResult<ExamInvigilationManagement.Application.DTOs.Admin.EmailNotification.EmailNotificationDto>
+
+@{
+    var stt = (Model.Page - 1) * Model.PageSize + 1;
+}
+
+<table class="table modern-table wide-table">
+    <thead>
+        <tr>
+            <th class="col-id">STT</th>
+            <th class="col-date">Thời gian</th>
+            <th class="col-email">Email nhận</th>
+            <th class="col-person">Người liên quan</th>
+            <th class="col-faculty">Khoa</th>
+            <th class="col-short">Loại email</th>
+            <th class="col-status">Trạng thái</th>
+            <th class="col-action">Chi tiết</th>
+        </tr>
+    </thead>
+    <tbody>
+        @if (Model.Items.Any())
+        {
+            foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td class="col-id">@stt</td>
+                    <td class="col-date">@(item.SentAt?.ToString("dd/MM/yyyy HH:mm") ?? "-")</td>
+                    <td class="col-email">@item.Email</td>
+                    <td class="col-person">
+                        <div class="fw-semibold">@(string.IsNullOrWhiteSpace(item.FullName) ? item.UserName : item.FullName)</div>
+                        <div class="text-muted small">@item.UserName</div>
+                    </td>
+                    <td class="col-faculty">@(item.FacultyName ?? "-")</td>
+                    <td class="col-short">@EmailTypeLabel(item.Type)</td>
+                    <td class="col-status">
+                        @if (item.Status == "Sent")
+                        {
+                            <span class="badge bg-success">Đã gửi</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">Gửi lỗi</span>
+                        }
+                    </td>
+                    <td class="col-action">
+                        <a asp-area="Admin" asp-controller="EmailNotification" asp-action="Details" asp-route-id="@item.Id" class="btn-icon edit" title="Xem chi tiết">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                    </td>
+                </tr>
+                stt++;
+            }
+        }
+        else
+        {
+            <tr><td colspan="8" class="text-center py-4">Không có email phù hợp</td></tr>
+        }
+    </tbody>
+</table>
+
+@await Html.PartialAsync("_Pagination", Model)
+
+@functions {
+    private static string EmailTypeLabel(string? type) => type switch
+    {
+        "ResetPassword" => "Đặt lại mật khẩu",
+        "InvigilatorConfirmation" => "Xác nhận coi thi",
+        "InvigilatorSupportRequest" => "Đề nghị hỗ trợ CBCT",
+        _ => string.IsNullOrWhiteSpace(type) ? "-" : type
+    };
+}

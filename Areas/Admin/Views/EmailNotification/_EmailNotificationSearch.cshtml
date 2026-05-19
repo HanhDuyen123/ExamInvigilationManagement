@@ -1,0 +1,50 @@
+<div class="role-filter-compact">
+    <div class="role-filter-main email-notification-search-grid">
+        <div class="search-modern search-field search-field-wide">
+            <i class="bi bi-search"></i>
+            <input type="text" id="keyword" class="crud-filter" placeholder="Tìm email, người nhận, loại gửi hoặc lỗi..." />
+        </div>
+
+        <div class="lookup-modern position-relative search-field">
+            <input id="userInput" class="input-modern" placeholder="Chọn người nhận..." autocomplete="off" />
+            <div id="userDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+            <input type="hidden" id="userId" />
+        </div>
+
+        <div class="lookup-modern position-relative search-field">
+            <input id="facultyInput" class="input-modern" placeholder="Chọn khoa..." autocomplete="off" />
+            <div id="facultyDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+            <input type="hidden" id="facultyId" />
+        </div>
+
+        <div class="search-field">
+            <select id="status" class="select-modern crud-filter">
+                <option value="">-- Trạng thái --</option>
+                <option value="Sent">Đã gửi</option>
+                <option value="Failed">Gửi lỗi</option>
+            </select>
+        </div>
+
+        <div class="search-field">
+            <select id="type" class="select-modern crud-filter">
+                <option value="">-- Loại email --</option>
+                <option value="ResetPassword">Đặt lại mật khẩu</option>
+                <option value="InvigilatorConfirmation">Xác nhận coi thi</option>
+                <option value="InvigilatorSupportRequest">Đề nghị hỗ trợ CBCT</option>
+            </select>
+        </div>
+
+        <div class="search-field"><input type="date" id="fromDate" class="input-modern crud-filter" /></div>
+        <div class="search-field"><input type="date" id="toDate" class="input-modern crud-filter" /></div>
+
+        <div class="search-field search-page-size">
+            <select id="pageSize" class="select-modern">
+                <option value="5" selected>5/trang</option>
+                <option value="10">10/trang</option>
+                <option value="20">20/trang</option>
+                <option value="50">50/trang</option>
+                <option value="100">100/trang</option>
+            </select>
+        </div>
+    </div>
+</div>

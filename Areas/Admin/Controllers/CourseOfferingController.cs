@@ -46,6 +46,7 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         public async Task<IActionResult> GetList(
             string? subjectId,
             int? userId,
+            int? academyYearId,
             int? semesterType,
             string? className,
             string? groupNumber,
@@ -55,6 +56,7 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
             var result = await _service.GetPagedAsync(
                 subjectId,
                 userId,
+                academyYearId,
                 semesterType,
                 className,
                 groupNumber,

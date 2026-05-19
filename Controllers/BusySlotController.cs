@@ -33,7 +33,9 @@ namespace ExamInvigilationManagement.Controllers
                 SearchPartialView = "_BusySlotSearch",
                 TableClass = "full-width",
                 ShowCreateButton = User.IsInRole("Giảng viên"),
-                ImportUrl = Url.Action("Index", "BulkImport", new { area = "", module = "lecturer-busy-slot" })
+                ImportUrl = User.IsInRole("Admin")
+                    ? null
+                    : Url.Action("Index", "BulkImport", new { area = "", module = "lecturer-busy-slot" })
             };
 
             return View(vm);

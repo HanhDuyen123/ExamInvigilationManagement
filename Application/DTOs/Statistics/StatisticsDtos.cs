@@ -5,6 +5,7 @@ namespace ExamInvigilationManagement.Application.DTOs.Statistics
         public int? AcademyYearId { get; set; }
         public int? SemesterId { get; set; }
         public int? PeriodId { get; set; }
+        public int? FacultyId { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
     }

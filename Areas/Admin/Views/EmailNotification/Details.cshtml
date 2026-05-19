@@ -1,0 +1,42 @@
+@model ExamInvigilationManagement.Application.DTOs.Admin.EmailNotification.EmailNotificationDto
+
+@{
+    ViewData["Title"] = "Chi tiết nhật ký email";
+}
+
+<div class="role-page">
+    <div class="role-header mb-4">
+        <div>
+            <h3 class="title-gradient">Chi tiết nhật ký email</h3>
+            <div class="subtitle">Kiểm tra đầy đủ thông tin người nhận, trạng thái gửi và lỗi phát sinh nếu có</div>
+        </div>
+        <a asp-area="Admin" asp-controller="EmailNotification" asp-action="Index" class="btn btn-create">
+            <i class="bi bi-arrow-left"></i><span>Quay lại</span>
+        </a>
+    </div>
+
+    <div class="content-card">
+        <div class="row g-3">
+            <div class="col-md-6"><div class="form-label">Email nhận</div><div class="fw-semibold">@Model.Email</div></div>
+            <div class="col-md-6"><div class="form-label">Trạng thái</div><div>@(Model.Status == "Sent" ? "Đã gửi" : "Gửi lỗi")</div></div>
+            <div class="col-md-6"><div class="form-label">Người liên quan</div><div>@Model.FullName (@Model.UserName)</div></div>
+            <div class="col-md-6"><div class="form-label">Khoa</div><div>@(Model.FacultyName ?? "-")</div></div>
+            <div class="col-md-6"><div class="form-label">Loại email</div><div>@EmailTypeLabel(Model.Type)</div></div>
+            <div class="col-md-6"><div class="form-label">Thời gian gửi</div><div>@(Model.SentAt?.ToString("dd/MM/yyyy HH:mm:ss") ?? "-")</div></div>
+            <div class="col-12">
+                <div class="form-label">Thông tin lỗi</div>
+                <pre class="p-3 rounded-3 border bg-light mb-0" style="white-space:pre-wrap;">@(string.IsNullOrWhiteSpace(Model.ErrorMessage) ? "Không có lỗi được ghi nhận." : Model.ErrorMessage)</pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+@functions {
+    private static string EmailTypeLabel(string? type) => type switch
+    {
+        "ResetPassword" => "Đặt lại mật khẩu",
+        "InvigilatorConfirmation" => "Xác nhận coi thi",
+        "InvigilatorSupportRequest" => "Đề nghị hỗ trợ CBCT",
+        _ => string.IsNullOrWhiteSpace(type) ? "-" : type
+    };
+}

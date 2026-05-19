@@ -17,10 +17,10 @@
     <div class="role-header mb-4">
         <div>
             <h3 class="title-gradient">Thống kê và báo cáo</h3>
-            <div class="subtitle">Góc nhìn @Model.ScopeName.ToLowerInvariant() về lịch thi, phân công coi thi và phản hồi giảng viên</div>
+            <div class="subtitle" id="statisticsSubtitle">Góc nhìn @Model.ScopeName.ToLowerInvariant() về lịch thi, phân công coi thi và phản hồi giảng viên</div>
         </div>
         <div class="d-flex flex-wrap gap-2">
-            <a class="btn btn-outline-primary rounded-3" asp-action="Preview" asp-route-academyYearId="@Model.Filter.AcademyYearId" asp-route-semesterId="@Model.Filter.SemesterId" asp-route-periodId="@Model.Filter.PeriodId" asp-route-fromDate="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" asp-route-toDate="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")">
+            <a id="statisticsPreviewLink" class="btn btn-outline-primary rounded-3" asp-action="Preview" asp-route-academyYearId="@Model.Filter.AcademyYearId" asp-route-semesterId="@Model.Filter.SemesterId" asp-route-periodId="@Model.Filter.PeriodId" asp-route-facultyId="@Model.Filter.FacultyId" asp-route-fromDate="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" asp-route-toDate="@Model.Filter.ToDate?.ToString("yyyy-MM-dd")">
                 <i class="bi bi-eye"></i> Xem trước báo cáo
             </a>
         </div>
@@ -46,6 +46,15 @@
                 <div id="periodDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
                 <input type="hidden" id="periodId" name="PeriodId" value="@Model.Filter.PeriodId" />
             </div>
+            @if (isAdmin)
+            {
+                <div class="lookup-modern position-relative" style="width:220px;">
+                    <label class="form-label mb-1">Khoa</label>
+                    <input id="facultyInput" class="input-modern" placeholder="Chọn khoa..." autocomplete="off" />
+                    <div id="facultyDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                    <input type="hidden" id="facultyId" name="FacultyId" value="@Model.Filter.FacultyId" />
+                </div>
+            }
             <div style="width:170px;">
                 <label class="form-label mb-1">Từ ngày</label>
                 <input type="date" name="FromDate" value="@Model.Filter.FromDate?.ToString("yyyy-MM-dd")" class="input-modern" />
@@ -58,6 +67,9 @@
         </div>
     </form>
 
+    <div id="statisticsMessage" class="alert d-none mb-4"></div>
+
+    <div id="statisticsDashboardContent">
     <div class="stats-metric-grid compact mb-4">
         @foreach (var metric in Model.Metrics)
         {
@@ -218,16 +230,23 @@
             <div class="panel-heading">
                 <div>
                     <div class="panel-title">Hiệu suất coi thi của giảng viên</div>
-                    <div class="panel-subtitle">Dữ liệu này cần đọc số chi tiết nên giữ dạng bảng, kèm thanh tiến độ tỷ lệ xác nhận.</div>
+                    <div class="panel-subtitle">Hiển thị đầy đủ @Model.LecturerWorkloads.Count.ToString("N0") giảng viên trong phạm vi lọc. Bảng cuộn nội bộ để không kéo dài toàn trang.</div>
+                </div>
+                <div class="statistics-table-tools">
+                    <div class="search-modern statistics-table-search">
+                        <i class="bi bi-search"></i>
+                        <input type="text" id="lecturerWorkloadSearch" placeholder="Lọc giảng viên..." autocomplete="off" />
+                    </div>
+                    <span class="panel-total">@Model.LecturerWorkloads.Count.ToString("N0") người</span>
                 </div>
             </div>
-            <div class="table-responsive">
+            <div class="table-responsive statistics-data-table-wrap">
                 <table class="table modern-table mb-0">
                     <thead><tr><th>Giảng viên</th><th>Phân công</th><th>Xác nhận</th><th>Từ chối</th><th>Chưa phản hồi</th><th>Tỷ lệ xác nhận</th></tr></thead>
                     <tbody>
                     @foreach (var item in Model.LecturerWorkloads)
                     {
-                        <tr>
+                        <tr class="lecturer-workload-row" data-lecturer="@item.LecturerName.ToLowerInvariant()">
                             <td>@item.LecturerName</td>
                             <td>@item.AssignedCount</td>
                             <td>@item.ConfirmedCount</td>
@@ -242,6 +261,7 @@
                         </tr>
                     }
                     @if (!Model.LecturerWorkloads.Any()) { <tr><td colspan="6" class="text-center py-4">Không có dữ liệu</td></tr> }
+                    <tr id="lecturerWorkloadEmpty" class="d-none"><td colspan="6" class="text-center py-4">Không có giảng viên phù hợp từ khóa lọc</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -253,10 +273,10 @@
             <div class="panel-heading">
                 <div>
                     <div class="panel-title">Độ phủ giám thị theo ca thi</div>
-                    <div class="panel-subtitle">Bảng phù hợp vì cần đối chiếu đợt, buổi, ca và tỷ lệ phủ cụ thể.</div>
+                    <div class="panel-subtitle">Đối chiếu đầy đủ @Model.SlotCoverage.Count.ToString("N0") nhóm đợt, buổi và ca thi trong phạm vi lọc.</div>
                 </div>
             </div>
-            <div class="table-responsive">
+            <div class="table-responsive statistics-data-table-wrap compact-scroll">
                 <table class="table modern-table mb-0">
                     <thead><tr><th>Đợt thi</th><th>Buổi</th><th>Ca</th><th>Số lịch</th><th>Đủ 2 giám thị</th><th>Tỷ lệ phủ</th></tr></thead>
                     <tbody>
@@ -281,6 +301,7 @@
                 </table>
             </div>
         </section>
+    </div>
     </div>
 </div>
 
@@ -335,8 +356,16 @@
     .rate-fill.primary { background:linear-gradient(90deg,#4f46e5,#06b6d4); }
     .rate-cell span { color:#334155; font-weight:700; font-size:.88rem; }
     .empty-stat { color:#94a3b8; text-align:center; padding:24px; }
+    .statistics-table-tools { display:flex; align-items:center; justify-content:flex-end; gap:10px; flex-wrap:wrap; }
+    .statistics-table-search { min-width:220px; max-width:280px; }
+    .statistics-table-search input { width:100%; border:0; outline:0; background:transparent; }
+    .statistics-data-table-wrap { max-height:520px; overflow:auto; border:1px solid rgba(148,163,184,.18); border-radius:16px; }
+    .statistics-data-table-wrap.compact-scroll { max-height:440px; }
+    .statistics-data-table-wrap .modern-table { min-width:760px; }
+    .statistics-data-table-wrap thead th { position:sticky; top:0; z-index:2; background:#f8fafc; box-shadow:0 1px 0 #e2e8f0; }
+    .statistics-data-table-wrap tbody tr:nth-child(even) td { background:#fbfdff; }
     @@media (max-width: 991.98px) { .stats-layout { grid-template-columns:1fr; } .chart-panel { min-height:auto; } .response-summary-grid { grid-template-columns:1fr; } }
-    @@media (max-width: 575.98px) { .panel-heading { flex-direction:column; } .bar-row { grid-template-columns:1fr; gap:6px; } .bar-row strong { text-align:left; } .rate-cell { grid-template-columns:1fr; } }
+    @@media (max-width: 575.98px) { .panel-heading { flex-direction:column; } .statistics-table-tools { justify-content:stretch; width:100%; } .statistics-table-search { max-width:none; width:100%; } .bar-row { grid-template-columns:1fr; gap:6px; } .bar-row strong { text-align:left; } .rate-cell { grid-template-columns:1fr; } }
 </style>
 
 @section Scripts {
@@ -344,6 +373,7 @@
     <script>
         $(function () {
             let statisticsTimer = null;
+            let statisticsRequestSeq = 0;
             function val(selector) { return $(selector).val() || null; }
             function submitOnSelect() { scheduleLoad(); }
             function clearBelow(level) {
@@ -355,6 +385,9 @@
                 AdminLookup.create({ key:'st-year', input:'#yearInput', hidden:'#yearId', menu:'#yearDropdown', url:'@Url.Action("AcademyYears", "Lookup", new { area = "" })', valueField:'id', textField:'name', onSelect:function(){clearBelow('year');submitOnSelect();}, onClear:function(){clearBelow('year');submitOnSelect();} });
                 AdminLookup.create({ key:'st-semester', input:'#semesterInput', hidden:'#semesterId', menu:'#semesterDropdown', url:'@Url.Action("Semesters", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { academyYearId: val('#yearId') }}, beforeSearch:function(){return val('#yearId') ? true : 'Vui lòng chọn năm học'}, onSelect:function(){clearBelow('semester');submitOnSelect();}, onClear:function(){clearBelow('semester');submitOnSelect();} });
                 AdminLookup.create({ key:'st-period', input:'#periodInput', hidden:'#periodId', menu:'#periodDropdown', url:'@Url.Action("Periods", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { semesterId: val('#semesterId') }}, beforeSearch:function(){return val('#yearId') && val('#semesterId') ? true : 'Vui lòng chọn năm học và học kỳ'}, onSelect:submitOnSelect, onClear:submitOnSelect });
+                if ($('#facultyInput').length) {
+                    AdminLookup.create({ key:'st-faculty', input:'#facultyInput', hidden:'#facultyId', menu:'#facultyDropdown', url:'@Url.Action("Search", "Faculty", new { area = "Admin" })', queryParam:'keyword', valueField:'id', textField:'name', onSelect:submitOnSelect, onClear:submitOnSelect });
+                }
                 restoreStatisticsLookupText();
 
                 $('#statisticsFilter').off('submit.statistics').on('submit.statistics', function (e) {
@@ -375,20 +408,56 @@
             }
 
             function loadStatistics(url) {
-                const $page = $('.statistics-page');
+                const seq = ++statisticsRequestSeq;
+                const $content = $('#statisticsDashboardContent');
                 const requestUrl = url || ($('#statisticsFilter').attr('action') + '?' + $('#statisticsFilter').serialize());
-                $page.fadeTo(100, .45);
+                $content.fadeTo(100, .55);
 
                 $.get(requestUrl, function (html) {
+                    if (seq !== statisticsRequestSeq) return;
                     const doc = new DOMParser().parseFromString(html, 'text/html');
-                    const next = doc.querySelector('.statistics-page');
-                    if (!next) { window.location.href = requestUrl; return; }
-                    $('.statistics-page').replaceWith(next);
+                    const nextContent = doc.querySelector('#statisticsDashboardContent');
+                    if (!nextContent) { window.location.href = requestUrl; return; }
+
+                    $('#statisticsDashboardContent').replaceWith(nextContent);
+
+                    const nextSubtitle = doc.querySelector('#statisticsSubtitle');
+                    if (nextSubtitle) $('#statisticsSubtitle').text(nextSubtitle.textContent || '');
+
+                    const nextPreviewLink = doc.querySelector('#statisticsPreviewLink');
+                    if (nextPreviewLink) $('#statisticsPreviewLink').attr('href', nextPreviewLink.getAttribute('href') || '#');
+
                     window.history.replaceState({}, '', requestUrl);
-                    bindStatisticsFilters();
-                    $('.statistics-page').fadeTo(100, 1);
+                    $('#statisticsDashboardContent').fadeTo(100, 1);
+                    hideStatisticsMessage();
+                }).fail(function () {
+                    $('#statisticsDashboardContent').fadeTo(100, 1);
+                    showStatisticsMessage('error', 'Không thể tải dữ liệu thống kê. Vui lòng kiểm tra bộ lọc hoặc thử lại.');
                 });
             }
+
+            function showStatisticsMessage(type, message) {
+                $('#statisticsMessage')
+                    .removeClass('d-none alert-success alert-danger alert-warning')
+                    .addClass(type === 'success' ? 'alert-success' : 'alert-danger')
+                    .text(message || 'Có lỗi xảy ra.');
+                if (window.AppNotify) window.AppNotify.show(type, message);
+            }
+
+            function hideStatisticsMessage() {
+                $('#statisticsMessage').addClass('d-none').text('');
+            }
+
+            $(document).on('input.statisticsWorkload', '#lecturerWorkloadSearch', function () {
+                const keyword = ($(this).val() || '').trim().toLowerCase();
+                let visible = 0;
+                $('.lecturer-workload-row').each(function () {
+                    const matched = !keyword || String($(this).data('lecturer') || '').includes(keyword);
+                    $(this).toggle(matched);
+                    if (matched) visible++;
+                });
+                $('#lecturerWorkloadEmpty').toggleClass('d-none', visible > 0 || $('.lecturer-workload-row').length === 0);
+            });
 
             function applyLookupText(key, hiddenSelector, items) {
                 const id = val(hiddenSelector);
@@ -412,6 +481,11 @@
                                 }
                             });
                         }
+                    });
+                }
+                if (val('#facultyId')) {
+                    $.get('@Url.Action("Search", "Faculty", new { area = "Admin" })', function (faculties) {
+                        applyLookupText('st-faculty', '#facultyId', faculties);
                     });
                 }
             }

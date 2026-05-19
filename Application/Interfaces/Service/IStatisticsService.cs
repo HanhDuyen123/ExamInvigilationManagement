@@ -6,6 +6,7 @@ namespace ExamInvigilationManagement.Application.Interfaces.Service
     {
         Task<StatisticsDashboardDto> GetDashboardAsync(int userId, string roleName, StatisticsFilterDto filter, CancellationToken cancellationToken = default);
         byte[] ExportPdf(StatisticsDashboardDto dashboard);
+        byte[] ExportExcel(StatisticsDashboardDto dashboard, string? templatePath = null);
         byte[] ExportCsv(StatisticsDashboardDto dashboard);
     }
 }

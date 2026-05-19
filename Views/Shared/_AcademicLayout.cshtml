@@ -239,8 +239,11 @@
         }
 
         .admin-sidebar {
-            width: 290px;
-            flex: 0 0 290px;
+            position: sticky;
+            top: 68px;
+            width: 264px;
+            flex: 0 0 264px;
+            height: calc(100vh - 68px);
             padding: 20px 15px;
             background: rgba(255, 255, 255, 0.66);
             border-right: 1px solid rgba(15, 23, 42, 0.06);
@@ -248,11 +251,14 @@
             -webkit-backdrop-filter: blur(18px);
             transition: width 0.28s ease, flex-basis 0.28s ease, transform 0.28s ease, opacity 0.28s ease;
             overflow-y: auto;
+            overflow-x: hidden;
+            overscroll-behavior: contain;
+            scrollbar-gutter: stable;
         }
 
             .admin-sidebar.collapsed {
-                width: 88px;
-                flex-basis: 88px;
+                width: 72px;
+                flex-basis: 72px;
                 overflow: visible;
             }
 

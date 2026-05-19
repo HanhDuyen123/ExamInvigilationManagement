@@ -80,14 +80,14 @@
                     ? '<ul class="mb-0 mt-2">' + errors.map(x => '<li>' + $('<div/>').text(x).html() + '</li>').join('') + '</ul>'
                     : '';
 
-                $box
-                    .removeClass('d-none alert-success alert-danger alert-warning')
-                    .addClass(type === 'success' ? 'alert-success' : 'alert-danger')
-                    .html($('<div/>').text(message).html() + extra);
+                // $box
+                //     .removeClass('d-none alert-success alert-danger alert-warning')
+                //     .addClass(type === 'success' ? 'alert-success' : 'alert-danger')
+                //     .html($('<div/>').text(message).html() + extra);
 
                 if (window.AppNotify) {
                     window.AppNotify.show(type, message);
-                }
+                }   
             }
 
             $(document).on('change', '#selectAllApprovalSchedules', function () {

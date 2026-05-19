@@ -5,6 +5,7 @@ using DocumentFormat.OpenXml.Spreadsheet;
 using ExamInvigilationManagement.Application.DTOs.Import;
 using ExamInvigilationManagement.Application.Interfaces.Common;
 using ExamInvigilationManagement.Application.Interfaces.Service;
+using ExamInvigilationManagement.Common;
 using ExamInvigilationManagement.Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -138,9 +139,12 @@ namespace ExamInvigilationManagement.Application.Services
                 var sheets = workbookPart.Workbook.AppendChild(new Sheets());
                 sheets.Append(new Sheet { Id = workbookPart.GetIdOfPart(worksheetPart), SheetId = 1, Name = "Import" });
 
-                sheetData.Append(BuildRow(1, columns.Select(x => x.Header)));
-                sheetData.Append(BuildRow(2, columns.Select(x => x.Example)));
-                sheetData.Append(BuildRow(3, columns.Select(x => x.Description)));
+                sheetData.Append(BuildRow(1, [DocumentLetterhead.Ministry, string.Empty, string.Empty, DocumentLetterhead.Nation]));
+                sheetData.Append(BuildRow(2, [DocumentLetterhead.School, string.Empty, string.Empty, DocumentLetterhead.Motto]));
+                sheetData.Append(BuildRow(4, [GetModuleTitle(module).ToUpperInvariant()]));
+                sheetData.Append(BuildRow(6, columns.Select(x => x.Header)));
+                sheetData.Append(BuildRow(7, columns.Select(x => x.Example)));
+                sheetData.Append(BuildRow(8, columns.Select(x => x.Description)));
                 workbookPart.Workbook.Save();
             }
             return stream.ToArray();
@@ -163,7 +167,7 @@ namespace ExamInvigilationManagement.Application.Services
                 return result;
             }
 
-            var rows = ReadRows(file, result);
+            var rows = ReadRows(module, file, result);
             result.TotalRows = rows.Count;
             if (result.Errors.Any() || rows.Count == 0)
             {
@@ -422,7 +426,7 @@ namespace ExamInvigilationManagement.Application.Services
             }
         }
 
-        private List<Dictionary<string, string>> ReadRows(IFormFile file, ImportResultDto result)
+        private List<Dictionary<string, string>> ReadRows(string module, IFormFile file, ImportResultDto result)
         {
             var rows = new List<Dictionary<string, string>>();
             try
@@ -435,8 +439,21 @@ namespace ExamInvigilationManagement.Application.Services
                 var sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>()!;
                 var excelRows = sheetData.Elements<Row>().ToList();
                 if (excelRows.Count < 2) return rows;
-                var headers = excelRows[0].Elements<Cell>().Select(c => GetCellValue(workbookPart, c).Trim()).ToList();
-                foreach (var row in excelRows.Where(x => (x.RowIndex?.Value ?? 0) >= 4))
+
+                var expectedHeaders = GetTemplateColumns(module).Select(x => x.Header).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var headerRow = excelRows.FirstOrDefault(row =>
+                {
+                    var rowHeaders = row.Elements<Cell>()
+                        .Select(c => GetCellValue(workbookPart, c).Trim())
+                        .Where(x => !string.IsNullOrWhiteSpace(x))
+                        .ToHashSet(StringComparer.OrdinalIgnoreCase);
+                    return expectedHeaders.Count > 0 && expectedHeaders.All(rowHeaders.Contains);
+                }) ?? excelRows[0];
+
+                var headerRowIndex = headerRow.RowIndex?.Value ?? 1;
+                var headers = headerRow.Elements<Cell>().Select(c => GetCellValue(workbookPart, c).Trim()).ToList();
+                var dataStartIndex = headerRowIndex + 3;
+                foreach (var row in excelRows.Where(x => (x.RowIndex?.Value ?? 0) >= dataStartIndex))
                 {
                     var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["__RowNumber"] = row.RowIndex?.Value.ToString() ?? "0" };
                     var cells = row.Elements<Cell>().ToList();
@@ -457,7 +474,16 @@ namespace ExamInvigilationManagement.Application.Services
         private static Row BuildRow(uint index, IEnumerable<string> values)
         {
             var row = new Row { RowIndex = index };
-            foreach (var value in values) row.Append(new Cell { DataType = CellValues.String, CellValue = new CellValue(value ?? string.Empty) });
+            var column = 1;
+            foreach (var value in values)
+            {
+                row.Append(new Cell
+                {
+                    CellReference = GetExcelColumnName(column++) + index,
+                    DataType = CellValues.String,
+                    CellValue = new CellValue(value ?? string.Empty)
+                });
+            }
             return row;
         }
 

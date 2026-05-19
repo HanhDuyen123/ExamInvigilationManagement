@@ -38,13 +38,13 @@
     </colgroup>
     <thead>
         <tr>
-            <th class="col-id">STT</th>
             @if (canSelectSchedule)
             {
                 <th class="col-id">
                     <input type="checkbox" id="selectAllApprovalSchedules" class="form-check-input" title="Chọn tất cả lịch hợp lệ trên trang" />
                 </th>
             }
+            <th class="col-id">STT</th>
             <th>Mã môn</th>
             <th>Môn học</th>
             <th>Lớp học phần</th>
@@ -70,7 +70,6 @@
             foreach (var item in Model.Items)
             {
                 <tr class="approval-row">
-                    <td class="col-id">@stt</td>
                     @if (canSelectSchedule)
                     {
                         var isApprovalAlreadySent = string.Equals(item.Status, "Chờ duyệt", StringComparison.OrdinalIgnoreCase) && item.ApprovalCount > 0;
@@ -100,6 +99,7 @@
                             }
                         </td>
                     }
+                    <td class="col-id">@stt</td>
                     <td class="cell-code">@item.SubjectId</td>
                     <td class="cell-wrap cell-subject">@item.SubjectName</td>
                     <td class="cell-wrap">@item.ClassName</td>

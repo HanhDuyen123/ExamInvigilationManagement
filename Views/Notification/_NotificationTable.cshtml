@@ -6,21 +6,21 @@
     var colSpan = isAdmin ? 9 : 8;
 }
 
-<table class="table modern-table">
+<table class="table modern-table notification-table">
     <thead>
         <tr>
-            <th>STT</th>
-            <th>Tiêu đề</th>
-            <th>Nội dung</th>
-            <th>Loại</th>
+            <th class="col-id">STT</th>
+            <th class="col-title">Tiêu đề</th>
+            <th class="col-message">Nội dung</th>
+            <th class="col-type">Loại</th>
             @if (isAdmin)
             {
-                <th>Người nhận</th>
+                <th class="col-person">Người nhận</th>
             }
-            <th>Người gửi</th>
-            <th>Thời gian</th>
-            <th>Trạng thái</th>
-            <th class="col-action">Action</th>
+            <th class="col-person">Người gửi</th>
+            <th class="col-date-time">Thời gian</th>
+            <th class="col-status">Trạng thái</th>
+            <th class="col-action">Thao tác</th>
         </tr>
     </thead>
     <tbody>
@@ -30,10 +30,10 @@
             foreach (var item in Model.Items)
             {
                 <tr class="@(item.IsRead ? "" : "table-light fw-semibold")">
-                    <td>@stt</td>
-                    <td>@item.Title</td>
-                    <td class="notification-content-cell">@item.Content</td>
-                    <td>
+                    <td class="col-id">@stt</td>
+                    <td class="col-title">@item.Title</td>
+                    <td class="col-message notification-content-cell">@item.Content</td>
+                    <td class="col-type">
                         <span class="badge bg-light text-dark border">
                             <i class="bi @NotificationTypeHelper.GetIcon(item.Type)"></i>
                             @NotificationTypeHelper.GetLabel(item.Type)
@@ -41,11 +41,11 @@
                     </td>
                     @if (isAdmin)
                     {
-                        <td>@(string.IsNullOrWhiteSpace(item.RecipientName) ? $"#{item.UserId}" : item.RecipientName)</td>
+                        <td class="col-person">@(string.IsNullOrWhiteSpace(item.RecipientName) ? $"#{item.UserId}" : item.RecipientName)</td>
                     }
-                    <td>@(string.IsNullOrWhiteSpace(item.CreatedByName) ? "Hệ thống" : item.CreatedByName)</td>
-                    <td>@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
-                    <td>
+                    <td class="col-person">@(string.IsNullOrWhiteSpace(item.CreatedByName) ? "Hệ thống" : item.CreatedByName)</td>
+                    <td class="col-date-time">@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                    <td class="col-status">
                         <span class="badge @(item.IsRead ? "bg-secondary" : "bg-primary")">
                             @(item.IsRead ? "Đã đọc" : "Chưa đọc")
                         </span>

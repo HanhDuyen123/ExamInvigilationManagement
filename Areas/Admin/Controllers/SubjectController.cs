@@ -94,7 +94,7 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
             else if (IsLecturer())
             {
                 var offerings = await _courseOfferingService.GetPagedAsync(
-                    null, currentUserId, null, null, null, 1, 1000);
+                    null, currentUserId, null, null, null, null, 1, 1000);
 
                 var subjectIds = offerings.Items
                     .Select(x => x.SubjectId)

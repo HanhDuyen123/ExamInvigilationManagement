@@ -23,10 +23,13 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
             var isLecturer = roleName.Equals("Giảng viên", StringComparison.OrdinalIgnoreCase);
             var isFacultyScope = roleName.Equals("Thư ký khoa", StringComparison.OrdinalIgnoreCase) || roleName.Equals("Trưởng khoa", StringComparison.OrdinalIgnoreCase);
+            var isAdmin = roleName.Equals("Admin", StringComparison.OrdinalIgnoreCase);
 
             var schedules = _db.ExamSchedules.AsNoTracking().AsQueryable();
             if (isFacultyScope && user?.FacultyId != null)
                 schedules = schedules.Where(x => x.Offering.Subject.FacultyId == user.FacultyId.Value);
+            if (isAdmin && filter.FacultyId.HasValue)
+                schedules = schedules.Where(x => x.Offering.Subject.FacultyId == filter.FacultyId.Value);
             if (isLecturer)
                 schedules = schedules.Where(x => x.ExamInvigilators.Any(i => i.AssigneeId == userId));
 
@@ -76,10 +79,24 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             var rejected = assignmentRows.Count(x => x.ResponseStatus == "Từ chối");
             var pending = assignmentRows.Count(x => string.IsNullOrWhiteSpace(x.ResponseStatus));
 
+            var selectedFacultyName = isAdmin && filter.FacultyId.HasValue
+                ? await _db.Faculties
+                    .AsNoTracking()
+                    .Where(x => x.FacultyId == filter.FacultyId.Value)
+                    .Select(x => x.FacultyName)
+                    .FirstOrDefaultAsync(cancellationToken)
+                : null;
+
             var dashboard = new StatisticsDashboardDto
             {
                 RoleName = roleName,
-                ScopeName = isLecturer ? "Lịch coi thi của tôi" : isFacultyScope ? user?.Faculty?.FacultyName ?? "Khoa hiện tại" : "Toàn hệ thống",
+                ScopeName = isLecturer
+                    ? "Lịch coi thi của tôi"
+                    : isFacultyScope
+                        ? user?.Faculty?.FacultyName ?? "Khoa hiện tại"
+                        : !string.IsNullOrWhiteSpace(selectedFacultyName)
+                            ? selectedFacultyName
+                            : "Toàn hệ thống",
                 Filter = filter,
                 Metrics = BuildMetrics(totalSchedules, approvedSchedules, fullCoveredSchedules, totalAssignments, confirmed, rejected, pending)
             };
@@ -120,8 +137,9 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     ConfirmedCount = g.Count(x => x.ResponseStatus == "Xác nhận"),
                     RejectedCount = g.Count(x => x.ResponseStatus == "Từ chối")
                 })
-                .OrderByDescending(x => x.AssignedCount)
-                .Take(isLecturer ? 12 : 10)
+                .OrderByDescending(x => x.RejectedCount)
+                .ThenByDescending(x => x.AssignedCount)
+                .ThenBy(x => x.LecturerName)
                 .ToList();
 
             foreach (var item in dashboard.LecturerWorkloads)
@@ -141,7 +159,6 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     FullCoveredCount = g.Count(x => x.InvigilatorCount >= 2)
                 })
                 .OrderByDescending(x => x.ScheduleCount)
-                .Take(10)
                 .ToList();
 
             foreach (var item in dashboard.SlotCoverage)

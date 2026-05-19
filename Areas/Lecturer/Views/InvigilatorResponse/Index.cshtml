@@ -14,6 +14,8 @@
         <div class="d-flex flex-wrap gap-2">
             <button type="button" class="btn btn-outline-primary rounded-3" id="viewTable"><i class="bi bi-table"></i> Danh sách</button>
             <button type="button" class="btn btn-outline-primary rounded-3" id="viewCalendar"><i class="bi bi-calendar-week"></i> Lịch trực quan</button>
+            <button type="button" id="confirmAssignments" class="btn-submit text-decoration-none"><i class="bi bi-check2-circle"></i> Xác nhận</button>
+            <button type="button" id="rejectAssignments" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#responseRejectModal"><i class="bi bi-x-circle"></i> Từ chối</button>
         </div>
     </div>
 
@@ -38,21 +40,27 @@
         </div>
     </div>
 
-    <div class="form-card action-note-card mb-4">
-        <div class="approval-action-grid">
-            <div>
-                <label class="form-label mb-1">Ghi chú phản hồi</label>
-                <textarea id="responseNote" class="input-modern" rows="2" placeholder="Bắt buộc nhập lý do khi từ chối lịch coi thi."></textarea>
-            </div>
-            <div class="d-flex gap-2 flex-wrap justify-content-end align-self-end">
-                <button type="button" id="confirmAssignments" class="btn-submit text-decoration-none"><i class="bi bi-check2-circle"></i> Xác nhận</button>
-                <button type="button" id="rejectAssignments" class="btn btn-danger rounded-3 px-4"><i class="bi bi-x-circle"></i> Từ chối</button>
-            </div>
-        </div>
-    </div>
-
     <div class="table-modern">
         <div id="assignmentResult" class="table-inner full-width"></div>
+    </div>
+</div>
+
+<div class="modal fade" id="responseRejectModal" tabindex="-1" aria-labelledby="responseRejectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4">
+            <div class="modal-header">
+                <h5 class="modal-title" id="responseRejectModalLabel">Lý do từ chối coi thi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <label class="form-label" for="responseRejectNote">Ghi chú phản hồi</label>
+                <textarea id="responseRejectNote" class="input-modern w-100" rows="4" maxlength="500" placeholder="Nhập lý do bạn không thể tham gia lịch coi thi đã chọn."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button type="button" class="btn btn-outline-danger" id="confirmResponseRejectBtn">Gửi từ chối</button>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -106,9 +114,9 @@
                 }, function (html) { $('#assignmentResult').html(html).fadeTo(100, 1); });
             }
             window.CrudPage = { loadData };
-            async function submit(status) {
+            async function submit(status, noteValue) {
                 const ids = $('.assignment-checkbox:checked').map(function () { return Number(this.value); }).get();
-                const note = $('#responseNote').val();
+                const note = noteValue || '';
                 if (!ids.length) { showMessage('error', 'Vui lòng chọn ít nhất một lịch coi thi.'); return; }
                 if (status === 'Từ chối' && !note.trim()) { showMessage('error', 'Vui lòng nhập lý do khi từ chối lịch coi thi.'); return; }
                 const response = await fetch('@Url.Action("Submit", "InvigilatorResponse", new { area = "Lecturer" })', {
@@ -119,14 +127,15 @@
                 const result = await response.json();
                 if (!response.ok || !result.success) { showMessage('error', result.message || 'Không thể ghi nhận phản hồi.', result.errors); return; }
                 showMessage('success', result.message || 'Đã ghi nhận phản hồi.');
-                $('#responseNote').val('');
+                $('#responseRejectNote').val('');
+                bootstrap.Modal.getInstance(document.getElementById('responseRejectModal'))?.hide();
                 loadData(1);
             }
 
             $(document).on('change', '#selectAllAssignments', function () { $('.assignment-checkbox').prop('checked', this.checked); });
             $(document).on('click', '.pagination a[data-page]', function(e) { e.preventDefault(); loadData($(this).data('page')); });
-            $('#confirmAssignments').on('click', () => submit('Xác nhận'));
-            $('#rejectAssignments').on('click', () => submit('Từ chối'));
+            $('#confirmAssignments').on('click', () => submit('Xác nhận', ''));
+            $('#confirmResponseRejectBtn').on('click', () => submit('Từ chối', $('#responseRejectNote').val()));
             $('#viewTable').on('click', function(){ viewMode='table'; loadData(1); });
             $('#viewCalendar').on('click', function(){ viewMode='calendar'; loadData(1); });
             $('.assignment-filter').on('input change', function(){ clearTimeout(window.irSearchTimer); window.irSearchTimer = setTimeout(() => loadData(1), 250); });

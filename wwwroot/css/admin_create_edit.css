@@ -74,7 +74,7 @@
 
 /* ACTIONS */
 .form-actions {
-    margin-top: 25px;
+    margin-top: 18px;
 }
 
 /* SUBMIT BUTTON */
@@ -82,11 +82,14 @@
     background: linear-gradient(135deg, #4f46e5, #6366f1);
     color: white;
     border: none;
-    border-radius: 12px;
-    padding: 10px 20px;
+    border-radius: 10px;
+    padding: 7px 14px;
+    min-height: 34px;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 800;
     box-shadow: 0 10px 25px rgba(99,102,241,0.25);
     transition: all 0.25s;
 }

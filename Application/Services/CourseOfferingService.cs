@@ -21,6 +21,7 @@ namespace ExamInvigilationManagement.Application.Services
         public async Task<PagedResult<CourseOfferingDto>> GetPagedAsync(
             string? subjectId,
             int? userId,
+            int? academyYearId,
             int? semesterType,
             string? className,
             string? groupNumber,
@@ -41,6 +42,11 @@ namespace ExamInvigilationManagement.Application.Services
             if (userId.HasValue)
             {
                 data = data.Where(x => x.UserId == userId.Value).ToList();
+            }
+
+            if (academyYearId.HasValue)
+            {
+                data = data.Where(x => x.Semester?.AcademyYearId == academyYearId.Value).ToList();
             }
 
             if (semesterType.HasValue)
@@ -81,6 +87,7 @@ namespace ExamInvigilationManagement.Application.Services
                         ? $"{x.User.Information.LastName} {x.User.Information.FirstName}"
                         : x.User?.UserName,
                     SemesterId = x.SemesterId,
+                    AcademyYearId = x.Semester?.AcademyYearId,
                     SemesterName = x.Semester?.Name,
                     AcademicYearName = x.Semester?.AcademyYear?.Name,
                     ClassName = x.ClassName,
@@ -115,6 +122,7 @@ namespace ExamInvigilationManagement.Application.Services
                     ? $"{x.User.Information.LastName} {x.User.Information.FirstName}"
                     : x.User?.UserName,
                 SemesterName = x.Semester?.Name,
+                AcademyYearId = x.Semester?.AcademyYearId,
                 AcademicYearName = x.Semester?.AcademyYear?.Name,
                 FacultyId = x.User?.FacultyId
             }).ToList();

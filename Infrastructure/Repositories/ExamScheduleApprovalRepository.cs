@@ -9,6 +9,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
     public class ExamScheduleApprovalRepository : IExamScheduleApprovalRepository
     {
         private const string StatusWaiting = "Chờ duyệt";
+        private static readonly string[] ReviewStatuses = ["Chờ duyệt", "Đã duyệt", "Từ chối duyệt"];
 
         private readonly ApplicationDbContext _db;
 
@@ -43,7 +44,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
         {
             var query = _db.ExamSchedules
                 .AsNoTracking()
-                .Where(x => x.Offering.Subject.FacultyId == facultyId);
+                .Where(x => x.Offering.Subject.FacultyId == facultyId)
+                .Where(x => ReviewStatuses.Contains(x.Status));
 
             if (search.AcademyYearId.HasValue)
                 query = query.Where(x => x.AcademyYearId == search.AcademyYearId.Value);
@@ -75,7 +77,12 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             if (string.IsNullOrWhiteSpace(search.Status) || search.Status == "Chờ duyệt")
                 query = query.Where(x => x.Status == StatusWaiting);
             else if (!string.Equals(search.Status, "Tất cả", StringComparison.OrdinalIgnoreCase))
-                query = query.Where(x => x.Status == search.Status.Trim());
+            {
+                var status = search.Status.Trim();
+                query = ReviewStatuses.Contains(status)
+                    ? query.Where(x => x.Status == status)
+                    : query.Where(x => false);
+            }
 
             var baseRows = await query
                 .Select(x => new
@@ -216,9 +223,9 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 ).ToList();
             }
 
-            var totalCount = allItems.Count(x => !IsFinalStatus(x.Status));
+            var totalCount = allItems.Count;
             var reviewableCount = allItems.Count(x => x.CanReview);
-            var notEnoughCount = allItems.Count(x => !IsFinalStatus(x.Status) && x.CurrentInvigilatorCount < 2);
+            var notEnoughCount = allItems.Count(x => IsFinalStatus(x.Status));
 
             var pagedItems = allItems
                 .Skip((page - 1) * pageSize)

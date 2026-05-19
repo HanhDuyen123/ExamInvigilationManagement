@@ -24,6 +24,7 @@
                     return {
                         subjectId: $('#subjectId').val()?.trim() || null,
                         userId: $('#userId').val() || null,
+                        academyYearId: $('#academyYearId').val() || null,
                         semesterType: $('#semesterType').val(),
                         className: $('#className').val()?.trim() || null,
                         groupNumber: $('#groupNumber').val()?.trim() || null
@@ -51,6 +52,18 @@
                 url: '@Url.Action("SearchLecturer", "User", new { area = "Admin" })',
                 valueField: 'id',
                 textField: 'fullName',
+                onSelect: () => CrudPage.loadData(1),
+                onClear: () => CrudPage.loadData(1)
+            });
+
+            AdminLookup.create({
+                key: 'co-year',
+                input: '#yearInput',
+                hidden: '#academyYearId',
+                menu: '#yearDropdown',
+                url: '@Url.Action("AcademyYears", "Lookup", new { area = "" })',
+                valueField: 'id',
+                textField: 'name',
                 onSelect: () => CrudPage.loadData(1),
                 onClear: () => CrudPage.loadData(1)
             });

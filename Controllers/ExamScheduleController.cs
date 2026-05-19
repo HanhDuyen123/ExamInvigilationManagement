@@ -8,6 +8,7 @@ using ExamInvigilationManagement.Application.DTOs.Notification;
 using ExamInvigilationManagement.Application.DTOs.ExamSchedule;
 using ExamInvigilationManagement.Application.DTOs.InvigilatorResponse;
 using ExamInvigilationManagement.Application.Interfaces.Service;
+using ExamInvigilationManagement.Common;
 using ExamInvigilationManagement.Common.Helpers;
 using ExamInvigilationManagement.Infrastructure.Services;
 using ExamInvigilationManagement.ViewModel;
@@ -708,6 +709,10 @@ namespace ExamInvigilationManagement.Controllers
                 var worksheetPart = workbookPart.WorksheetParts.FirstOrDefault() ?? throw new InvalidOperationException("File mẫu không có worksheet.");
                 var sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>() ?? throw new InvalidOperationException("Worksheet mẫu không hợp lệ.");
 
+                SetCellValue(worksheetPart, workbookPart, "A1", DocumentLetterhead.Ministry);
+                SetCellValue(worksheetPart, workbookPart, "D1", DocumentLetterhead.Nation);
+                SetCellValue(worksheetPart, workbookPart, "A2", DocumentLetterhead.School);
+                SetCellValue(worksheetPart, workbookPart, "D2", DocumentLetterhead.Motto);
                 SetCellValue(worksheetPart, workbookPart, "A4", result.Title);
 
                 var headerRowIndex = FindHeaderRowIndex(sheetData, workbookPart);

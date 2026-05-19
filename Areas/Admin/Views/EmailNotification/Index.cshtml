@@ -1,0 +1,36 @@
+@model ExamInvigilationManagement.ViewModel.CrudIndexViewModel
+
+@{
+    ViewData["Title"] = "Nhật ký email";
+}
+
+@await Html.PartialAsync("_CrudIndex", Model)
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+    <script>
+        $(function () {
+            CrudPage.init({
+                api: '@Url.Action("GetList", "EmailNotification", new { area = "Admin" })',
+                tableId: '#crudTable',
+                filterSelector: '.crud-filter',
+                pageSize: '#pageSize',
+                extraData: function () {
+                    return {
+                        keyword: $('#keyword').val()?.trim() || null,
+                        userId: $('#userId').val() || null,
+                        facultyId: $('#facultyId').val() || null,
+                        status: $('#status').val() || null,
+                        type: $('#type').val() || null,
+                        fromDate: $('#fromDate').val() || null,
+                        toDate: $('#toDate').val() || null
+                    };
+                }
+            });
+
+            AdminLookup.create({ key:'email-user', input:'#userInput', hidden:'#userId', menu:'#userDropdown', url:'@Url.Action("SearchUsers", "EmailNotification", new { area = "Admin" })', queryParam:'keyword', valueField:'id', textField:'name', onSelect:function(){CrudPage.loadData(1)}, onClear:function(){CrudPage.loadData(1)} });
+            AdminLookup.create({ key:'email-faculty', input:'#facultyInput', hidden:'#facultyId', menu:'#facultyDropdown', url:'@Url.Action("Search", "Faculty", new { area = "Admin" })', queryParam:'keyword', valueField:'id', textField:'name', onSelect:function(){CrudPage.loadData(1)}, onClear:function(){CrudPage.loadData(1)} });
+        });
+    </script>
+}

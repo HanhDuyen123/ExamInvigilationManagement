@@ -43,22 +43,38 @@
             padding: 46px 56px;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
+            /* thay đổi */
+            justify-content: center;
+            position: relative;
         }
+
+        /* .brand-panel { */
+        /*     padding: 46px 56px; */
+        /*     display: flex; */
+        /*     flex-direction: column; */
+        /*     justify-content: space-between; */
+        /* } */
 
         .brand-mark {
             display: inline-flex;
             align-items: center;
             gap: 12px;
-            font-weight: 700;
+            font-weight: 900;
+            font-size: larger;
             letter-spacing: -0.02em;
             color: #0f766e;
             font-family: "Be Vietnam Pro", "Segoe UI", sans-serif;
         }
 
+        .brand-mark {
+            position: absolute;
+            top: 46px;
+            left: 56px;
+        }
+
         .brand-logo {
-            width: 78px;
-            height: 78px;
+            width: 80px;
+            height: 80px;
             border-radius: 50%;
             display: block;
             object-fit: contain;
@@ -249,6 +265,63 @@
             line-height: 1.5;
         }
 
+        .hero-copy {
+            max-width: 640px;
+            /* vị trí giữa màn hình */
+            margin-top: auto;
+            margin-bottom: auto;
+            /* animation */
+            opacity: 0;
+            transform: translateY(140px);
+            animation: heroFloatUp 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+            will-change: transform, opacity;
+        }
+
+        @@keyframes heroFloatUp {
+            0%
+
+            {
+                opacity: 0;
+                transform: translateY(80px);
+            }
+
+            60% {
+                opacity: 1;
+                transform: translateY(-8px);
+            }
+
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+        }
+
+        .hero-copy h1,
+        .hero-copy p {
+            opacity: 0;
+            transform: translateY(24px);
+            animation: fadeUp 0.8s ease forwards;
+        }
+
+        .hero-copy h1 {
+            animation-delay: 0.35s;
+        }
+
+        .hero-copy p {
+            animation-delay: 0.55s;
+        }
+
+        @@keyframes fadeUp {
+            to
+
+            {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+        }
+
         @@media (max-width: 860px) {
             .auth-shell {
                 grid-template-columns: 1fr;
@@ -283,8 +356,8 @@
                 <span>TRƯỜNG ĐẠI HỌC NHA TRANG<br /><small>Hệ thống quản lý coi thi</small></span>
             </div>
             <div class="hero-copy">
-                <h1>Quản lý coi thi tập trung, bảo mật và rõ trách nhiệm.</h1>
-                <p>Theo dõi lịch thi, phân công cán bộ coi thi và xử lý nghiệp vụ học vụ trong một hệ thống thống nhất.</p>
+                <h1>Quản lý coi thi tập trung</h1>
+                <p>Theo dõi lịch thi, phân công cán bộ coi thi và xử lý nghiệp vụ học vụ.</p>
             </div>
         </section>
 
@@ -333,6 +406,12 @@
     </main>
 
     <script>
+        try {
+            Object.keys(localStorage)
+                .filter(function (key) { return key.indexOf('crud-list-state:') === 0; })
+                .forEach(function (key) { localStorage.removeItem(key); });
+        } catch { }
+
         function togglePassword() {
             const input = document.getElementById("passwordInput");
             const button = document.querySelector(".toggle-password");

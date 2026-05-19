@@ -2,33 +2,31 @@
 
 @{
     var stt = (Model.Page - 1) * Model.PageSize + 1;
-    var colspan = 15;
+    var colspan = 14;
 }
 
 <table class="table modern-table schedule-table-compact approval-table-compact">
     <colgroup>
-        <col style="width:3%;" />
-        <col style="width:3%;" />
-        <col style="width:6%;" />
-        <col style="width:15%;" />
-        <col style="width:7%;" />
-        <col style="width:5%;" />
-        <col style="width:6%;" />
-        <col style="width:5%;" />
-        <col style="width:6%;" />
-        <col style="width:6%;" />
-        <col style="width:10%;" />
-        <col style="width:10%;" />
-        <col style="width:9%;" />
         <col style="width:4%;" />
-        <col style="width:5%;" />
+        <col style="width:7%;" />
+        <col style="width:16%;" />
+        <col style="width:7%;" />
+        <col style="width:6%;" />
+        <col style="width:7%;" />
+        <col style="width:6%;" />
+        <col style="width:7%;" />
+        <col style="width:7%;" />
+        <col style="width:9%;" />
+        <col style="width:9%;" />
+        <col style="width:8%;" />
+        <col style="width:3%;" />
+        <col style="width:4%;" />
     </colgroup>
     <thead>
         <tr>
             <th style="width:44px;">
                 <input type="checkbox" id="approvalSelectAll" class="form-check-input" />
             </th>
-            <th>STT</th>
             <th>Mã MH</th>
             <th>Tên MH</th>
             <th>Năm học</th>
@@ -66,7 +64,6 @@
                                    disabled="disabled" />
                         }
                     </td>
-                    <td>@stt</td>
                     <td class="cell-code">@item.SubjectId</td>
                     <td class="cell-wrap cell-subject">@item.SubjectName</td>
                     <td class="cell-nowrap">@item.AcademyYearName</td>
