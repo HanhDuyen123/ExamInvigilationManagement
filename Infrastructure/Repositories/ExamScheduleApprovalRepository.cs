@@ -1,6 +1,8 @@
 ﻿using ExamInvigilationManagement.Application.DTOs.Approval;
 using ExamInvigilationManagement.Application.Interfaces.Repositories;
 using ExamInvigilationManagement.Common;
+using ExamInvigilationManagement.Common.Constants;
+using ExamInvigilationManagement.Common.Workflow;
 using ExamInvigilationManagement.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -8,8 +10,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 {
     public class ExamScheduleApprovalRepository : IExamScheduleApprovalRepository
     {
-        private const string StatusWaiting = "Chờ duyệt";
-        private static readonly string[] ReviewStatuses = ["Chờ duyệt", "Đã duyệt", "Từ chối duyệt"];
+        private const string StatusWaiting = ExamScheduleStatuses.PendingApproval;
+        private static readonly string[] ReviewStatuses = [ExamScheduleStatuses.PendingApproval, ExamScheduleStatuses.Approved, ExamScheduleStatuses.ApprovalRejected];
 
         private readonly ApplicationDbContext _db;
 
@@ -149,7 +151,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 var gt1 = list?.FirstOrDefault(i => i.PositionNo == 1);
                 var gt2 = list?.FirstOrDefault(i => i.PositionNo == 2);
 
-                var isFinal = IsFinalStatus(x.Status);
+                var isFinal = StateTransitionGuard.IsFinalExamScheduleStatus(x.Status);
                 var hasEnoughInvigilators = x.InvigilatorCount >= 2;
 
                 var canReview = !isFinal && hasEnoughInvigilators;
@@ -225,7 +227,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
             var totalCount = allItems.Count;
             var reviewableCount = allItems.Count(x => x.CanReview);
-            var notEnoughCount = allItems.Count(x => IsFinalStatus(x.Status));
+            var notEnoughCount = allItems.Count(x => StateTransitionGuard.IsFinalExamScheduleStatus(x.Status));
 
             var pagedItems = allItems
                 .Skip((page - 1) * pageSize)
@@ -287,6 +289,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
             try
             {
+                var now = DateTime.Now;
+                var correlationId = Guid.NewGuid();
                 var scheduleIds = plan.Items.Select(x => x.ExamScheduleId).Distinct().ToList();
 
                 var schedules = await _db.ExamSchedules
@@ -302,7 +306,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 {
                     var schedule = scheduleMap[item.ExamScheduleId];
 
-                    if (IsFinalStatus(schedule.Status))
+                    if (StateTransitionGuard.IsFinalExamScheduleStatus(schedule.Status))
                         throw new InvalidOperationException($"Lịch thi #{item.ExamScheduleId} đã ở trạng thái cuối, không thể duyệt.");
 
                     var invigilatorCount = await _db.ExamInvigilators
@@ -321,8 +325,45 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                         UpdateAt = item.UpdateAt
                     });
 
+                    StateTransitionGuard.EnsureExamScheduleStatusChange(schedule.Status, item.Status, $"Lịch thi #{item.ExamScheduleId}");
+                    var oldStatus = schedule.Status;
                     schedule.Status = item.Status;
+
+                    _db.ApprovalHistories.Add(new Data.Entities.ApprovalHistory
+                    {
+                        ExamScheduleId = item.ExamScheduleId,
+                        ActorUserId = item.ApproverId,
+                        FromStatus = oldStatus,
+                        ToStatus = item.Status,
+                        Action = item.Status == ExamScheduleStatuses.Approved ? "Approve" : "RejectApproval",
+                        Note = item.Note,
+                        CreatedAt = now,
+                        CorrelationId = correlationId
+                    });
                 }
+
+                _db.AuditLogs.Add(new Data.Entities.AuditLog
+                {
+                    EventType = "ApprovalReview",
+                    EntityName = "ExamSchedule",
+                    EntityId = string.Join(",", scheduleIds),
+                    Action = "BulkReview",
+                    ActorUserId = plan.Items.FirstOrDefault()?.ApproverId,
+                    NewValues = $"Processed={plan.Items.Count}",
+                    CreatedAt = now,
+                    CorrelationId = correlationId,
+                    Source = nameof(ExamScheduleApprovalRepository)
+                });
+
+                _db.OutboxMessages.Add(new Data.Entities.OutboxMessage
+                {
+                    Type = "ApprovalReviewed",
+                    Payload = $"{{\"processedCount\":{plan.Items.Count}}}",
+                    Status = "Pending",
+                    RetryCount = 0,
+                    CreatedAt = now,
+                    CorrelationId = correlationId
+                });
 
                 await _db.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
@@ -332,11 +373,6 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 await transaction.RollbackAsync(cancellationToken);
                 throw;
             }
-        }
-        private static bool IsFinalStatus(string status)
-        {
-            return status.Equals("Đã duyệt", StringComparison.OrdinalIgnoreCase)
-                   || status.Equals("Từ chối duyệt", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

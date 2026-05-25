@@ -209,6 +209,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
             try
             {
+                var now = DateTime.Now;
+                var correlationId = Guid.NewGuid();
                 if (plan.NewInvigilators.Count > 0)
                 {
                     var entities = plan.NewInvigilators.Select(x => new Data.Entities.ExamInvigilator
@@ -224,6 +226,22 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     }).ToList();
 
                     await _db.ExamInvigilators.AddRangeAsync(entities, cancellationToken);
+
+                    foreach (var item in plan.NewInvigilators)
+                    {
+                        _db.AssignmentChangeHistories.Add(new Data.Entities.AssignmentChangeHistory
+                        {
+                            ExamScheduleId = item.ExamScheduleId,
+                            OldAssigneeId = null,
+                            NewAssigneeId = item.NewAssigneeId ?? item.AssigneeId,
+                            PositionNo = item.PositionNo,
+                            ChangeType = "AutoAssign",
+                            Reason = "Tự động phân công giám thị.",
+                            ActorUserId = item.AssignerId,
+                            CreatedAt = now,
+                            CorrelationId = correlationId
+                        });
+                    }
                 }
 
                 if (plan.ScheduleStatuses.Count > 0)
@@ -244,6 +262,29 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                             schedule.Status = status;
                     }
                 }
+
+                _db.AuditLogs.Add(new Data.Entities.AuditLog
+                {
+                    EventType = "AutoAssignment",
+                    EntityName = "ExamInvigilator",
+                    EntityId = string.Join(",", plan.NewInvigilators.Select(x => x.ExamScheduleId).Distinct()),
+                    Action = "SavePlan",
+                    ActorUserId = plan.NewInvigilators.FirstOrDefault()?.AssignerId,
+                    NewValues = $"Assignments={plan.NewInvigilators.Count};Schedules={plan.ScheduleStatuses.Count}",
+                    CreatedAt = now,
+                    CorrelationId = correlationId,
+                    Source = nameof(AutoAssignmentRepository)
+                });
+
+                _db.OutboxMessages.Add(new Data.Entities.OutboxMessage
+                {
+                    Type = "AutoAssignmentSaved",
+                    Payload = $"{{\"assignmentCount\":{plan.NewInvigilators.Count},\"scheduleCount\":{plan.ScheduleStatuses.Count}}}",
+                    Status = "Pending",
+                    RetryCount = 0,
+                    CreatedAt = now,
+                    CorrelationId = correlationId
+                });
 
                 await _db.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);

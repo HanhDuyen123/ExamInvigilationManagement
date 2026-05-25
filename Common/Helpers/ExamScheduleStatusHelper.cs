@@ -1,12 +1,14 @@
-﻿namespace ExamInvigilationManagement.Common.Helpers
+﻿using ExamInvigilationManagement.Common.Constants;
+
+namespace ExamInvigilationManagement.Common.Helpers
 {
     public static class ExamScheduleStatusHelper
     {
-        public const string WaitingAssign = "Chờ phân công";
-        public const string MissingInvigilator = "Thiếu giám thị";
-        public const string Pending = "Chờ duyệt";
-        public const string Approved = "Đã duyệt";
-        public const string Rejected = "Từ chối duyệt";
+        public const string WaitingAssign = ExamScheduleStatuses.WaitingAssign;
+        public const string MissingInvigilator = ExamScheduleStatuses.MissingInvigilator;
+        public const string Pending = ExamScheduleStatuses.PendingApproval;
+        public const string Approved = ExamScheduleStatuses.Approved;
+        public const string Rejected = ExamScheduleStatuses.ApprovalRejected;
 
         private static readonly HashSet<string> Allowed = new(StringComparer.OrdinalIgnoreCase)
         {

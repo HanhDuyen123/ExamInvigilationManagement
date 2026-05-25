@@ -81,7 +81,8 @@ namespace ExamInvigilationManagement.Controllers
                     ? Url.Action("Index", "BulkImport", new { area = "", module = "exam-schedule" })
                     : User.IsInRole("Thư ký khoa")
                         ? Url.Action("Index", "BulkImport", new { area = "", module = "exam-invigilator" })
-                        : null
+                        : null,
+                ExportUrl = Url.Action("Export", "ExamSchedule")
             };
 
             
@@ -146,6 +147,57 @@ namespace ExamInvigilationManagement.Controllers
             var result = await _service.GetPagedAsync(filter, page, pageSize);
             return PartialView("_ExamScheduleTable", result);
         }
+
+        [HttpGet]
+        public async Task<IActionResult> Export(
+            string? keyword,
+            int? facultyId,
+            int? userId,
+            int? academyYearId,
+            int? semesterId,
+            int? periodId,
+            int? sessionId,
+            int? slotId,
+            string? subjectId,
+            string? className,
+            string? groupNumber,
+            string? buildingId,
+            int? roomId,
+            string? status,
+            DateOnly? fromDate,
+            DateOnly? toDate)
+        {
+            var scope = await BuildScopeAsync();
+            var filter = new ExamScheduleSearchDto
+            {
+                Keyword = keyword,
+                FacultyId = facultyId,
+                UserId = userId,
+                AcademyYearId = academyYearId,
+                SemesterId = semesterId,
+                PeriodId = periodId,
+                SessionId = sessionId,
+                SlotId = slotId,
+                SubjectId = subjectId,
+                ClassName = className,
+                GroupNumber = groupNumber,
+                BuildingId = buildingId,
+                RoomId = roomId,
+                Status = User.IsInRole("Giảng viên") ? null : status,
+                FromDate = fromDate,
+                ToDate = toDate,
+                CurrentRole = scope.Role,
+                CurrentUserId = scope.UserId,
+                CurrentFacultyId = scope.FacultyId
+            };
+
+            var result = await _service.GetPagedAsync(filter, 1, int.MaxValue);
+            var fileBytes = BuildExamScheduleExportExcel(result.Items.ToList());
+            var fileName = $"lich-thi-{DateTime.Now:yyyyMMdd-HHmm}.xlsx";
+
+            return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
+        }
+
         [HttpGet]
         public async Task<IActionResult> SearchLecturer(string? keyword, int? facultyId)
         {
@@ -511,6 +563,8 @@ namespace ExamInvigilationManagement.Controllers
             await _service.MarkApprovalRequestedAsync(
                 schedules.Select(x => x.Id),
                 deans.Select(x => x.Id),
+                currentUserId.Value,
+                currentFacultyId.Value,
                 "Thư ký khoa gửi yêu cầu duyệt lịch thi.",
                 cancellationToken);
 
@@ -792,6 +846,97 @@ namespace ExamInvigilationManagement.Controllers
             var year = SanitizeFileName(result.AcademyYearName);
             var semester = SanitizeFileName(result.SemesterName);
             return $"De-nghi-ho-tro-CBCT-{semester}-{year}.xlsx";
+        }
+
+        private static byte[] BuildExamScheduleExportExcel(IReadOnlyList<ExamScheduleDto> schedules)
+        {
+            using var stream = new MemoryStream();
+            using (var document = SpreadsheetDocument.Create(stream, SpreadsheetDocumentType.Workbook, true))
+            {
+                var workbookPart = document.AddWorkbookPart();
+                workbookPart.Workbook = new Workbook();
+
+                var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
+                var sheetData = new SheetData();
+                worksheetPart.Worksheet = new Worksheet(sheetData);
+
+                var sheets = workbookPart.Workbook.AppendChild(new Sheets());
+                sheets.Append(new Sheet
+                {
+                    Id = workbookPart.GetIdOfPart(worksheetPart),
+                    SheetId = 1,
+                    Name = "Lịch thi"
+                });
+
+                AppendExportRow(sheetData, 1, ["TRƯỜNG ĐẠI HỌC NHA TRANG"]);
+                AppendExportRow(sheetData, 2, ["DANH SÁCH LỊCH THI"]);
+                AppendExportRow(sheetData, 3, [$"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm}"]);
+                AppendExportRow(sheetData, 5,
+                [
+                    "STT", "Mã môn", "Tên môn", "Số TC", "Lớp", "Nhóm", "Ngày thi", "Buổi", "Ca",
+                    "Giờ", "Phòng", "Giảng đường", "Sĩ số", "Giảng viên dạy", "CBCT 1", "CBCT 2", "Trạng thái"
+                ]);
+
+                for (var i = 0; i < schedules.Count; i++)
+                {
+                    var item = schedules[i];
+                    AppendExportRow(sheetData, (uint)(6 + i),
+                    [
+                        (i + 1).ToString(),
+                        item.SubjectId,
+                        item.SubjectName,
+                        item.Credit?.ToString(),
+                        item.ClassName,
+                        item.GroupNumber,
+                        item.ExamDate?.ToString("dd/MM/yyyy"),
+                        item.SessionName,
+                        GetSlotNumber(item),
+                        FormatTime(item.SlotTimeStart),
+                        item.RoomName,
+                        item.BuildingName ?? item.BuildingId,
+                        item.RoomCapacity?.ToString(),
+                        item.UserName,
+                        FormatLecturer(item.Lecturer1Code, item.Lecturer1Name),
+                        FormatLecturer(item.Lecturer2Code, item.Lecturer2Name),
+                        item.Status
+                    ]);
+                }
+
+                workbookPart.Workbook.Save();
+            }
+
+            return stream.ToArray();
+        }
+
+        private static void AppendExportRow(SheetData sheetData, uint rowIndex, IReadOnlyList<string?> values)
+        {
+            var row = new Row { RowIndex = rowIndex };
+            for (var i = 0; i < values.Count; i++)
+            {
+                SetRowCell(row, GetExcelColumnName(i + 1), rowIndex, values[i]);
+            }
+
+            sheetData.Append(row);
+        }
+
+        private static string GetExcelColumnName(int index)
+        {
+            var name = string.Empty;
+            while (index > 0)
+            {
+                index--;
+                name = (char)('A' + index % 26) + name;
+                index /= 26;
+            }
+
+            return name;
+        }
+
+        private static string FormatLecturer(string? code, string? name)
+        {
+            if (string.IsNullOrWhiteSpace(code)) return name ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(name)) return code;
+            return $"{code} - {name}";
         }
 
         private static string BuildSupportRequestEmailBody(SupportRequestBuildResult result, string? senderName, string? replyTo)

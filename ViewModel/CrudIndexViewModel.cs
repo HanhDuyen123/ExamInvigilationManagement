@@ -11,6 +11,7 @@
         public string TableClass { get; set; } = "";
         public bool ShowCreateButton { get; set; } = true;
         public string? ImportUrl { get; set; }
+        public string? ExportUrl { get; set; }
         public string? TemplateUrl { get; set; }
     }
 }

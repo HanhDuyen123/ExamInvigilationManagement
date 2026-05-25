@@ -72,6 +72,34 @@
                 }
             });
 
+            $('#exportDataFile').on('click', function (event) {
+                event.preventDefault();
+                const params = new URLSearchParams();
+                const data = {
+                    facultyId: val('#facultyId'),
+                    userId: val('#userId'),
+                    academyYearId: val('#yearId'),
+                    semesterId: val('#semesterId'),
+                    periodId: val('#periodId'),
+                    sessionId: val('#sessionId'),
+                    slotId: val('#slotId'),
+                    subjectId: val('#subjectId'),
+                    className: val('#className'),
+                    groupNumber: val('#groupNumber'),
+                    buildingId: val('#buildingId'),
+                    roomId: val('#roomId'),
+                    status: val('#status'),
+                    fromDate: val('#fromDate'),
+                    toDate: val('#toDate')
+                };
+
+                Object.keys(data).forEach(key => {
+                    if (data[key] !== null && data[key] !== '') params.append(key, data[key]);
+                });
+
+                window.location.href = '@Url.Action("Export", "ExamSchedule")' + (params.toString() ? '?' + params.toString() : '');
+            });
+
             function showApprovalMessage(type, message, errors) {
                 const $box = $('#approvalRequestMessage');
                 if (!$box.length) return;

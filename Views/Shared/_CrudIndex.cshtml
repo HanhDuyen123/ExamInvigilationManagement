@@ -49,6 +49,14 @@
                     <span>Nhập file</span>
                 </a>
             }
+
+            @if (!string.IsNullOrWhiteSpace(Model.ExportUrl))
+            {
+                <a href="@Model.ExportUrl" id="exportDataFile" class="btn btn-create">
+                    <i class="bi bi-download"></i>
+                    <span>Xuất file</span>
+                </a>
+            }
         </div>
     </div>
 

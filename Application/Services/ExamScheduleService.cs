@@ -129,8 +129,8 @@ namespace ExamInvigilationManagement.Application.Services
 
         public Task DeleteAsync(int id) => _repo.DeleteAsync(id);
 
-        public Task MarkApprovalRequestedAsync(IEnumerable<int> scheduleIds, IEnumerable<int> approverIds, string? note = null, CancellationToken cancellationToken = default)
-            => _repo.MarkApprovalRequestedAsync(scheduleIds, approverIds, note, cancellationToken);
+        public Task MarkApprovalRequestedAsync(IEnumerable<int> scheduleIds, IEnumerable<int> approverIds, int? requestedById = null, int? facultyId = null, string? note = null, CancellationToken cancellationToken = default)
+            => _repo.MarkApprovalRequestedAsync(scheduleIds, approverIds, requestedById, facultyId, note, cancellationToken);
 
         private static void ValidateDto(ExamScheduleDto dto)
         {

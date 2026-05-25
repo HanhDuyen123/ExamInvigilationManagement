@@ -2,6 +2,8 @@ using ExamInvigilationManagement.Application.DTOs.InvigilatorSubstitution;
 using ExamInvigilationManagement.Application.DTOs.ManualAssignment;
 using ExamInvigilationManagement.Application.Interfaces.Repositories;
 using ExamInvigilationManagement.Common;
+using ExamInvigilationManagement.Common.Constants;
+using ExamInvigilationManagement.Common.Workflow;
 using ExamInvigilationManagement.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -136,7 +138,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 ExamInvigilatorId = examInvigilatorId,
                 UserId = userId,
                 SubstituteUserId = substituteUserId,
-                Status = "Đã đề xuất",
+                Status = InvigilatorSubstitutionStatuses.Proposed,
                 CreateAt = DateTime.Now
             };
             _db.InvigilatorSubstitutions.Add(entity);
@@ -195,40 +197,72 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
         public async Task ApproveAsync(int substitutionId, int reviewerId, CancellationToken cancellationToken = default)
         {
-            var substitution = await _db.InvigilatorSubstitutions
-                .Include(x => x.ExamInvigilator)
-                .FirstOrDefaultAsync(x => x.SubstitutionId == substitutionId, cancellationToken);
-            if (substitution == null) throw new InvalidOperationException("Không tìm thấy đề xuất thay thế.");
+            await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                var now = DateTime.Now;
+                var correlationId = Guid.NewGuid();
+                var substitution = await _db.InvigilatorSubstitutions
+                    .Include(x => x.ExamInvigilator)
+                    .ThenInclude(x => x.ExamSchedule)
+                    .FirstOrDefaultAsync(x => x.SubstitutionId == substitutionId, cancellationToken);
+                if (substitution == null) throw new InvalidOperationException("Không tìm thấy đề xuất thay thế.");
 
-            var scheduleId = substitution.ExamInvigilator.ExamScheduleId;
-            substitution.Status = "Đã duyệt";
-            substitution.ExamInvigilator.NewAssigneeId = substitution.SubstituteUserId;
-            substitution.ExamInvigilator.UpdateAt = DateTime.Now;
-            await _db.SaveChangesAsync(cancellationToken);
-            await MarkSchedulePendingApprovalAsync(scheduleId, cancellationToken);
+                substitution.Status = InvigilatorSubstitutionStatuses.Approved;
+                var oldAssigneeId = substitution.ExamInvigilator.NewAssigneeId ?? substitution.ExamInvigilator.AssigneeId;
+                substitution.ExamInvigilator.NewAssigneeId = substitution.SubstituteUserId;
+                substitution.ExamInvigilator.UpdateAt = now;
+                MarkSchedulePendingApproval(substitution.ExamInvigilator.ExamSchedule);
+
+                AddSubstitutionHistory(substitution, oldAssigneeId, substitution.SubstituteUserId, reviewerId, now, correlationId);
+
+                await _db.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
         }
 
         public async Task ApproveWithReplacementAsync(int substitutionId, int replacementUserId, int reviewerId, CancellationToken cancellationToken = default)
         {
-            var substitution = await _db.InvigilatorSubstitutions
-                .Include(x => x.ExamInvigilator)
-                .FirstOrDefaultAsync(x => x.SubstitutionId == substitutionId, cancellationToken);
-            if (substitution == null) throw new InvalidOperationException("Không tìm thấy đề xuất thay thế.");
+            await using var transaction = await _db.Database.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                var now = DateTime.Now;
+                var correlationId = Guid.NewGuid();
+                var substitution = await _db.InvigilatorSubstitutions
+                    .Include(x => x.ExamInvigilator)
+                    .ThenInclude(x => x.ExamSchedule)
+                    .FirstOrDefaultAsync(x => x.SubstitutionId == substitutionId, cancellationToken);
+                if (substitution == null) throw new InvalidOperationException("Không tìm thấy đề xuất thay thế.");
 
-            var scheduleId = substitution.ExamInvigilator.ExamScheduleId;
-            substitution.SubstituteUserId = replacementUserId;
-            substitution.Status = "Đã duyệt";
-            substitution.ExamInvigilator.NewAssigneeId = replacementUserId;
-            substitution.ExamInvigilator.UpdateAt = DateTime.Now;
-            await _db.SaveChangesAsync(cancellationToken);
-            await MarkSchedulePendingApprovalAsync(scheduleId, cancellationToken);
+                var oldAssigneeId = substitution.ExamInvigilator.NewAssigneeId ?? substitution.ExamInvigilator.AssigneeId;
+                substitution.SubstituteUserId = replacementUserId;
+                substitution.Status = InvigilatorSubstitutionStatuses.Approved;
+                substitution.ExamInvigilator.NewAssigneeId = replacementUserId;
+                substitution.ExamInvigilator.UpdateAt = now;
+                MarkSchedulePendingApproval(substitution.ExamInvigilator.ExamSchedule);
+
+                AddSubstitutionHistory(substitution, oldAssigneeId, replacementUserId, reviewerId, now, correlationId);
+
+                await _db.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
         }
 
         public async Task RejectAsync(int substitutionId, CancellationToken cancellationToken = default)
         {
             var substitution = await _db.InvigilatorSubstitutions.FirstOrDefaultAsync(x => x.SubstitutionId == substitutionId, cancellationToken);
             if (substitution == null) throw new InvalidOperationException("Không tìm thấy đề xuất thay thế.");
-            substitution.Status = "Từ chối duyệt";
+            substitution.Status = InvigilatorSubstitutionStatuses.Rejected;
             await _db.SaveChangesAsync(cancellationToken);
         }
 
@@ -304,12 +338,51 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             return query;
         }
 
-        private async Task MarkSchedulePendingApprovalAsync(int scheduleId, CancellationToken cancellationToken)
+        private static void MarkSchedulePendingApproval(Data.Entities.ExamSchedule schedule)
         {
-            var schedule = await _db.ExamSchedules.FirstOrDefaultAsync(x => x.ExamScheduleId == scheduleId, cancellationToken);
-            if (schedule == null) throw new InvalidOperationException("Không tìm thấy lịch thi cần cập nhật trạng thái.");
-            schedule.Status = "Chờ duyệt";
-            await _db.SaveChangesAsync(cancellationToken);
+            StateTransitionGuard.EnsureExamScheduleStatusChange(schedule.Status, ExamScheduleStatuses.PendingApproval, $"Lịch thi #{schedule.ExamScheduleId}");
+            schedule.Status = ExamScheduleStatuses.PendingApproval;
+        }
+
+        private void AddSubstitutionHistory(Data.Entities.InvigilatorSubstitution substitution, int oldAssigneeId, int newAssigneeId, int reviewerId, DateTime now, Guid correlationId)
+        {
+            _db.AssignmentChangeHistories.Add(new Data.Entities.AssignmentChangeHistory
+            {
+                ExamInvigilatorId = substitution.ExamInvigilatorId,
+                ExamScheduleId = substitution.ExamInvigilator.ExamScheduleId,
+                OldAssigneeId = oldAssigneeId,
+                NewAssigneeId = newAssigneeId,
+                PositionNo = substitution.ExamInvigilator.PositionNo,
+                ChangeType = "ApproveSubstitution",
+                Reason = "Duyệt đề xuất thay thế giám thị.",
+                ActorUserId = reviewerId,
+                CreatedAt = now,
+                CorrelationId = correlationId
+            });
+
+            _db.AuditLogs.Add(new Data.Entities.AuditLog
+            {
+                EventType = "InvigilatorSubstitution",
+                EntityName = "InvigilatorSubstitution",
+                EntityId = substitution.SubstitutionId.ToString(),
+                Action = "Approve",
+                ActorUserId = reviewerId,
+                OldValues = $"AssigneeId={oldAssigneeId}",
+                NewValues = $"AssigneeId={newAssigneeId}",
+                CreatedAt = now,
+                CorrelationId = correlationId,
+                Source = nameof(InvigilatorSubstitutionRepository)
+            });
+
+            _db.OutboxMessages.Add(new Data.Entities.OutboxMessage
+            {
+                Type = "InvigilatorSubstitutionApproved",
+                Payload = $"{{\"substitutionId\":{substitution.SubstitutionId},\"examScheduleId\":{substitution.ExamInvigilator.ExamScheduleId}}}",
+                Status = "Pending",
+                RetryCount = 0,
+                CreatedAt = now,
+                CorrelationId = correlationId
+            });
         }
     }
 }

@@ -4,14 +4,15 @@ using ExamInvigilationManagement.Application.DTOs.Notification;
 using ExamInvigilationManagement.Application.Interfaces.Repositories;
 using ExamInvigilationManagement.Application.Interfaces.Service;
 using ExamInvigilationManagement.Common;
+using ExamInvigilationManagement.Common.Constants;
 using ExamInvigilationManagement.Common.Helpers;
 
 namespace ExamInvigilationManagement.Application.Services
 {
     public class InvigilatorResponseService : IInvigilatorResponseService
     {
-        private const string Confirmed = "Xác nhận";
-        private const string Rejected = "Từ chối";
+        private const string Confirmed = InvigilatorResponseStatuses.Confirmed;
+        private const string Rejected = InvigilatorResponseStatuses.Rejected;
         private static readonly TimeSpan ResponseWindow = TimeSpan.FromHours(48);
 
         private readonly IInvigilatorResponseRepository _repository;

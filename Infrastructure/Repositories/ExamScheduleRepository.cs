@@ -1,6 +1,7 @@
 ﻿using ExamInvigilationManagement.Application.DTOs.ExamSchedule;
 using ExamInvigilationManagement.Application.Interfaces.Repositories;
 using ExamInvigilationManagement.Common;
+using ExamInvigilationManagement.Common.Constants;
 using ExamInvigilationManagement.Domain.Entities;
 using ExamInvigilationManagement.Infrastructure.Data;
 using ExamInvigilationManagement.Infrastructure.Mapping;
@@ -460,40 +461,108 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             };
         }
 
-        public async Task MarkApprovalRequestedAsync(IEnumerable<int> scheduleIds, IEnumerable<int> approverIds, string? note = null, CancellationToken cancellationToken = default)
+        public async Task MarkApprovalRequestedAsync(IEnumerable<int> scheduleIds, IEnumerable<int> approverIds, int? requestedById = null, int? facultyId = null, string? note = null, CancellationToken cancellationToken = default)
         {
             var ids = scheduleIds.Distinct().ToList();
             var deans = approverIds.Distinct().ToList();
             if (!ids.Any() || !deans.Any()) return;
 
-            var existing = await _context.ExamScheduleApprovals
-                .Where(x => ids.Contains(x.ExamScheduleId) && deans.Contains(x.ApproverId))
-                .Select(x => new { x.ExamScheduleId, x.ApproverId })
-                .ToListAsync(cancellationToken);
+            await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+            var now = DateTime.Now;
+            var correlationId = Guid.NewGuid();
 
-            var existingKeys = existing
-                .Select(x => $"{x.ExamScheduleId}:{x.ApproverId}")
-                .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-            foreach (var scheduleId in ids)
+            try
             {
-                foreach (var approverId in deans)
+                Data.Entities.ApprovalRequest? approvalRequest = null;
+                if (requestedById.HasValue)
                 {
-                    if (existingKeys.Contains($"{scheduleId}:{approverId}")) continue;
-
-                    _context.ExamScheduleApprovals.Add(new Data.Entities.ExamScheduleApproval
+                    approvalRequest = new Data.Entities.ApprovalRequest
                     {
-                        ExamScheduleId = scheduleId,
-                        ApproverId = approverId,
-                        Status = "Chờ duyệt",
+                        RequestedById = requestedById.Value,
+                        FacultyId = facultyId,
+                        Status = ExamScheduleStatuses.PendingApproval,
                         Note = note,
-                        ApproveAt = null,
-                        UpdateAt = DateTime.Now
-                    });
+                        CreatedAt = now,
+                        CorrelationId = correlationId
+                    };
+                    _context.ApprovalRequests.Add(approvalRequest);
                 }
-            }
 
-            await _context.SaveChangesAsync(cancellationToken);
+                var existing = await _context.ExamScheduleApprovals
+                    .Where(x => ids.Contains(x.ExamScheduleId) && deans.Contains(x.ApproverId))
+                    .Select(x => new { x.ExamScheduleId, x.ApproverId })
+                    .ToListAsync(cancellationToken);
+
+                var existingKeys = existing
+                    .Select(x => $"{x.ExamScheduleId}:{x.ApproverId}")
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var scheduleId in ids)
+                {
+                    foreach (var approverId in deans)
+                    {
+                        if (existingKeys.Contains($"{scheduleId}:{approverId}")) continue;
+
+                        _context.ExamScheduleApprovals.Add(new Data.Entities.ExamScheduleApproval
+                        {
+                            ExamScheduleId = scheduleId,
+                            ApproverId = approverId,
+                            Status = ExamScheduleStatuses.PendingApproval,
+                            Note = note,
+                            ApproveAt = null,
+                            UpdateAt = now
+                        });
+                    }
+
+                    if (requestedById.HasValue)
+                    {
+                        _context.ApprovalHistories.Add(new Data.Entities.ApprovalHistory
+                        {
+                            ApprovalRequest = approvalRequest,
+                            ExamScheduleId = scheduleId,
+                            ActorUserId = requestedById.Value,
+                            FromStatus = ExamScheduleStatuses.PendingApproval,
+                            ToStatus = ExamScheduleStatuses.PendingApproval,
+                            Action = "RequestApproval",
+                            Note = note,
+                            CreatedAt = now,
+                            CorrelationId = correlationId
+                        });
+                    }
+                }
+
+                _context.AuditLogs.Add(new Data.Entities.AuditLog
+                {
+                    EventType = "ApprovalRequest",
+                    EntityName = "ExamSchedule",
+                    EntityId = string.Join(",", ids),
+                    Action = "RequestApproval",
+                    ActorUserId = requestedById,
+                    NewValues = $"Schedules={ids.Count};Approvers={deans.Count}",
+                    Note = note,
+                    CreatedAt = now,
+                    CorrelationId = correlationId,
+                    Source = nameof(ExamScheduleRepository)
+                });
+
+                _context.OutboxMessages.Add(new Data.Entities.OutboxMessage
+                {
+                    Type = "ApprovalRequestCreated",
+                    Payload = $"{{\"scheduleCount\":{ids.Count},\"approverCount\":{deans.Count}}}",
+                    Status = "Pending",
+                    RetryCount = 0,
+                    CreatedAt = now,
+                    CorrelationId = correlationId
+                });
+
+                await _context.SaveChangesAsync(cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
         }
         private static string? GetUserFullName(dynamic? user)
         {

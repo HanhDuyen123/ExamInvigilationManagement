@@ -18,6 +18,14 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<AcademyYear> AcademyYears { get; set; }
 
+    public virtual DbSet<ApprovalHistory> ApprovalHistories { get; set; }
+
+    public virtual DbSet<ApprovalRequest> ApprovalRequests { get; set; }
+
+    public virtual DbSet<AssignmentChangeHistory> AssignmentChangeHistories { get; set; }
+
+    public virtual DbSet<AuditLog> AuditLogs { get; set; }
+
     public virtual DbSet<Building> Buildings { get; set; }
 
     public virtual DbSet<CourseOffering> CourseOfferings { get; set; }
@@ -48,6 +56,8 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<Notification> Notifications { get; set; }
 
+    public virtual DbSet<OutboxMessage> OutboxMessages { get; set; }
+
     public virtual DbSet<PasswordResetToken> PasswordResetTokens { get; set; }
 
     public virtual DbSet<Position> Positions { get; set; }
@@ -71,6 +81,40 @@ public partial class ApplicationDbContext : DbContext
         modelBuilder.Entity<AcademyYear>(entity =>
         {
             entity.HasKey(e => e.AcademyYearId).HasName("PK__AcademyY__6E9A375C180825D0");
+        });
+
+        modelBuilder.Entity<ApprovalHistory>(entity =>
+        {
+            entity.HasKey(e => e.ApprovalHistoryId).HasName("PK_ApprovalHistory");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+            entity.HasIndex(e => e.ExamScheduleId).HasDatabaseName("IX_ApprovalHistory_ExamScheduleId");
+            entity.HasIndex(e => e.ApprovalRequestId).HasDatabaseName("IX_ApprovalHistory_ApprovalRequestId");
+            entity.HasIndex(e => e.CorrelationId).HasDatabaseName("IX_ApprovalHistory_CorrelationId");
+        });
+
+        modelBuilder.Entity<ApprovalRequest>(entity =>
+        {
+            entity.HasKey(e => e.ApprovalRequestId).HasName("PK_ApprovalRequest");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+            entity.HasIndex(e => e.RequestedById).HasDatabaseName("IX_ApprovalRequest_RequestedById");
+            entity.HasIndex(e => e.CorrelationId).HasDatabaseName("IX_ApprovalRequest_CorrelationId");
+        });
+
+        modelBuilder.Entity<AssignmentChangeHistory>(entity =>
+        {
+            entity.HasKey(e => e.AssignmentChangeHistoryId).HasName("PK_AssignmentChangeHistory");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+            entity.HasIndex(e => e.ExamScheduleId).HasDatabaseName("IX_AssignmentChangeHistory_ExamScheduleId");
+            entity.HasIndex(e => e.ExamInvigilatorId).HasDatabaseName("IX_AssignmentChangeHistory_ExamInvigilatorId");
+            entity.HasIndex(e => e.CorrelationId).HasDatabaseName("IX_AssignmentChangeHistory_CorrelationId");
+        });
+
+        modelBuilder.Entity<AuditLog>(entity =>
+        {
+            entity.HasKey(e => e.AuditLogId).HasName("PK_AuditLog");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+            entity.HasIndex(e => new { e.EntityName, e.EntityId }).HasDatabaseName("IX_AuditLog_Entity");
+            entity.HasIndex(e => e.CorrelationId).HasDatabaseName("IX_AuditLog_CorrelationId");
         });
 
         modelBuilder.Entity<Building>(entity =>
@@ -269,6 +313,16 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.NotificationUsers)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Notification_User");
+        });
+
+        modelBuilder.Entity<OutboxMessage>(entity =>
+        {
+            entity.HasKey(e => e.OutboxMessageId).HasName("PK_OutboxMessage");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.RetryCount).HasDefaultValue(0);
+            entity.Property(e => e.Status).HasDefaultValue("Pending");
+            entity.HasIndex(e => e.Status).HasDatabaseName("IX_OutboxMessage_Status");
+            entity.HasIndex(e => e.CorrelationId).HasDatabaseName("IX_OutboxMessage_CorrelationId");
         });
 
         modelBuilder.Entity<Position>(entity =>
