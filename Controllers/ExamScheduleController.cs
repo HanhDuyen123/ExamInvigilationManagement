@@ -161,6 +161,7 @@ namespace ExamInvigilationManagement.Controllers
             string? subjectId,
             string? className,
             string? groupNumber,
+            int? examFormatId,
             string? buildingId,
             int? roomId,
             string? status,
@@ -181,6 +182,7 @@ namespace ExamInvigilationManagement.Controllers
                 SubjectId = subjectId,
                 ClassName = className,
                 GroupNumber = groupNumber,
+                ExamFormatId = examFormatId,
                 BuildingId = buildingId,
                 RoomId = roomId,
                 Status = User.IsInRole("Giảng viên") ? null : status,
@@ -192,7 +194,8 @@ namespace ExamInvigilationManagement.Controllers
             };
 
             var result = await _service.GetPagedAsync(filter, 1, int.MaxValue);
-            var fileBytes = BuildExamScheduleExportExcel(result.Items.ToList());
+            var templatePath = Path.Combine(_environment.WebRootPath, "templates", "MAU EXPORT LICH PHAN CONG COI THI.xlsx");
+            var fileBytes = BuildExamScheduleExportExcel(result.Items.ToList(), templatePath);
             var fileName = $"lich-thi-{DateTime.Now:yyyyMMdd-HHmm}.xlsx";
 
             return File(fileBytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", fileName);
@@ -848,8 +851,11 @@ namespace ExamInvigilationManagement.Controllers
             return $"De-nghi-ho-tro-CBCT-{semester}-{year}.xlsx";
         }
 
-        private static byte[] BuildExamScheduleExportExcel(IReadOnlyList<ExamScheduleDto> schedules)
+        private static byte[] BuildExamScheduleExportExcel(IReadOnlyList<ExamScheduleDto> schedules, string? templatePath = null)
         {
+            if (!string.IsNullOrWhiteSpace(templatePath) && System.IO.File.Exists(templatePath))
+                return BuildExamScheduleExportFromTemplate(schedules, templatePath);
+
             using var stream = new MemoryStream();
             using (var document = SpreadsheetDocument.Create(stream, SpreadsheetDocumentType.Workbook, true))
             {
@@ -869,11 +875,12 @@ namespace ExamInvigilationManagement.Controllers
                 });
 
                 AppendExportRow(sheetData, 1, ["TRƯỜNG ĐẠI HỌC NHA TRANG"]);
-                AppendExportRow(sheetData, 2, ["DANH SÁCH LỊCH THI"]);
-                AppendExportRow(sheetData, 3, [$"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm}"]);
+                AppendExportRow(sheetData, 2, ["KHOA/VIỆN/BỘ MÔN"]);
+                AppendExportRow(sheetData, 3, [BuildExamScheduleExportTitle(schedules)]);
+                AppendExportRow(sheetData, 4, [$"Ngày xuất: {DateTime.Now:dd/MM/yyyy HH:mm}"]);
                 AppendExportRow(sheetData, 5,
                 [
-                    "STT", "Mã môn", "Tên môn", "Số TC", "Lớp", "Nhóm", "Ngày thi", "Buổi", "Ca",
+                    "STT", "Mã môn", "Tên môn", "Số TC", "Lớp", "Nhóm", "Hình thức thi", "Ngày thi", "Buổi", "Ca",
                     "Giờ", "Phòng", "Giảng đường", "Sĩ số", "Giảng viên dạy", "CBCT 1", "CBCT 2", "Trạng thái"
                 ]);
 
@@ -888,6 +895,7 @@ namespace ExamInvigilationManagement.Controllers
                         item.Credit?.ToString(),
                         item.ClassName,
                         item.GroupNumber,
+                        FormatExamFormat(item),
                         item.ExamDate?.ToString("dd/MM/yyyy"),
                         item.SessionName,
                         GetSlotNumber(item),
@@ -906,6 +914,90 @@ namespace ExamInvigilationManagement.Controllers
             }
 
             return stream.ToArray();
+        }
+
+        private static byte[] BuildExamScheduleExportFromTemplate(IReadOnlyList<ExamScheduleDto> schedules, string templatePath)
+        {
+            var bytes = System.IO.File.ReadAllBytes(templatePath);
+            using var stream = new MemoryStream();
+            stream.Write(bytes, 0, bytes.Length);
+            stream.Position = 0;
+
+            using (var document = SpreadsheetDocument.Open(stream, true))
+            {
+                var workbookPart = document.WorkbookPart ?? throw new InvalidOperationException("Template Excel không hợp lệ.");
+                var worksheetPart = workbookPart.WorksheetParts.First();
+                var sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>() ?? worksheetPart.Worksheet.AppendChild(new SheetData());
+
+                SetCellValue(worksheetPart, workbookPart, "A3", BuildExamScheduleExportTitle(schedules));
+
+                foreach (var row in sheetData.Elements<Row>().Where(r => r.RowIndex?.Value >= 5).ToList())
+                    row.Remove();
+
+                AppendExportRow(sheetData, 5,
+                [
+                    "STT", "Mã môn", "Tên môn", "Số TC", "Lớp", "Nhóm", "Hình thức thi", "Ngày thi", "Buổi", "Ca",
+                    "Giờ", "Phòng", "Giảng đường", "Sĩ số", "Giảng viên dạy", "CBCT 1", "CBCT 2", "Trạng thái"
+                ]);
+
+                for (var i = 0; i < schedules.Count; i++)
+                {
+                    var item = schedules[i];
+                    AppendExportRow(sheetData, (uint)(6 + i),
+                    [
+                        (i + 1).ToString(),
+                        item.SubjectId,
+                        item.SubjectName,
+                        item.Credit?.ToString(),
+                        item.ClassName,
+                        item.GroupNumber,
+                        FormatExamFormat(item),
+                        item.ExamDate?.ToString("dd/MM/yyyy"),
+                        item.SessionName,
+                        GetSlotNumber(item),
+                        FormatTime(item.SlotTimeStart),
+                        item.RoomName,
+                        item.BuildingName ?? item.BuildingId,
+                        item.RoomCapacity?.ToString(),
+                        item.UserName,
+                        FormatLecturer(item.Lecturer1Code, item.Lecturer1Name),
+                        FormatLecturer(item.Lecturer2Code, item.Lecturer2Name),
+                        item.Status
+                    ]);
+                }
+
+                worksheetPart.Worksheet.Save();
+                workbookPart.Workbook.Save();
+            }
+
+            return stream.ToArray();
+        }
+
+        private static string BuildExamScheduleExportTitle(IReadOnlyList<ExamScheduleDto> schedules)
+        {
+            var periods = schedules
+                .Select(x => x.PeriodName)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var years = schedules
+                .Select(x => x.AcademyYearName)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var dates = schedules
+                .Where(x => x.ExamDate.HasValue)
+                .Select(x => x.ExamDate!.Value.Date)
+                .ToList();
+
+            var periodText = periods.Count == 0 ? "..." : string.Join(", ", periods);
+            var yearText = years.Count == 0 ? "..." : string.Join(", ", years);
+            var fromText = dates.Count == 0 ? "....." : dates.Min().ToString("dd/MM/yyyy");
+            var toText = dates.Count == 0 ? "....." : dates.Max().ToString("dd/MM/yyyy");
+
+            return $"DANH SÁCH LỊCH PHÂN CÔNG COI THI ĐỢT THI {periodText} NĂM HỌC {yearText} (TỪ NGÀY {fromText} ĐẾN NGÀY {toText})";
         }
 
         private static void AppendExportRow(SheetData sheetData, uint rowIndex, IReadOnlyList<string?> values)
@@ -937,6 +1029,13 @@ namespace ExamInvigilationManagement.Controllers
             if (string.IsNullOrWhiteSpace(code)) return name ?? string.Empty;
             if (string.IsNullOrWhiteSpace(name)) return code;
             return $"{code} - {name}";
+        }
+
+        private static string FormatExamFormat(ExamScheduleDto item)
+        {
+            if (string.IsNullOrWhiteSpace(item.ExamFormatCode)) return item.ExamFormatName ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(item.ExamFormatName)) return item.ExamFormatCode;
+            return $"{item.ExamFormatCode} - {item.ExamFormatName}";
         }
 
         private static string BuildSupportRequestEmailBody(SupportRequestBuildResult result, string? senderName, string? replyTo)

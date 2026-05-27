@@ -1,0 +1,51 @@
+@model ExamInvigilationManagement.Common.PagedResult<ExamInvigilationManagement.Application.DTOs.Admin.Outbox.OutboxMessageDto>
+
+<table class="table modern-table wide-table">
+    <thead>
+        <tr>
+            <th>Thời gian</th>
+            <th>Loại sự kiện</th>
+            <th>Trạng thái</th>
+            <th>Retry</th>
+            <th>Lỗi gần nhất</th>
+            <th>Correlation</th>
+            <th class="col-action">Chi tiết</th>
+        </tr>
+    </thead>
+    <tbody>
+    @if (Model.Items.Any())
+    {
+        foreach (var item in Model.Items)
+        {
+            <tr>
+                <td class="cell-nowrap">@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                <td><span class="fw-semibold">@OutboxTypeLabel(item.Type)</span></td>
+                <td><span class="badge rounded-pill @StatusClass(item.Status)">@StatusLabel(item.Status)</span></td>
+                <td>@item.RetryCount</td>
+                <td class="cell-wrap">@(string.IsNullOrWhiteSpace(item.ErrorMessage) ? "-" : item.ErrorMessage)</td>
+                <td><code>@item.CorrelationId.ToString("N").Substring(0, 8)</code></td>
+                <td class="col-action"><a asp-area="Admin" asp-controller="Outbox" asp-action="Details" asp-route-id="@item.Id" class="btn-icon detail" title="Xem chi tiết"><i class="bi bi-eye"></i></a></td>
+            </tr>
+        }
+    }
+    else
+    {
+        <tr><td colspan="7" class="text-center py-4">Không có outbox message phù hợp</td></tr>
+    }
+    </tbody>
+</table>
+
+@await Html.PartialAsync("_Pagination", Model)
+
+@functions {
+    private static string StatusLabel(string status) => status switch { "Pending" => "Đang chờ", "Processed" => "Đã xử lý", "Failed" => "Lỗi", _ => status };
+    private static string StatusClass(string status) => status switch { "Processed" => "bg-success", "Failed" => "bg-danger", _ => "bg-warning text-dark" };
+    private static string OutboxTypeLabel(string type) => type switch
+    {
+        "ApprovalRequestCreated" => "Tạo yêu cầu duyệt",
+        "ApprovalReviewed" => "Duyệt lịch",
+        "AutoAssignmentSaved" => "Lưu phân công tự động",
+        "InvigilatorSubstitutionApproved" => "Duyệt thay thế giám thị",
+        _ => type
+    };
+}

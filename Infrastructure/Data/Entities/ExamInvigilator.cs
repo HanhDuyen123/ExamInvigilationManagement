@@ -31,6 +31,9 @@ public partial class ExamInvigilator
     [Column(TypeName = "datetime")]
     public DateTime? UpdateAt { get; set; }
 
+    [Column(TypeName = "datetime")]
+    public DateTime? ConfirmationSentAt { get; set; }
+
     [ForeignKey("AssigneeId")]
     [InverseProperty("ExamInvigilatorAssignees")]
     public virtual User Assignee { get; set; } = null!;

@@ -20,6 +20,22 @@ namespace ExamInvigilationManagement.Application.Services
             AutoAssignRequestDto request,
             CancellationToken cancellationToken = default)
         {
+            request.PreviewOnly = false;
+            return await BuildAssignmentAsync(request, cancellationToken);
+        }
+
+        public async Task<AutoAssignResultDto> PreviewAsync(
+            AutoAssignRequestDto request,
+            CancellationToken cancellationToken = default)
+        {
+            request.PreviewOnly = true;
+            return await BuildAssignmentAsync(request, cancellationToken);
+        }
+
+        private async Task<AutoAssignResultDto> BuildAssignmentAsync(
+            AutoAssignRequestDto request,
+            CancellationToken cancellationToken = default)
+        {
             ValidateRequest(request);
 
             var facultyId = await _repository.GetUserFacultyIdAsync(request.AssignerId, cancellationToken);
@@ -41,7 +57,10 @@ namespace ExamInvigilationManagement.Application.Services
 
             var result = new AutoAssignResultDto
             {
-                TotalSchedules = schedules.Count
+                TotalSchedules = schedules.Count,
+                IsPreview = request.PreviewOnly,
+                SemesterId = request.SemesterId,
+                PeriodId = request.PeriodId
             };
 
             if (schedules.Count == 0)
@@ -77,6 +96,7 @@ namespace ExamInvigilationManagement.Application.Services
                 schedules.Select(x => x.SubjectId),
                 facultyId.Value,
                 cancellationToken);
+            var isLecturerRoleByUser = lecturers.ToDictionary(x => x.UserId, x => x.IsLecturerRole);
 
             foreach (var lecturer in lecturers)
             {
@@ -130,11 +150,18 @@ namespace ExamInvigilationManagement.Application.Services
                 scheduleAssignedPositions,
                 sameDayLoadMap,
                 subjectLecturerMap,
+                isLecturerRoleByUser,
                 assignmentMode);
 
             if (solverResult != null)
             {
-                await _repository.SavePlanAsync(solverResult.Plan, cancellationToken);
+                solverResult.Result.IsPreview = request.PreviewOnly;
+                solverResult.Result.SemesterId = request.SemesterId;
+                solverResult.Result.PeriodId = request.PeriodId;
+                if (!request.PreviewOnly)
+                    await _repository.SavePlanAsync(solverResult.Plan, cancellationToken);
+                else
+                    solverResult.Result.Message = BuildPreviewMessage(solverResult.Result);
                 return solverResult.Result;
             }
 
@@ -186,6 +213,7 @@ namespace ExamInvigilationManagement.Application.Services
                     RoomDisplay = schedule.RoomDisplay,
                     SubjectName = schedule.SubjectName,
                     ClassName = schedule.ClassName,
+                    ExamFormatDisplay = schedule.ExamFormatDisplay,
                     StatusBefore = schedule.Status,
                     RequiredCount = RequiredInvigilatorsPerSchedule,
                     AssignedCount = assignedUsers.Count
@@ -267,6 +295,7 @@ namespace ExamInvigilationManagement.Application.Services
                         occupiedKeySet,
                         ownerScheduleCountByLecturer,
                         subjectLecturerMap,
+                        isLecturerRoleByUser,
                         day);
 
                     if (fallback == null)
@@ -312,13 +341,16 @@ namespace ExamInvigilationManagement.Application.Services
                 result.Details.Add(detailByScheduleId[item.Schedule.ExamScheduleId]);
             }
 
-            await _repository.SavePlanAsync(plan, cancellationToken);
+            if (!request.PreviewOnly)
+                await _repository.SavePlanAsync(plan, cancellationToken);
 
             result.AssignedInvigilators = plan.NewInvigilators.Count;
             result.FullyAssignedSchedules = result.Details.Count(x => x.StatusAfter == "Chờ duyệt");
             result.MissingSchedules = result.Details.Count(x => x.StatusAfter == "Thiếu giám thị");
             result.Success = true;
-            result.Message = result.MissingSchedules > 0
+            result.Message = request.PreviewOnly
+                ? BuildPreviewMessage(result)
+                : result.MissingSchedules > 0
                 ? "Auto assignment hoàn thành nhưng còn một số lịch thiếu giám thị."
                 : "Auto assignment hoàn thành.";
 
@@ -326,6 +358,13 @@ namespace ExamInvigilationManagement.Application.Services
                 result.Warnings.Add("Một số lịch không đủ 2 giám thị trong phạm vi cùng khoa.");
 
             return result;
+        }
+
+        private static string BuildPreviewMessage(AutoAssignResultDto result)
+        {
+            return result.MissingSchedules > 0
+                ? "Đây là bản xem trước. Nếu lưu, hệ thống sẽ phân công nhưng vẫn còn một số lịch thiếu giám thị."
+                : "Đây là bản xem trước. Nếu lưu, hệ thống sẽ phân công đủ các lịch đủ điều kiện.";
         }
 
         private static void ValidateRequest(AutoAssignRequestDto request)
@@ -350,6 +389,7 @@ namespace ExamInvigilationManagement.Application.Services
                 RoomDisplay = schedule.RoomDisplay,
                 SubjectName = schedule.SubjectName,
                 ClassName = schedule.ClassName,
+                ExamFormatDisplay = schedule.ExamFormatDisplay,
                 StatusBefore = schedule.Status,
                 StatusAfter = schedule.Status,
                 RequiredCount = RequiredInvigilatorsPerSchedule,
@@ -411,6 +451,7 @@ namespace ExamInvigilationManagement.Application.Services
             HashSet<(int UserId, int SlotId, DateOnly BusyDate)> occupiedKeySet,
             Dictionary<int, int> ownerScheduleCountByLecturer,
             Dictionary<string, HashSet<int>> subjectLecturerMap,
+            Dictionary<int, bool> isLecturerRoleByUser,
             DateOnly day)
         {
             var candidates = lecturers
@@ -420,7 +461,7 @@ namespace ExamInvigilationManagement.Application.Services
                     var load = lecturerLoads.TryGetValue(l.UserId, out var currentLoad) ? currentLoad : 0;
                     var sameDayLoad = sameDayLoadMap.TryGetValue((l.UserId, day), out var d) ? d : 0;
                     var ownerCount = ownerScheduleCountByLecturer.TryGetValue(l.UserId, out var c) ? c : 0;
-                    var tier = GetCandidateTier(l.UserId, schedule, subjectLecturerMap);
+                    var tier = GetCandidateTier(l.UserId, schedule, subjectLecturerMap, isLecturerRoleByUser);
 
                     var score = 0;
                     var reasons = new List<string>();
@@ -429,6 +470,11 @@ namespace ExamInvigilationManagement.Application.Services
                     {
                         score += 2500;
                         reasons.Add("từng dạy cùng môn");
+                    }
+                    else if (tier == CandidateTier.FacultyMember)
+                    {
+                        score -= 6500;
+                        reasons.Add($"nhân sự cùng khoa ({l.RoleName}) dùng khi thiếu giảng viên");
                     }
                     else
                     {
@@ -521,7 +567,7 @@ namespace ExamInvigilationManagement.Application.Services
                 AssignerId = assignerId,
                 ExamScheduleId = schedule.ExamScheduleId,
                 PositionNo = positionNo,
-                Status = "Chờ xác nhận",
+                Status = "Chưa gửi xác nhận",
                 CreateAt = DateTime.Now,
                 UpdateAt = DateTime.Now
             });
@@ -572,6 +618,7 @@ namespace ExamInvigilationManagement.Application.Services
             Dictionary<int, HashSet<byte>> scheduleAssignedPositions,
             Dictionary<(int UserId, DateOnly Day), int> sameDayLoadMap,
             Dictionary<string, HashSet<int>> subjectLecturerMap,
+            Dictionary<int, bool> isLecturerRoleByUser,
             AutoAssignmentMode assignmentMode)
         {
             try
@@ -583,6 +630,7 @@ namespace ExamInvigilationManagement.Application.Services
                 var exactVars = new List<BoolVar>();
                 var sameSubjectVars = new List<BoolVar>();
                 var emergencyVars = new List<BoolVar>();
+                var facultyMemberVars = new List<BoolVar>();
                 var scheduleById = schedules.ToDictionary(x => x.ExamScheduleId);
                 var lecturerById = lecturers.ToDictionary(x => x.UserId);
                 var plan = new AutoAssignPlanDto();
@@ -596,6 +644,7 @@ namespace ExamInvigilationManagement.Application.Services
                         RoomDisplay = x.RoomDisplay,
                         SubjectName = x.SubjectName,
                         ClassName = x.ClassName,
+                        ExamFormatDisplay = x.ExamFormatDisplay,
                         StatusBefore = x.Status,
                         RequiredCount = RequiredInvigilatorsPerSchedule,
                         AssignedCount = scheduleAssignedUsers.TryGetValue(x.ExamScheduleId, out var assigned) ? assigned.Count : 0
@@ -631,11 +680,13 @@ namespace ExamInvigilationManagement.Application.Services
                         variables[(schedule.ExamScheduleId, lecturer.UserId)] = variable;
                         scheduleVars.Add(variable);
 
-                        var tier = GetCandidateTier(lecturer.UserId, schedule, subjectLecturerMap);
+                        var tier = GetCandidateTier(lecturer.UserId, schedule, subjectLecturerMap, isLecturerRoleByUser);
                         if (tier == CandidateTier.ExactOwner)
                             exactVars.Add(variable);
                         else if (tier == CandidateTier.SameSubject)
                             sameSubjectVars.Add(variable);
+                        else if (tier == CandidateTier.FacultyMember)
+                            facultyMemberVars.Add(variable);
                         else
                             emergencyVars.Add(variable);
                     }
@@ -731,6 +782,7 @@ namespace ExamInvigilationManagement.Application.Services
                 model.Add(sameSubjectTotal == bestSameSubject);
 
                 fairnessTerms.AddRange(emergencyVars.Select(x => LinearExpr.Term(x, 3_000)));
+                fairnessTerms.AddRange(facultyMemberVars.Select(x => LinearExpr.Term(x, 8_000)));
                 model.Minimize(LinearExpr.Sum(fairnessTerms.ToArray()));
                 status = solver.Solve(model);
                 if (status != CpSolverStatus.Feasible && status != CpSolverStatus.Optimal)
@@ -745,7 +797,7 @@ namespace ExamInvigilationManagement.Application.Services
                         Schedule = scheduleById[x.Key.ScheduleId],
                         Lecturer = lecturerById[x.Key.LecturerId]
                     })
-                    .OrderBy(x => GetCandidateTier(x.Lecturer.UserId, x.Schedule, subjectLecturerMap))
+                    .OrderBy(x => GetCandidateTier(x.Lecturer.UserId, x.Schedule, subjectLecturerMap, isLecturerRoleByUser))
                     .ThenBy(x => x.Schedule.ExamDate)
                     .ThenBy(x => x.Schedule.TimeStart)
                     .ThenBy(x => x.Lecturer.UserName)
@@ -767,7 +819,7 @@ namespace ExamInvigilationManagement.Application.Services
                     var day = DateOnly.FromDateTime(selected.Schedule.ExamDate);
                     var load = lecturerLoads.TryGetValue(selected.Lecturer.UserId, out var currentLoad) ? currentLoad : 0;
                     var sameDayLoad = sameDayLoadMap.TryGetValue((selected.Lecturer.UserId, day), out var d) ? d : 0;
-                    var tier = GetCandidateTier(selected.Lecturer.UserId, selected.Schedule, subjectLecturerMap);
+                    var tier = GetCandidateTier(selected.Lecturer.UserId, selected.Schedule, subjectLecturerMap, isLecturerRoleByUser);
                     var score = GetCandidateScore(tier, load, sameDayLoad);
                     var reason = $"{GetCandidateTierReason(tier)}; tải hiện tại: {load}; số lịch trong ngày: {sameDayLoad}";
 
@@ -897,10 +949,14 @@ namespace ExamInvigilationManagement.Application.Services
         private static CandidateTier GetCandidateTier(
             int lecturerId,
             AutoAssignScheduleDto schedule,
-            Dictionary<string, HashSet<int>> subjectLecturerMap)
+            Dictionary<string, HashSet<int>> subjectLecturerMap,
+            Dictionary<int, bool> isLecturerRoleByUser)
         {
             if (lecturerId == schedule.OfferingUserId)
                 return CandidateTier.ExactOwner;
+
+            if (isLecturerRoleByUser.TryGetValue(lecturerId, out var isLecturerRole) && !isLecturerRole)
+                return CandidateTier.FacultyMember;
 
             return subjectLecturerMap.TryGetValue(schedule.SubjectId, out var lecturerIds) && lecturerIds.Contains(lecturerId)
                 ? CandidateTier.SameSubject
@@ -913,7 +969,8 @@ namespace ExamInvigilationManagement.Application.Services
             {
                 CandidateTier.ExactOwner => -50_000,
                 CandidateTier.SameSubject => 1_000,
-                _ => 12_000
+                CandidateTier.Emergency => 12_000,
+                _ => 28_000
             };
         }
 
@@ -923,7 +980,8 @@ namespace ExamInvigilationManagement.Application.Services
             {
                 CandidateTier.ExactOwner => 12_000,
                 CandidateTier.SameSubject => 8_000,
-                _ => 3_000
+                CandidateTier.Emergency => 3_000,
+                _ => 1_000
             };
 
             return Math.Max(0, baseScore - load * 120 - sameDayLoad * 120);
@@ -935,7 +993,8 @@ namespace ExamInvigilationManagement.Application.Services
             {
                 CandidateTier.ExactOwner => "đúng giảng viên phụ trách lớp học phần",
                 CandidateTier.SameSubject => "giảng viên từng dạy cùng môn",
-                _ => "giảng viên cùng khoa phù hợp lịch"
+                CandidateTier.Emergency => "giảng viên cùng khoa phù hợp lịch",
+                _ => "nhân sự cùng khoa dùng khi thiếu giảng viên"
             };
         }
 
@@ -961,7 +1020,8 @@ namespace ExamInvigilationManagement.Application.Services
         {
             ExactOwner = 0,
             SameSubject = 1,
-            Emergency = 2
+            Emergency = 2,
+            FacultyMember = 3
         }
 
         private enum AutoAssignmentMode

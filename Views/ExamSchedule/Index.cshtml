@@ -63,6 +63,7 @@
                         subjectId: val('#subjectId'),
                         className: val('#className'),
                         groupNumber: val('#groupNumber'),
+                        examFormatId: val('#examFormatId'),
                         buildingId: val('#buildingId'),
                         roomId: val('#roomId'),
                         status: val('#status'),
@@ -86,6 +87,7 @@
                     subjectId: val('#subjectId'),
                     className: val('#className'),
                     groupNumber: val('#groupNumber'),
+                    examFormatId: val('#examFormatId'),
                     buildingId: val('#buildingId'),
                     roomId: val('#roomId'),
                     status: val('#status'),
@@ -561,6 +563,23 @@
                 extraParams: function () {
                     return { facultyId: val('#facultyId') };
                 },
+                onSelect: function () {
+                    CrudPage.loadData(1);
+                },
+                onClear: function () {
+                    CrudPage.loadData(1);
+                }
+            });
+
+            AdminLookup.create({
+                key: 'exam-format',
+                input: '#examFormatInput',
+                hidden: '#examFormatId',
+                menu: '#examFormatDropdown',
+                url: '@Url.Action("ExamFormats", "Lookup")',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name',
                 onSelect: function () {
                     CrudPage.loadData(1);
                 },

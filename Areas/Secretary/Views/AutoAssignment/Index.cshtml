@@ -17,7 +17,7 @@
         </a>
     </div>
 
-    <form asp-area="Secretary" asp-controller="AutoAssignment" asp-action="Run" method="post" class="auto-assign-layout">
+    <form asp-area="Secretary" asp-controller="AutoAssignment" asp-action="Preview" method="post" class="auto-assign-layout">
         @Html.AntiForgeryToken()
 
         <div class="form-card auto-assign-form-card">
@@ -59,8 +59,8 @@
 
             <div class="auto-assign-actions auto-assign-full">
                 <button type="submit" class="btn-submit">
-                    <i class="bi bi-play-circle"></i>
-                    Chạy tự động phân công
+                    <i class="bi bi-eye"></i>
+                    Xem trước phương án
                 </button>
             </div>
         </div>

@@ -1,12 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Security.Claims;
+using System.Text.Json;
 using ExamInvigilationManagement.Infrastructure.Data.Entities;
+using Microsoft.AspNetCore.Http;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExamInvigilationManagement.Infrastructure.Data;
 
 public partial class ApplicationDbContext : DbContext
 {
+    private readonly IHttpContextAccessor? _httpContextAccessor;
+
     public ApplicationDbContext()
     {
     }
@@ -14,6 +20,12 @@ public partial class ApplicationDbContext : DbContext
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
         : base(options)
     {
+    }
+
+    public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options, IHttpContextAccessor httpContextAccessor)
+        : base(options)
+    {
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public virtual DbSet<AcademyYear> AcademyYears { get; set; }
@@ -33,6 +45,8 @@ public partial class ApplicationDbContext : DbContext
     public virtual DbSet<EmailNotification> EmailNotifications { get; set; }
 
     public virtual DbSet<ExamInvigilator> ExamInvigilators { get; set; }
+
+    public virtual DbSet<ExamFormat> ExamFormats { get; set; }
 
     public virtual DbSet<ExamPeriod> ExamPeriods { get; set; }
 
@@ -169,6 +183,13 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.NewAssignee).WithMany(p => p.ExamInvigilatorNewAssignees).HasConstraintName("FK_Invigilator_NewAssignee");
         });
 
+        modelBuilder.Entity<ExamFormat>(entity =>
+        {
+            entity.HasKey(e => e.ExamFormatId).HasName("PK_ExamFormat");
+            entity.HasIndex(e => e.Code).IsUnique().HasDatabaseName("UX_ExamFormat_Code");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+        });
+
         modelBuilder.Entity<ExamPeriod>(entity =>
         {
             entity.HasKey(e => e.PeriodId).HasName("PK__ExamPeri__E521BB16289BD43D");
@@ -189,6 +210,9 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.Offering).WithMany(p => p.ExamSchedules)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ExamSchedule_Offering");
+
+            entity.HasOne(d => d.ExamFormat).WithMany(p => p.ExamSchedules)
+                .HasConstraintName("FK_ExamSchedule_ExamFormat");
 
             entity.HasOne(d => d.Period).WithMany(p => p.ExamSchedules)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -404,6 +428,112 @@ public partial class ApplicationDbContext : DbContext
         });
 
         OnModelCreatingPartial(modelBuilder);
+    }
+
+    public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        AddAutomaticAuditLogs();
+        return base.SaveChangesAsync(cancellationToken);
+    }
+
+    public override int SaveChanges()
+    {
+        AddAutomaticAuditLogs();
+        return base.SaveChanges();
+    }
+
+    private void AddAutomaticAuditLogs()
+    {
+        var entries = ChangeTracker.Entries()
+            .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+            .Where(e => ShouldAudit(e))
+            .ToList();
+
+        if (entries.Count == 0) return;
+
+        var actorUserId = GetCurrentUserId();
+        var now = DateTime.Now;
+        var correlationId = Guid.NewGuid();
+
+        foreach (var entry in entries)
+        {
+            AuditLogs.Add(new AuditLog
+            {
+                EventType = "CrudChange",
+                EntityName = entry.Entity.GetType().Name,
+                EntityId = GetPrimaryKeyValue(entry),
+                Action = entry.State.ToString(),
+                ActorUserId = actorUserId,
+                OldValues = entry.State == EntityState.Added ? null : SerializeValues(entry, original: true),
+                NewValues = entry.State == EntityState.Deleted ? null : SerializeValues(entry, original: false),
+                CreatedAt = now,
+                CorrelationId = correlationId,
+                Source = "ApplicationDbContext"
+            });
+        }
+    }
+
+    private static bool ShouldAudit(EntityEntry entry)
+    {
+        if (entry.Entity is AuditLog or OutboxMessage) return false;
+
+        return entry.Entity is AcademyYear
+            or Building
+            or CourseOffering
+            or ExamFormat
+            or ExamInvigilator
+            or ExamPeriod
+            or ExamSchedule
+            or ExamScheduleApproval
+            or ExamSession
+            or ExamSlot
+            or Faculty
+            or Entities.Information
+            or InvigilatorResponse
+            or InvigilatorSubstitution
+            or LecturerBusySlot
+            or Position
+            or Role
+            or Room
+            or Semester
+            or Subject
+            or User;
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var value = _httpContextAccessor?.HttpContext?.User?.FindFirstValue(ClaimTypes.NameIdentifier);
+        return int.TryParse(value, out var userId) ? userId : null;
+    }
+
+    private static string? GetPrimaryKeyValue(EntityEntry entry)
+    {
+        var key = entry.Metadata.FindPrimaryKey();
+        if (key == null) return null;
+
+        var values = key.Properties.Select(p =>
+            entry.State == EntityState.Deleted
+                ? entry.Property(p.Name).OriginalValue?.ToString()
+                : entry.Property(p.Name).CurrentValue?.ToString());
+
+        return string.Join(",", values.Where(x => !string.IsNullOrWhiteSpace(x)));
+    }
+
+    private static string SerializeValues(EntityEntry entry, bool original)
+    {
+        var values = new Dictionary<string, object?>();
+
+        foreach (var property in entry.Properties)
+        {
+            if (property.Metadata.IsPrimaryKey()) continue;
+            if (property.Metadata.IsForeignKey() || property.Metadata.ClrType.IsPrimitive || property.Metadata.ClrType == typeof(string) || property.Metadata.ClrType == typeof(DateTime) || property.Metadata.ClrType == typeof(DateOnly) || property.Metadata.ClrType == typeof(TimeOnly) || Nullable.GetUnderlyingType(property.Metadata.ClrType) != null)
+            {
+                if (entry.State == EntityState.Modified && !property.IsModified && !original) continue;
+                values[property.Metadata.Name] = original ? property.OriginalValue : property.CurrentValue;
+            }
+        }
+
+        return JsonSerializer.Serialize(values);
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);

@@ -9,7 +9,7 @@
     <div class="role-header mb-4">
         <div>
             <h3 class="title-gradient">Đề xuất thay thế giám thị</h3>
-            <div class="subtitle">Theo dõi các đề xuất từ giảng viên đã từ chối lịch coi thi</div>
+            <div class="subtitle">Xử lý đề xuất từ giảng viên đã từ chối lịch coi thi.</div>
         </div>
     </div>
 
@@ -26,20 +26,24 @@
 
     <div class="table-modern"><div class="table-inner full-width">
         <table class="table modern-table">
-            <thead><tr><th>Mã môn</th><th>Môn học</th><th>Lớp/Nhóm</th><th>Ngày thi</th><th>Ca/Phòng</th><th>Người từ chối</th><th>Người thay thế</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
+            <thead><tr><th>Lịch thi</th><th>Thời gian/Phòng</th><th>Đề xuất</th><th>Trạng thái</th><th>Thao tác</th></tr></thead>
             <tbody>
             @if (items.Items.Any())
             {
                 foreach (var item in items.Items)
                 {
                     <tr>
-                        <td>@item.SubjectId</td><td>@item.SubjectName</td><td>@item.ClassName / @item.GroupNumber</td><td>@item.ExamDate.ToString("dd/MM/yyyy")</td><td>@item.SlotName (@item.TimeStart.ToString("HH\\:mm"))<br /><span class="text-muted">@item.RoomDisplay</span></td><td>@item.RequestUserName</td><td>@item.SubstituteUserName</td><td><span class="badge rounded-pill @(item.Status == "Đã duyệt" ? "bg-success" : item.Status == "Từ chối duyệt" ? "bg-danger" : "bg-warning text-dark")">@item.Status</span></td><td><a asp-action="Details" asp-route-id="@item.SubstitutionId" class="btn-icon detail"><i class="bi bi-eye"></i></a></td>
+                        <td><span class="cell-code">@item.SubjectId</span> - @item.SubjectName<br /><span class="text-muted small">Lớp @item.ClassName, nhóm @item.GroupNumber · @(string.IsNullOrWhiteSpace(item.ExamFormatDisplay) ? "Chưa có hình thức thi" : item.ExamFormatDisplay)</span></td>
+                        <td>@item.ExamDate.ToString("dd/MM/yyyy")<br /><span class="text-muted small">@item.SlotName (@item.TimeStart.ToString(@"HH\:mm")) · @item.RoomDisplay</span></td>
+                        <td><strong>@item.RequestUserName</strong> từ chối<br /><span class="text-muted small">Đề xuất: @item.SubstituteUserName</span></td>
+                        <td><span class="badge rounded-pill @(item.Status == "Đã duyệt" ? "bg-success" : item.Status == "Từ chối duyệt" ? "bg-danger" : "bg-warning text-dark")">@item.Status</span></td>
+                        <td><a asp-action="Details" asp-route-id="@item.SubstitutionId" class="btn btn-sm btn-outline-primary rounded-3">Xử lý</a></td>
                     </tr>
                 }
             }
             else
             {
-                <tr><td colspan="9" class="text-center py-4">Chưa có đề xuất thay thế phù hợp</td></tr>
+                <tr><td colspan="5" class="text-center py-4">Chưa có đề xuất thay thế phù hợp</td></tr>
             }
             </tbody>
         </table>

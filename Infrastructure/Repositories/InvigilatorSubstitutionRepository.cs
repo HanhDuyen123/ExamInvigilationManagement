@@ -207,6 +207,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     .ThenInclude(x => x.ExamSchedule)
                     .FirstOrDefaultAsync(x => x.SubstitutionId == substitutionId, cancellationToken);
                 if (substitution == null) throw new InvalidOperationException("Không tìm thấy đề xuất thay thế.");
+                InvigilatorWorkflowGuard.EnsureSubstitutionStatusChange(substitution.Status, InvigilatorSubstitutionStatuses.Approved, $"Đề xuất thay thế #{substitutionId}");
 
                 substitution.Status = InvigilatorSubstitutionStatuses.Approved;
                 var oldAssigneeId = substitution.ExamInvigilator.NewAssigneeId ?? substitution.ExamInvigilator.AssigneeId;
@@ -238,6 +239,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     .ThenInclude(x => x.ExamSchedule)
                     .FirstOrDefaultAsync(x => x.SubstitutionId == substitutionId, cancellationToken);
                 if (substitution == null) throw new InvalidOperationException("Không tìm thấy đề xuất thay thế.");
+                InvigilatorWorkflowGuard.EnsureSubstitutionStatusChange(substitution.Status, InvigilatorSubstitutionStatuses.Approved, $"Đề xuất thay thế #{substitutionId}");
 
                 var oldAssigneeId = substitution.ExamInvigilator.NewAssigneeId ?? substitution.ExamInvigilator.AssigneeId;
                 substitution.SubstituteUserId = replacementUserId;
@@ -262,6 +264,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
         {
             var substitution = await _db.InvigilatorSubstitutions.FirstOrDefaultAsync(x => x.SubstitutionId == substitutionId, cancellationToken);
             if (substitution == null) throw new InvalidOperationException("Không tìm thấy đề xuất thay thế.");
+            InvigilatorWorkflowGuard.EnsureSubstitutionStatusChange(substitution.Status, InvigilatorSubstitutionStatuses.Rejected, $"Đề xuất thay thế #{substitutionId}");
             substitution.Status = InvigilatorSubstitutionStatuses.Rejected;
             await _db.SaveChangesAsync(cancellationToken);
         }
@@ -280,6 +283,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 SubjectName = x.ExamSchedule.Offering.Subject.SubjectName,
                 ClassName = x.ExamSchedule.Offering.ClassName,
                 GroupNumber = x.ExamSchedule.Offering.GroupNumber,
+                ExamFormatDisplay = x.ExamSchedule.ExamFormat != null ? x.ExamSchedule.ExamFormat.Code + " - " + x.ExamSchedule.ExamFormat.Name : string.Empty,
                 ExamDate = x.ExamSchedule.ExamDate,
                 SemesterId = x.ExamSchedule.SemesterId,
                 PeriodId = x.ExamSchedule.PeriodId,
@@ -308,6 +312,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     SubjectName = x.ExamInvigilator.ExamSchedule.Offering.Subject.SubjectName,
                     ClassName = x.ExamInvigilator.ExamSchedule.Offering.ClassName,
                     GroupNumber = x.ExamInvigilator.ExamSchedule.Offering.GroupNumber,
+                    ExamFormatDisplay = x.ExamInvigilator.ExamSchedule.ExamFormat != null ? x.ExamInvigilator.ExamSchedule.ExamFormat.Code + " - " + x.ExamInvigilator.ExamSchedule.ExamFormat.Name : string.Empty,
                     ExamDate = x.ExamInvigilator.ExamSchedule.ExamDate,
                     SlotName = x.ExamInvigilator.ExamSchedule.Slot.SlotName,
                     TimeStart = x.ExamInvigilator.ExamSchedule.Slot.TimeStart,
@@ -377,7 +382,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             _db.OutboxMessages.Add(new Data.Entities.OutboxMessage
             {
                 Type = "InvigilatorSubstitutionApproved",
-                Payload = $"{{\"substitutionId\":{substitution.SubstitutionId},\"examScheduleId\":{substitution.ExamInvigilator.ExamScheduleId}}}",
+                Payload = $"{{\"substitutionId\":{substitution.SubstitutionId},\"examScheduleId\":{substitution.ExamInvigilator.ExamScheduleId},\"recipientIds\":[{oldAssigneeId},{newAssigneeId}],\"relatedId\":{substitution.SubstitutionId},\"createdBy\":{reviewerId}}}",
                 Status = "Pending",
                 RetryCount = 0,
                 CreatedAt = now,

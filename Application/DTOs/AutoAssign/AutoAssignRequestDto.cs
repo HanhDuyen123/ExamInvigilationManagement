@@ -12,5 +12,7 @@ namespace ExamInvigilationManagement.Application.DTOs.AutoAssign
 
         [Required(ErrorMessage = "Không xác định được người thực hiện.")]
         public int AssignerId { get; set; }
+
+        public bool PreviewOnly { get; set; }
     }
 }

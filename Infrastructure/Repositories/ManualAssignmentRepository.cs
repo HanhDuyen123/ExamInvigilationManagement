@@ -54,6 +54,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     SubjectName = x.Offering.Subject.SubjectName,
                     ClassName = x.Offering.ClassName,
                     GroupNumber = x.Offering.GroupNumber,
+                    ExamFormatDisplay = x.ExamFormat != null ? x.ExamFormat.Code + " - " + x.ExamFormat.Name : string.Empty,
                     ExamDate = x.ExamDate,
                     Status = x.Status,
                     CurrentInvigilatorCount = x.ExamInvigilators.Count
@@ -167,14 +168,16 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .Where(x =>
                     x.IsActive &&
                     x.FacultyId == facultyId &&
-                    x.Role.RoleName == "Giảng viên")
+                    x.Role.RoleName != "Admin")
                 .Select(x => new ManualAssignmentLecturerOptionDto
                 {
                     UserId = x.UserId,
                     UserName = x.UserName,
                     FullName = x.Information.LastName + " " + x.Information.FirstName,
                     FacultyId = x.FacultyId,
-                    FacultyName = x.Faculty != null ? x.Faculty.FacultyName : string.Empty
+                    FacultyName = x.Faculty != null ? x.Faculty.FacultyName : string.Empty,
+                    RoleName = x.Role.RoleName,
+                    IsLecturerRole = x.Role.RoleName == "Giảng viên"
                 })
                 .ToListAsync(cancellationToken);
         }

@@ -5,37 +5,32 @@
     var schedule = Model.Schedule;
 }
 
-<div class="form-page wide">
-    <div class="form-header mb-4">
+<div class="form-page wide substitution-compact-page">
+    <div class="form-header mb-3">
         <div>
             <h3 class="title-gradient">Đề xuất người thay thế</h3>
-            <div class="subtitle">Chọn giảng viên phù hợp để gửi Thư ký khoa duyệt thay thế lịch đã từ chối</div>
+            <div class="subtitle">Chọn một giảng viên phù hợp để Thư ký khoa xử lý thay thế.</div>
         </div>
-        <a asp-area="Lecturer" asp-controller="InvigilatorResponse" asp-action="Index" asp-route-status="Từ chối" class="btn-back"><i class="bi bi-arrow-left"></i> Back</a>
+        <a asp-area="Lecturer" asp-controller="InvigilatorResponse" asp-action="Index" asp-route-status="Từ chối" class="btn-back"><i class="bi bi-arrow-left"></i> Quay lại</a>
     </div>
 
-    <div class="form-card mb-4">
-        <h5 class="mb-3">Lịch coi thi đã từ chối</h5>
-        <div class="row g-3">
-            <div class="col-md-2"><label class="form-label">Mã môn</label><input class="input-modern" readonly value="@schedule.SubjectId" /></div>
-            <div class="col-md-4"><label class="form-label">Môn học</label><input class="input-modern" readonly value="@schedule.SubjectName" /></div>
-            <div class="col-md-2"><label class="form-label">Lớp</label><input class="input-modern" readonly value="@schedule.ClassName" /></div>
-            <div class="col-md-2"><label class="form-label">Nhóm</label><input class="input-modern" readonly value="@schedule.GroupNumber" /></div>
-            <div class="col-md-2"><label class="form-label">Vị trí</label><input class="input-modern" readonly value="GT @schedule.PositionNo" /></div>
-            <div class="col-md-3"><label class="form-label">Ngày thi</label><input class="input-modern" readonly value="@schedule.ExamDate.ToString("dd/MM/yyyy")" /></div>
-            <div class="col-md-3"><label class="form-label">Ca thi</label><input class="input-modern" readonly value="@schedule.SlotName (@schedule.TimeStart.ToString("HH\\:mm"))" /></div>
-            <div class="col-md-3"><label class="form-label">Phòng</label><input class="input-modern" readonly value="@schedule.RoomDisplay" /></div>
-            <div class="col-md-3"><label class="form-label">Lý do từ chối</label><input class="input-modern" readonly value="@(schedule.ResponseNote ?? "Không có ghi chú")" /></div>
+    <div class="substitution-summary mb-3">
+        <div>
+            <span class="summary-label">Lịch đã từ chối</span>
+            <strong>@schedule.SubjectId - @schedule.SubjectName</strong>
+            <small>Lớp @schedule.ClassName, nhóm @schedule.GroupNumber · @(string.IsNullOrWhiteSpace(schedule.ExamFormatDisplay) ? "Chưa có hình thức thi" : schedule.ExamFormatDisplay)</small>
         </div>
+        <div><span class="summary-label">Thời gian</span><strong>@schedule.ExamDate.ToString("dd/MM/yyyy")</strong><small>@schedule.SlotName (@schedule.TimeStart.ToString(@"HH\:mm")) · @schedule.RoomDisplay</small></div>
+        <div><span class="summary-label">Vị trí</span><strong>GT @schedule.PositionNo</strong><small>@(schedule.ResponseNote ?? "Không có ghi chú từ chối")</small></div>
     </div>
 
-    <div class="form-card">
-        <div class="d-flex flex-wrap align-items-end gap-3 mb-3">
-            <div class="flex-grow-1" style="min-width:260px;max-width:420px">
+    <div class="form-card compact-card">
+        <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-3">
+            <div class="flex-grow-1" style="min-width:260px;max-width:460px">
                 <label class="form-label">Tìm giảng viên</label>
-                <input id="lecturerSearch" class="input-modern" placeholder="Nhập username hoặc họ tên..." />
+                <input id="lecturerSearch" class="input-modern" placeholder="Nhập mã hoặc họ tên giảng viên..." />
             </div>
-            <div class="text-muted small">Mỗi lịch coi thi chỉ được đề xuất thay thế một lần. Người không phù hợp sẽ bị khóa để tránh chọn nhầm.</div>
+            <div class="text-muted small">Người bận, trùng lịch hoặc chính người đã từ chối sẽ không thể chọn.</div>
         </div>
 
         <form asp-action="Create" method="post">
@@ -43,43 +38,44 @@
             <input type="hidden" name="ExamInvigilatorId" value="@schedule.ExamInvigilatorId" />
             <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
-            <div class="row g-3" id="lecturerOptions">
-                @foreach (var lecturer in Model.LecturerOptions)
-                {
-                    var disabled = !lecturer.CanSelect;
-                    <div class="col-lg-4 col-md-6 lecturer-option" data-text="@($"{lecturer.UserName} {lecturer.FullName}".ToLower())">
-                        <label class="substitution-card @(disabled ? "disabled" : "")">
-                            <input type="radio" name="SubstituteUserId" value="@lecturer.UserId" disabled="@(disabled ? "disabled" : null)" />
-                            <span class="fw-bold d-block">@lecturer.FullName</span>
-                            <span class="text-muted d-block">@lecturer.UserName</span>
-                            <span class="small d-block mt-2"><strong>@lecturer.RecommendationLabel</strong></span>
-                            <span class="small text-muted d-block mt-1">@lecturer.WorkloadLabel</span>
-                            @if (lecturer.HasTaughtClass)
-                            {
-                                <span class="badge bg-primary-subtle text-primary mt-2">Hiểu rõ lớp thi</span>
-                            }
-                            else if (lecturer.HasTaughtSubject)
-                            {
-                                <span class="badge bg-info-subtle text-info mt-2">Có kinh nghiệm với môn thi</span>
-                            }
-                            <span class="small @(lecturer.CanSelect ? "text-success" : "text-danger") d-block mt-2">@lecturer.Reason</span>
-                        </label>
-                    </div>
-                }
+            <div class="table-responsive lecturer-select-table-wrap">
+                <table class="table modern-table lecturer-select-table">
+                    <thead><tr><th>Chọn</th><th>Giảng viên</th><th>Khả dụng</th><th>Tải hiện tại</th><th>Gợi ý</th></tr></thead>
+                    <tbody id="lecturerOptions">
+                    @foreach (var lecturer in Model.LecturerOptions)
+                    {
+                        var disabled = !lecturer.CanSelect;
+                        <tr class="lecturer-option @(disabled ? "disabled" : "")" data-text="@($"{lecturer.UserName} {lecturer.FullName}".ToLower())">
+                            <td><input type="radio" name="SubstituteUserId" value="@lecturer.UserId" disabled="@(disabled ? "disabled" : null)" /></td>
+                            <td><strong>@lecturer.FullName</strong><br /><span class="text-muted small">@lecturer.UserName</span></td>
+                            <td><span class="badge rounded-pill @(lecturer.CanSelect ? "bg-success" : "bg-danger")">@lecturer.AvailabilityLabel</span></td>
+                            <td>@lecturer.WorkloadLabel</td>
+                            <td>@lecturer.RecommendationLabel</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
             </div>
 
-            <div class="form-actions mt-4">
-                <button type="submit" class="btn-submit"><i class="bi bi-send-check"></i> Gửi đề xuất cho Thư ký khoa</button>
+            <div class="form-actions mt-3">
+                <button type="submit" class="btn-submit"><i class="bi bi-send-check"></i> Gửi đề xuất</button>
             </div>
         </form>
     </div>
 </div>
 
 <style>
-    .substitution-card { display:block; height:100%; border:1px solid rgba(79,70,229,.14); border-radius:18px; padding:16px; background:#fff; cursor:pointer; transition:.2s ease; }
-    .substitution-card:hover { transform:translateY(-2px); box-shadow:0 16px 36px rgba(79,70,229,.12); }
-    .substitution-card input { margin-right:8px; }
-    .substitution-card.disabled { opacity:.55; cursor:not-allowed; background:#f8fafc; }
+    .substitution-compact-page .compact-card { padding: 1rem; }
+    .substitution-summary { display:grid; grid-template-columns:1.5fr 1fr .9fr; gap:.75rem; border:1px solid #e2e8f0; background:#fff; padding:.85rem 1rem; border-radius:14px; }
+    .substitution-summary > div { min-width:0; }
+    .substitution-summary strong, .substitution-summary small { display:block; }
+    .substitution-summary small { color:#64748b; margin-top:.15rem; }
+    .summary-label { display:block; color:#64748b; font-size:.76rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; margin-bottom:.15rem; }
+    .lecturer-select-table-wrap { max-height:520px; overflow:auto; border:1px solid #e2e8f0; border-radius:12px; }
+    .lecturer-select-table { margin:0; }
+    .lecturer-select-table thead th { position:sticky; top:0; background:#f8fafc; z-index:1; }
+    .lecturer-select-table tr.disabled { opacity:.58; background:#f8fafc; }
+    @@media (max-width: 900px) { .substitution-summary { grid-template-columns:1fr; } }
 </style>
 
 @section Scripts {
@@ -89,6 +85,9 @@
             $('.lecturer-option').each(function () {
                 $(this).toggle(!value || ($(this).data('text') || '').includes(value));
             });
+        });
+        $('.lecturer-select-table').on('click', 'tr.lecturer-option:not(.disabled)', function (e) {
+            if (e.target.tagName !== 'INPUT') $(this).find('input[type="radio"]').prop('checked', true);
         });
     </script>
 }

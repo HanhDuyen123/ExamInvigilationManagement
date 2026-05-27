@@ -15,6 +15,7 @@ namespace ExamInvigilationManagement.Controllers
         private readonly ISubjectService _subjectService;
         private readonly IBuildingService _buildingService;
         private readonly IRoomService _roomService;
+        private readonly IExamScheduleService _examScheduleService;
 
         public LookupController(
             IAcademyYearService academyYearService,
@@ -25,6 +26,7 @@ namespace ExamInvigilationManagement.Controllers
             ISubjectService subjectService,
             IBuildingService buildingService,
             IRoomService roomService,
+            IExamScheduleService examScheduleService,
             IAdminUserService userService) : base(userService)
         {
             _academyYearService = academyYearService;
@@ -35,6 +37,7 @@ namespace ExamInvigilationManagement.Controllers
             _subjectService = subjectService;
             _buildingService = buildingService;
             _roomService = roomService;
+            _examScheduleService = examScheduleService;
         }
 
         [HttpGet]
@@ -149,6 +152,23 @@ namespace ExamInvigilationManagement.Controllers
             }
 
             return Json(data.Select(x => new { id = x.RoomId, name = $"{x.BuildingId}.{x.RoomName}" }));
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> ExamFormats(string? keyword, CancellationToken cancellationToken)
+        {
+            var data = await _examScheduleService.GetExamFormatsAsync(cancellationToken);
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                var kw = keyword.Trim();
+                data = data.Where(x =>
+                    x.Code.Contains(kw, StringComparison.OrdinalIgnoreCase) ||
+                    x.Name.Contains(kw, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+            }
+
+            return Json(data.Select(x => new { id = x.Id, name = x.DisplayName, code = x.Code, examFormatName = x.Name }));
         }
     }
 }

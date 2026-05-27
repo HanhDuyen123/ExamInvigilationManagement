@@ -12,11 +12,13 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
             ExamScheduleApprovalSearchDto search,
             int page,
             int pageSize,
+            int? approverId = null,
             CancellationToken cancellationToken = default);
 
         Task<List<ExamScheduleApprovalIndexItemDto>> GetBulkTargetsAsync(
             int facultyId,
             IEnumerable<int> examScheduleIds,
+            int? approverId = null,
             CancellationToken cancellationToken = default);
 
         Task<List<int>> GetSecretaryRecipientIdsAsync(

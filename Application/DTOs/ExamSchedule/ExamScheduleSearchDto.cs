@@ -17,6 +17,8 @@
         public string? ClassName { get; set; }
         public string? GroupNumber { get; set; }
 
+        public int? ExamFormatId { get; set; }
+
         public string? BuildingId { get; set; }
         public int? RoomId { get; set; }
 

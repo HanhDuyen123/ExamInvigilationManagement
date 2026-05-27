@@ -19,7 +19,7 @@ namespace ExamInvigilationManagement.Application.Services
         private readonly IPasswordService _passwordService;
 
         private static readonly string[] ValidScheduleStatuses = ["Chờ phân công", "Thiếu giám thị", "Chờ duyệt", "Đã duyệt", "Từ chối duyệt"];
-        private static readonly string[] ValidInvigilatorStatuses = ["Chờ xác nhận", "Xác nhận", "Từ chối"];
+        private static readonly string[] ValidInvigilatorStatuses = ["Chưa gửi xác nhận", "Chờ xác nhận", "Xác nhận", "Từ chối"];
 
         public BulkImportService(ApplicationDbContext db, IPasswordService passwordService)
         {
@@ -94,6 +94,7 @@ namespace ExamInvigilationManagement.Application.Services
                 Col("UserName", "Tên đăng nhập giảng viên", true, "Giảng viên phụ trách học phần mở.", "gv001"),
                 Col("ClassName", "Lớp học phần", true, "Dùng để xác định học phần mở.", "D21CQCN01"),
                 Col("GroupNumber", "Nhóm", true, "Dùng để xác định học phần mở.", "01"),
+                Col("ExamFormat", "Hình thức thi", true, "Code hoặc tên hình thức thi, ví dụ PM/TN-TL/TL.", "PM"),
                 Col("AcademyYearName", "Năm học", true, "Tên năm học phải khớp chính xác.", "2025-2026"),
                 Col("SemesterName", "Học kỳ", true, "Tên học kỳ trong năm học đã chọn.", "Học kỳ 1"),
                 Col("PeriodName", "Đợt thi", true, "Tên đợt thi trong học kỳ.", "Đợt 1"),
@@ -120,7 +121,7 @@ namespace ExamInvigilationManagement.Application.Services
                 Col("ExamScheduleId", "Mã lịch thi", true, "ExamScheduleId đã tồn tại.", "1"),
                 Col("AssigneeUserName", "Tên đăng nhập giám thị", true, "Tài khoản giảng viên cùng khoa.", "gv001"),
                 Col("PositionNo", "Vị trí", true, "Chỉ nhận 1 hoặc 2.", "1"),
-                Col("Status", "Trạng thái", false, "Mặc định Chờ xác nhận.", "Chờ xác nhận")
+                Col("Status", "Trạng thái", false, "Mặc định Chưa gửi xác nhận.", "Chưa gửi xác nhận")
             ],
             _ => []
         };
@@ -213,11 +214,11 @@ namespace ExamInvigilationManagement.Application.Services
                 var id = Val(row, "Mã môn").Trim();
                 var name = Val(row, "Tên môn").Trim();
                 if (Required(result, r, "Mã môn", id) && id.Length > 10) result.Errors.Add(Error(r, "Mã môn", id, "Tối đa 10 ký tự."));
-                if (Required(result, r, "Tên môn", name) && name.Length > 100) result.Errors.Add(Error(r, "Tên môn", name, "Tối đa 100 ký tự."));
+                if (Required(result, r, "Tên môn", name) && name.Length > 255) result.Errors.Add(Error(r, "Tên môn", name, "Tối đa 255 ký tự."));
                 if (!seen.Add(id)) result.Errors.Add(Error(r, "Mã môn", id, "Bị trùng trong file import."));
                 if (existing.Contains(id)) result.Errors.Add(Error(r, "Mã môn", id, "Đã tồn tại trong hệ thống."));
                 if (!TryByte(row, "Số tín chỉ", result, r, out var credit) || credit is < 1 or > 20) result.Errors.Add(Error(r, "Số tín chỉ", Val(row, "Số tín chỉ"), "Phải là số từ 1 đến 20."));
-                var faculty = ResolveOne(faculties, x => x.FacultyName, Val(row, "Tên khoa"), result, r, "Tên khoa");
+                var faculty = ResolveFaculty(faculties, x => x.FacultyName, Val(row, "Tên khoa"), result, r, "Tên khoa");
                 var facultyId = faculty?.FacultyId ?? 0;
                 list.Add(new E.Subject { SubjectId = id, SubjectName = name, Credit = credit, FacultyId = facultyId });
             }
@@ -263,7 +264,7 @@ namespace ExamInvigilationManagement.Application.Services
                 int? facultyId = null;
                 if (!string.IsNullOrWhiteSpace(Val(row, "Tên khoa")))
                 {
-                    var faculty = ResolveOne(faculties, x => x.FacultyName, Val(row, "Tên khoa"), result, r, "Tên khoa");
+                    var faculty = ResolveFaculty(faculties, x => x.FacultyName, Val(row, "Tên khoa"), result, r, "Tên khoa");
                     facultyId = faculty?.FacultyId;
                 }
                 DateTime? dob = null;
@@ -303,7 +304,7 @@ namespace ExamInvigilationManagement.Application.Services
                 var semester = ResolveOne(semesters.Where(x => year == null || x.AcademyYearId == year.AcademyYearId), x => x.SemesterName, Val(row, "Học kỳ"), result, r, "Học kỳ");
                 var semesterId = semester?.SemesterId ?? 0;
                 if (Required(result, r, "Mã môn", subjectId) && !subjects.Contains(subjectId)) result.Errors.Add(Error(r, "Mã môn", subjectId, "Không tồn tại."));
-                if (Required(result, r, "Lớp học phần", className) && className.Length > 10) result.Errors.Add(Error(r, "Lớp học phần", className, "Tối đa 10 ký tự."));
+                if (Required(result, r, "Lớp học phần", className) && className.Length > 30) result.Errors.Add(Error(r, "Lớp học phần", className, "Tối đa 30 ký tự."));
                 if (Required(result, r, "Nhóm", group) && group.Length > 2) result.Errors.Add(Error(r, "Nhóm", group, "Tối đa 2 ký tự."));
                 var key = $"{userName}|{semesterId}|{subjectId}|{className}|{group}";
                 if (!seen.Add(key)) result.Errors.Add(Error(r, "Dòng", key, "Bị trùng học phần mở trong file."));
@@ -320,6 +321,7 @@ namespace ExamInvigilationManagement.Application.Services
             var sessions = await _db.ExamSessions.Select(x => new { x.SessionId, x.SessionName, x.PeriodId }).ToListAsync(ct);
             var slots = await _db.ExamSlots.Select(x => new { x.SlotId, x.SlotName, x.SessionId }).ToListAsync(ct);
             var rooms = await _db.Rooms.Select(x => new { x.RoomId, x.RoomName, x.BuildingId }).ToListAsync(ct);
+            var examFormats = await _db.ExamFormats.Where(x => x.IsActive).Select(x => new { x.ExamFormatId, x.Code, x.Name }).ToListAsync(ct);
             var offerings = await _db.CourseOfferings.Include(x => x.User).Select(x => new { x.OfferingId, x.User.UserName, x.SemesterId, x.SubjectId, x.ClassName, x.GroupNumber }).ToListAsync(ct);
             var list = new List<E.ExamSchedule>();
             foreach (var row in rows)
@@ -339,6 +341,13 @@ namespace ExamInvigilationManagement.Application.Services
                 Required(result, r, "Mã giảng đường", buildingId);
                 var room = ResolveOne(rooms.Where(x => string.Equals(x.BuildingId, buildingId, StringComparison.OrdinalIgnoreCase)), x => x.RoomName, Val(row, "Tên phòng"), result, r, "Tên phòng");
                 var roomId = room?.RoomId ?? 0;
+                var examFormatValue = Val(row, "Hình thức thi").Trim();
+                Required(result, r, "Hình thức thi", examFormatValue);
+                var examFormat = examFormats.FirstOrDefault(x =>
+                    string.Equals(x.Code, examFormatValue, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(x.Name, examFormatValue, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(x.Code + " - " + x.Name, examFormatValue, StringComparison.OrdinalIgnoreCase));
+                if (examFormat == null) result.Errors.Add(Error(r, "Hình thức thi", examFormatValue, "Không tồn tại trong danh mục hình thức thi."));
                 var offering = offerings.FirstOrDefault(x => x.SemesterId == semesterId && string.Equals(x.SubjectId, Val(row, "Mã môn"), StringComparison.OrdinalIgnoreCase) && string.Equals(x.UserName, Val(row, "Tên đăng nhập giảng viên"), StringComparison.OrdinalIgnoreCase) && string.Equals(x.ClassName, Val(row, "Lớp học phần"), StringComparison.OrdinalIgnoreCase) && string.Equals(x.GroupNumber, Val(row, "Nhóm"), StringComparison.OrdinalIgnoreCase));
                 if (offering == null) result.Errors.Add(Error(r, "Học phần mở", "", "Không tìm thấy học phần mở theo Mã môn + Giảng viên + Lớp + Nhóm + Học kỳ."));
                 var offeringId = offering?.OfferingId ?? 0;
@@ -346,7 +355,7 @@ namespace ExamInvigilationManagement.Application.Services
                 var status = Val(row, "Trạng thái").Trim();
                 if (string.IsNullOrWhiteSpace(status)) status = "Chờ phân công";
                 if (!ValidScheduleStatuses.Contains(status)) result.Errors.Add(Error(r, "Trạng thái", status, "Không hợp lệ."));
-                list.Add(new E.ExamSchedule { OfferingId = offeringId, AcademyYearId = yearId, SemesterId = semesterId, PeriodId = periodId, SessionId = sessionId, SlotId = slotId, RoomId = roomId, ExamDate = examDate!.Value, Status = status });
+                list.Add(new E.ExamSchedule { OfferingId = offeringId, AcademyYearId = yearId, SemesterId = semesterId, PeriodId = periodId, SessionId = sessionId, SlotId = slotId, RoomId = roomId, ExamFormatId = examFormat?.ExamFormatId, ExamDate = examDate!.Value, Status = status });
             }
             return list;
         }
@@ -406,7 +415,7 @@ namespace ExamInvigilationManagement.Application.Services
                 if (!seenPos.Add((scheduleId, pos)) || occupiedPositions.Contains((scheduleId, pos))) result.Errors.Add(Error(r, "Vị trí", pos.ToString(), "Vị trí giám thị của lịch thi đã có người hoặc bị trùng trong file."));
                 if (user != null && assignedUsers.Contains((scheduleId, user.UserId))) result.Errors.Add(Error(r, "Tên đăng nhập giám thị", userName, "Giảng viên đã được phân công ở lịch này."));
                 var status = Val(row, "Trạng thái").Trim();
-                if (string.IsNullOrWhiteSpace(status)) status = "Chờ xác nhận";
+                if (string.IsNullOrWhiteSpace(status)) status = "Chưa gửi xác nhận";
                 if (!ValidInvigilatorStatuses.Contains(status)) result.Errors.Add(Error(r, "Trạng thái", status, "Không hợp lệ."));
                 list.Add(new E.ExamInvigilator { ExamScheduleId = scheduleId, AssigneeId = user?.UserId ?? 0, AssignerId = currentUserId, PositionNo = pos, Status = status, CreateAt = DateTime.Now });
             }
@@ -448,7 +457,12 @@ namespace ExamInvigilationManagement.Application.Services
                         .Where(x => !string.IsNullOrWhiteSpace(x))
                         .ToHashSet(StringComparer.OrdinalIgnoreCase);
                     return expectedHeaders.Count > 0 && expectedHeaders.All(rowHeaders.Contains);
-                }) ?? excelRows[0];
+                });
+
+                if (headerRow == null && module == "exam-schedule")
+                    return ReadSchoolExamScheduleRows(workbookPart, excelRows);
+
+                headerRow ??= excelRows[0];
 
                 var headerRowIndex = headerRow.RowIndex?.Value ?? 1;
                 var headers = headerRow.Elements<Cell>().Select(c => GetCellValue(workbookPart, c).Trim()).ToList();
@@ -469,6 +483,127 @@ namespace ExamInvigilationManagement.Application.Services
                 result.Errors.Add(Error(0, "File", file.FileName, "Không đọc được file .xlsx: " + ex.Message));
             }
             return rows;
+        }
+
+        private static List<Dictionary<string, string>> ReadSchoolExamScheduleRows(WorkbookPart workbookPart, List<Row> excelRows)
+        {
+            var rows = new List<Dictionary<string, string>>();
+            var headerRow = excelRows.FirstOrDefault(row =>
+            {
+                var values = ReadRowCells(workbookPart, row).Values.Select(NormalizeLookup).ToHashSet();
+                return values.Contains(NormalizeLookup("Mã học phần")) || values.Contains(NormalizeLookup("Ma HP"));
+            });
+
+            if (headerRow == null) return rows;
+
+            var headerIndex = headerRow.RowIndex?.Value ?? 1;
+            var headersByColumn = ReadRowCells(workbookPart, headerRow);
+            var title = excelRows.TakeWhile(x => (x.RowIndex?.Value ?? 0) < headerIndex)
+                .SelectMany(x => ReadRowCells(workbookPart, x).Values)
+                .FirstOrDefault(x => NormalizeLookup(x).Contains("danh sach hoc phan") || NormalizeLookup(x).Contains("danh sách học phần")) ?? string.Empty;
+
+            foreach (var row in excelRows.Where(x => (x.RowIndex?.Value ?? 0) > headerIndex))
+            {
+                var cells = ReadRowCells(workbookPart, row);
+                string Get(params string[] names)
+                {
+                    foreach (var name in names)
+                    {
+                        var column = headersByColumn.FirstOrDefault(x => HeaderMatches(x.Value, name)).Key;
+                        if (!string.IsNullOrWhiteSpace(column) && cells.TryGetValue(column, out var value)) return value.Trim();
+                    }
+                    return string.Empty;
+                }
+
+                var subjectId = Get("Mã học phần", "Ma HP");
+                if (string.IsNullOrWhiteSpace(subjectId)) continue;
+
+                var lecturer = Get("Cán bộ giảng dạy");
+                var roomRaw = Get("Tên phòng thi", "phòng thi");
+                var building = Get("Dãy phòng");
+                if (string.IsNullOrWhiteSpace(building)) building = ParseBuilding(roomRaw);
+
+                var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["__RowNumber"] = row.RowIndex?.Value.ToString() ?? "0",
+                    ["Mã môn"] = subjectId,
+                    ["Tên đăng nhập giảng viên"] = ParseLecturerCode(lecturer),
+                    ["Lớp học phần"] = Get("Lớp HP"),
+                    ["Nhóm"] = FirstNonEmpty(Get("Nhóm HP"), Get("Nhóm thi"), "01"),
+                    ["Năm học"] = InferAcademyYear(title, Get("Ngày thi")),
+                    ["Học kỳ"] = "Học kỳ 2",
+                    ["Đợt thi"] = InferPeriod(title),
+                    ["Buổi thi"] = Get("Buổi thi"),
+                    ["Ca thi"] = NormalizeSlotName(Get("Ca thi")),
+                    ["Mã giảng đường"] = building,
+                    ["Tên phòng"] = ParseRoomName(roomRaw, building),
+                    ["Ngày thi"] = Get("Ngày thi"),
+                    ["Hình thức thi"] = NormalizeExamFormat(Get("Tên hình thức thi")),
+                    ["Trạng thái"] = "Chờ phân công"
+                };
+
+                rows.Add(dict);
+            }
+
+            return rows;
+        }
+
+        private static Dictionary<string, string> ReadRowCells(WorkbookPart workbookPart, Row row)
+        {
+            return row.Elements<Cell>()
+                .Where(c => !string.IsNullOrWhiteSpace(c.CellReference?.Value))
+                .ToDictionary(c => GetColumnName(c.CellReference!.Value) ?? string.Empty, c => GetCellValue(workbookPart, c), StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static bool HeaderMatches(string? actual, string expected) => NormalizeHeader(actual) == NormalizeHeader(expected);
+        private static string NormalizeHeader(string? value) => NormalizeLookup(value).Replace("đ", "d").Replace(" ", string.Empty);
+        private static string FirstNonEmpty(params string[] values) => values.FirstOrDefault(x => !string.IsNullOrWhiteSpace(x)) ?? string.Empty;
+        private static string ParseLecturerCode(string value)
+        {
+            var code = (value ?? string.Empty).Split('-', 2)[0].Trim();
+            return string.IsNullOrWhiteSpace(code) ? "UNKNOWN" : code;
+        }
+        private static string ParseBuilding(string room)
+        {
+            room = (room ?? string.Empty).Trim();
+            var cut = room.IndexOfAny(['.', '-']);
+            return cut > 0 ? room[..cut] : room;
+        }
+        private static string ParseRoomName(string room, string building)
+        {
+            room = (room ?? string.Empty).Trim();
+            building = (building ?? string.Empty).Trim();
+            if (!string.IsNullOrWhiteSpace(building) && room.StartsWith(building, StringComparison.OrdinalIgnoreCase))
+                room = room[building.Length..].TrimStart('.', '-').Trim();
+            return room;
+        }
+        private static string NormalizeSlotName(string slot) => slot.Trim().StartsWith("Ca", StringComparison.OrdinalIgnoreCase) ? slot.Trim() : $"Ca {slot.Trim()}";
+        private static string InferAcademyYear(string title, string date)
+        {
+            var normalized = title ?? string.Empty;
+            var match = System.Text.RegularExpressions.Regex.Match(normalized, @"20\d{2}\s*-\s*20\d{2}");
+            if (match.Success) return match.Value.Replace(" ", string.Empty);
+            if (DateTime.TryParse(date, out var dt)) return $"{dt.Year - 1}-{dt.Year}";
+            return "2025-2026";
+        }
+        private static string InferPeriod(string title)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(title ?? string.Empty, @"[ĐD]ợt\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            return match.Success ? $"Đợt {match.Groups[1].Value}" : "Đợt 1";
+        }
+        private static string NormalizeExamFormat(string value)
+        {
+            var code = (value ?? string.Empty).Split('-', 2)[0].Trim().ToUpperInvariant();
+            return code switch
+            {
+                "TN" or "TN/TL" or "TN-TL" => "TN/TL",
+                "BTL" or "BTL/VD" or "BTL-VD" => "BTL-VD",
+                "TL" => "TL",
+                "PM" => "PM",
+                "PTH" => "PTH",
+                "VD" => "VD",
+                _ => string.IsNullOrWhiteSpace(code) ? value : code
+            };
         }
 
         private static Row BuildRow(uint index, IEnumerable<string> values)
@@ -513,6 +648,11 @@ namespace ExamInvigilationManagement.Application.Services
         private static bool TryDateTime(Dictionary<string, string> row, string column, ImportResultDto result, int rowNo, out DateTime? value)
         {
             var raw = Val(row, column);
+            if (double.TryParse(raw, NumberStyles.Number, CultureInfo.InvariantCulture, out var oaDate) && oaDate > 20000 && oaDate < 60000)
+            {
+                value = DateTime.FromOADate(oaDate).Date;
+                return true;
+            }
             if (DateTime.TryParseExact(raw, ["yyyy-MM-dd", "dd/MM/yyyy", "M/d/yyyy", "d/M/yyyy"], CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt) || DateTime.TryParse(raw, out dt)) { value = dt.Date; return true; }
             value = null; result.Errors.Add(Error(rowNo, column, raw, "Ngày không hợp lệ. Dùng yyyy-MM-dd hoặc dd/MM/yyyy.")); return false;
         }
@@ -526,6 +666,39 @@ namespace ExamInvigilationManagement.Application.Services
             if (matches.Count == 1) return matches[0];
             result.Errors.Add(Error(row, column, raw, matches.Count == 0 ? "Không tìm thấy dữ liệu khớp trong hệ thống." : "Tên bị trùng trong hệ thống hoặc trong phạm vi cha, cần kiểm tra lại dữ liệu."));
             return null;
+        }
+
+        private static T? ResolveFaculty<T>(IEnumerable<T> source, Func<T, string?> selector, string raw, ImportResultDto result, int row, string column) where T : class
+        {
+            if (!Required(result, row, column, raw)) return null;
+
+            var list = source.ToList();
+            var exact = list.Where(x => NormalizeLookup(selector(x)) == NormalizeLookup(raw)).ToList();
+            if (exact.Count == 1) return exact[0];
+
+            var normalized = NormalizeOrgUnitLookup(raw);
+            var matches = list.Where(x => NormalizeOrgUnitLookup(selector(x)) == normalized).ToList();
+            if (matches.Count == 1) return matches[0];
+
+            var preferred = matches
+                .Where(x => StartsWithOrgUnitPrefix(selector(x)))
+                .ToList();
+            if (preferred.Count == 1) return preferred[0];
+
+            result.Errors.Add(Error(row, column, raw, matches.Count == 0 ? "Không tìm thấy khoa/trường/trung tâm khớp trong hệ thống." : "Tên khoa/trường/trung tâm bị trùng theo tên rút gọn, cần gộp dữ liệu trước khi import."));
+            return null;
+        }
+
+        private static bool StartsWithOrgUnitPrefix(string? value)
+        {
+            var normalized = NormalizeLookup(value);
+            return normalized.StartsWith("khoa ") || normalized.StartsWith("trung tâm ") || normalized.StartsWith("trung tam ") || normalized.StartsWith("trường ") || normalized.StartsWith("truong ");
+        }
+
+        private static string NormalizeOrgUnitLookup(string? value)
+        {
+            var normalized = NormalizeLookup(value);
+            return System.Text.RegularExpressions.Regex.Replace(normalized, @"^(khoa|trung tâm|trung tam|trường|truong)\s+", string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         }
         private static string NormalizeLookup(string? value) => (value ?? string.Empty).Trim().ToLowerInvariant();
     }

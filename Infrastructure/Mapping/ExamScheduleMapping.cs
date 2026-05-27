@@ -14,6 +14,7 @@
                 SessionId = entity.SessionId,
                 RoomId = entity.RoomId,
                 OfferingId = entity.OfferingId,
+                ExamFormatId = entity.ExamFormatId,
                 ExamDate = entity.ExamDate,
                 Status = entity.Status
             };
@@ -31,6 +32,7 @@
                 SessionId = domain.SessionId,
                 RoomId = domain.RoomId,
                 OfferingId = domain.OfferingId,
+                ExamFormatId = domain.ExamFormatId,
                 ExamDate = domain.ExamDate,
                 Status = domain.Status
             };

@@ -1,0 +1,45 @@
+@model ExamInvigilationManagement.Common.PagedResult<ExamInvigilationManagement.Application.DTOs.Admin.Audit.AuditLogDto>
+
+<table class="table modern-table wide-table">
+    <thead>
+        <tr>
+            <th>Thời gian</th>
+            <th>Nghiệp vụ</th>
+            <th>Dữ liệu</th>
+            <th>Hành động</th>
+            <th>Người thực hiện</th>
+            <th>Nguồn</th>
+            <th class="col-action">Chi tiết</th>
+        </tr>
+    </thead>
+    <tbody>
+    @if (Model.Items.Any())
+    {
+        foreach (var item in Model.Items)
+        {
+            <tr>
+                <td class="cell-nowrap">@item.CreatedAt.ToString("dd/MM/yyyy HH:mm")</td>
+                <td>@EventLabel(item.EventType)</td>
+                <td><span class="fw-semibold">@EntityLabel(item.EntityName)</span><br /><span class="text-muted small">@ShortId(item.EntityId)</span></td>
+                <td><span class="badge rounded-pill bg-secondary">@ActionLabel(item.Action)</span></td>
+                <td>@(string.IsNullOrWhiteSpace(item.ActorFullName) ? item.ActorUserName ?? "Hệ thống" : item.ActorFullName)</td>
+                <td class="cell-wrap">@(item.Source ?? "-")</td>
+                <td class="col-action"><a asp-area="Admin" asp-controller="AuditLog" asp-action="Details" asp-route-id="@item.Id" class="btn-icon detail" title="Xem chi tiết"><i class="bi bi-eye"></i></a></td>
+            </tr>
+        }
+    }
+    else
+    {
+        <tr><td colspan="7" class="text-center py-4">Không có lịch sử phù hợp</td></tr>
+    }
+    </tbody>
+</table>
+
+@await Html.PartialAsync("_Pagination", Model)
+
+@functions {
+    private static string ShortId(string? value) => string.IsNullOrWhiteSpace(value) ? "-" : value.Length > 24 ? value[..24] + "..." : value;
+    private static string EventLabel(string value) => value switch { "CrudChange" => "Thay đổi dữ liệu", "ApprovalRequest" => "Gửi duyệt", "ApprovalReview" => "Duyệt lịch", "AutoAssignment" => "Phân công tự động", "InvigilatorSubstitution" => "Thay thế giám thị", _ => value };
+    private static string EntityLabel(string value) => value switch { "ExamSchedule" => "Lịch thi", "ExamInvigilator" => "Phân công", "InvigilatorSubstitution" => "Đề xuất thay thế", "CourseOffering" => "Học phần mở", "User" => "Tài khoản", "Room" => "Phòng thi", "ExamSlot" => "Ca thi", _ => value };
+    private static string ActionLabel(string value) => value switch { "Added" => "Thêm", "Modified" => "Sửa", "Deleted" => "Xóa", "RequestApproval" => "Gửi duyệt", "BulkReview" => "Duyệt hàng loạt", "SavePlan" => "Lưu phương án", "Approve" => "Duyệt", _ => value };
+}

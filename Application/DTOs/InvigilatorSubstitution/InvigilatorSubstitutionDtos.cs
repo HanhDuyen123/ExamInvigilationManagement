@@ -15,6 +15,7 @@ namespace ExamInvigilationManagement.Application.DTOs.InvigilatorSubstitution
         public string SubjectName { get; set; } = string.Empty;
         public string ClassName { get; set; } = string.Empty;
         public string GroupNumber { get; set; } = string.Empty;
+        public string ExamFormatDisplay { get; set; } = string.Empty;
         public DateTime ExamDate { get; set; }
         public int SemesterId { get; set; }
         public int PeriodId { get; set; }
@@ -72,6 +73,7 @@ namespace ExamInvigilationManagement.Application.DTOs.InvigilatorSubstitution
         public string SubjectName { get; set; } = string.Empty;
         public string ClassName { get; set; } = string.Empty;
         public string GroupNumber { get; set; } = string.Empty;
+        public string ExamFormatDisplay { get; set; } = string.Empty;
         public DateTime ExamDate { get; set; }
         public string SlotName { get; set; } = string.Empty;
         public TimeOnly TimeStart { get; set; }

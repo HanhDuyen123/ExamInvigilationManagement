@@ -79,10 +79,12 @@ namespace ExamInvigilationManagement.Application.Services
 
                     var score = 0;
                     if (isExactOwner) score += 1000;
+                    if (x.IsLecturerRole) score += 300;
                     score += Math.Max(0, 200 - currentLoad * 20);
                     score += Math.Max(0, 80 - sameDayLoad * 20);
 
                     var reasons = new List<string>();
+                    reasons.Add(x.IsLecturerRole ? "Vai trò giảng viên" : $"Nhân sự cùng khoa ({x.RoleName})");
                     if (isExactOwner) reasons.Add("Đang phụ trách lớp học phần này");
                     if (currentLoad == 0) reasons.Add("Chưa có lịch coi thi nào trong học kỳ");
                     else reasons.Add($"Đã có {currentLoad} lịch coi thi trong học kỳ");
@@ -99,18 +101,21 @@ namespace ExamInvigilationManagement.Application.Services
                         FullName = x.FullName,
                         FacultyId = x.FacultyId,
                         FacultyName = x.FacultyName,
+                        RoleName = x.RoleName,
+                        IsLecturerRole = x.IsLecturerRole,
                         CurrentLoad = currentLoad,
                         SameDayLoad = sameDayLoad,
                         IsExactOwner = isExactOwner,
                         CanSelect = canSelect,
                         Reason = string.Join("; ", reasons),
-                        RecommendationLabel = BuildRecommendationLabel(isExactOwner, currentLoad, sameDayLoad, canSelect),
+                        RecommendationLabel = BuildRecommendationLabel(isExactOwner, x.IsLecturerRole, currentLoad, sameDayLoad, canSelect),
                         WorkloadLabel = BuildWorkloadLabel(currentLoad, sameDayLoad),
                         AvailabilityLabel = BuildAvailabilityLabel(isBusy, isConflict, isAlreadyAssigned)
                     };
                 })
                 .OrderByDescending(x => x.CanSelect)
                 .ThenByDescending(x => x.IsExactOwner)
+                .ThenByDescending(x => x.IsLecturerRole)
                 .ThenBy(x => x.CurrentLoad)
                 .ThenBy(x => x.SameDayLoad)
                 .ThenBy(x => x.FullName)
@@ -143,6 +148,7 @@ namespace ExamInvigilationManagement.Application.Services
                     SubjectName = schedule.SubjectName,
                     ClassName = schedule.ClassName,
                     GroupNumber = schedule.GroupNumber,
+                    ExamFormatDisplay = schedule.ExamFormatDisplay,
                     ExamDate = schedule.ExamDate,
                     Status = schedule.Status,
                     CurrentInvigilatorCount = currentInvigilators.Count,
@@ -278,7 +284,7 @@ namespace ExamInvigilationManagement.Application.Services
                     AssignerId = request.AssignerId,
                     ExamScheduleId = schedule.ExamScheduleId,
                     PositionNo = kvp.Key,
-                    Status = "Chờ xác nhận",
+                    Status = "Chưa gửi xác nhận",
                     CreateAt = DateTime.Now,
                     UpdateAt = DateTime.Now
                 });
@@ -329,10 +335,11 @@ namespace ExamInvigilationManagement.Application.Services
             return string.Empty;
         }
 
-        private static string BuildRecommendationLabel(bool isExactOwner, int currentLoad, int sameDayLoad, bool canSelect)
+        private static string BuildRecommendationLabel(bool isExactOwner, bool isLecturerRole, int currentLoad, int sameDayLoad, bool canSelect)
         {
             if (!canSelect) return "Không phù hợp để chọn";
             if (isExactOwner) return "Rất phù hợp: đang phụ trách lớp";
+            if (!isLecturerRole) return "Dự phòng: nhân sự cùng khoa";
             if (currentLoad == 0 && sameDayLoad == 0) return "Nên chọn: lịch đang nhẹ";
             if (sameDayLoad == 0) return "Phù hợp: chưa coi thi trong ngày";
             return "Có thể chọn nếu cần cân đối nhân sự";

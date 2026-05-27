@@ -42,12 +42,16 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
     ExamScheduleApprovalSearchDto search,
     int page,
     int pageSize,
+    int? approverId = null,
     CancellationToken cancellationToken = default)
         {
             var query = _db.ExamSchedules
                 .AsNoTracking()
                 .Where(x => x.Offering.Subject.FacultyId == facultyId)
                 .Where(x => ReviewStatuses.Contains(x.Status));
+
+            if (approverId.HasValue)
+                query = query.Where(x => x.ExamScheduleApprovals.Any(a => a.ApproverId == approverId.Value));
 
             if (search.AcademyYearId.HasValue)
                 query = query.Where(x => x.AcademyYearId == search.AcademyYearId.Value);
@@ -94,6 +98,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     SubjectName = x.Offering.Subject.SubjectName,
                     x.Offering.ClassName,
                     x.Offering.GroupNumber,
+                    ExamFormatDisplay = x.ExamFormat != null ? x.ExamFormat.Code + " - " + x.ExamFormat.Name : string.Empty,
 
                     x.AcademyYearId,
                     AcademyYearName = x.AcademyYear.AcademyYearName,
@@ -169,6 +174,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     SubjectName = x.SubjectName,
                     ClassName = x.ClassName,
                     GroupNumber = x.GroupNumber,
+                    ExamFormatDisplay = x.ExamFormatDisplay,
 
                     AcademyYearId = x.AcademyYearId,
                     AcademyYearName = x.AcademyYearName,
@@ -252,6 +258,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
         public async Task<List<ExamScheduleApprovalIndexItemDto>> GetBulkTargetsAsync(
             int facultyId,
             IEnumerable<int> examScheduleIds,
+            int? approverId = null,
             CancellationToken cancellationToken = default)
         {
             var ids = examScheduleIds.Distinct().ToList();
@@ -260,7 +267,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 Status = "Tất cả"
             };
 
-            var page = await GetIndexPageAsync(facultyId, search, 1, int.MaxValue, cancellationToken);
+            var page = await GetIndexPageAsync(facultyId, search, 1, int.MaxValue, approverId, cancellationToken);
             return page.PagedItems.Items.Where(x => ids.Contains(x.ExamScheduleId)).ToList();
         }
 

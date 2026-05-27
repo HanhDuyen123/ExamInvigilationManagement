@@ -38,21 +38,7 @@ namespace ExamInvigilationManagement.Common.Workflow
         private static string NormalizeExamScheduleStatus(string? status)
         {
             if (string.IsNullOrWhiteSpace(status)) return ExamScheduleStatuses.PendingApproval;
-
-            return status.Trim().ToLowerInvariant() switch
-            {
-                "waitingassign" => ExamScheduleStatuses.WaitingAssign,
-                "chờ phân công" => ExamScheduleStatuses.WaitingAssign,
-                "missinginvigilator" => ExamScheduleStatuses.MissingInvigilator,
-                "thiếu giám thị" => ExamScheduleStatuses.MissingInvigilator,
-                "pending" or "pendingapproval" => ExamScheduleStatuses.PendingApproval,
-                "chờ duyệt" => ExamScheduleStatuses.PendingApproval,
-                "approved" => ExamScheduleStatuses.Approved,
-                "đã duyệt" => ExamScheduleStatuses.Approved,
-                "rejected" or "approvalrejected" => ExamScheduleStatuses.ApprovalRejected,
-                "từ chối duyệt" => ExamScheduleStatuses.ApprovalRejected,
-                _ => status.Trim()
-            };
+            return ExamScheduleStatuses.ToDisplay(status);
         }
     }
 }

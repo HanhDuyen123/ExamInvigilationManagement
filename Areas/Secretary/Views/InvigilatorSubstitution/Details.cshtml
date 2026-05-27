@@ -2,46 +2,85 @@
 
 @{
     ViewData["Title"] = "Chi tiết đề xuất thay thế";
+    var evaluation = Model.SubstituteEvaluation;
 }
 
-<div class="form-page wide">
-    <div class="form-header mb-4">
-        <div><h3 class="title-gradient">Chi tiết đề xuất thay thế</h3><div class="subtitle">Đối chiếu lịch thi, người từ chối và người được đề xuất</div></div>
-        <a asp-action="Index" class="btn-back"><i class="bi bi-arrow-left"></i> Back</a>
+<div class="form-page wide substitution-detail-page">
+    <div class="form-header mb-3">
+        <div><h3 class="title-gradient">Xử lý đề xuất thay thế</h3><div class="subtitle">Duyệt người được đề xuất hoặc chọn giảng viên khác cho cùng lịch thi.</div></div>
+        <a asp-action="Index" class="btn-back"><i class="bi bi-arrow-left"></i> Quay lại</a>
     </div>
 
-    <div class="row g-4">
-        <div class="col-lg-7">
-            <div class="form-card h-100">
-                <h5 class="mb-3">Thông tin lịch thi</h5>
-                <div class="row g-3">
-                    <div class="col-md-3"><label class="form-label">Mã môn</label><input class="input-modern" readonly value="@Model.SubjectId" /></div>
-                    <div class="col-md-9"><label class="form-label">Môn học</label><input class="input-modern" readonly value="@Model.SubjectName" /></div>
-                    <div class="col-md-4"><label class="form-label">Lớp/Nhóm</label><input class="input-modern" readonly value="@Model.ClassName / @Model.GroupNumber" /></div>
-                    <div class="col-md-4"><label class="form-label">Ngày thi</label><input class="input-modern" readonly value="@Model.ExamDate.ToString("dd/MM/yyyy")" /></div>
-                    <div class="col-md-4"><label class="form-label">Ca thi</label><input class="input-modern" readonly value="@Model.SlotName (@Model.TimeStart.ToString("HH\\:mm"))" /></div>
-                    <div class="col-md-4"><label class="form-label">Phòng</label><input class="input-modern" readonly value="@Model.RoomDisplay" /></div>
-                    <div class="col-md-4"><label class="form-label">Vị trí</label><input class="input-modern" readonly value="GT @Model.PositionNo" /></div>
-                    <div class="col-md-4"><label class="form-label">Trạng thái lịch</label><input class="input-modern" readonly value="@Model.ScheduleStatus" /></div>
-                </div>
+    <div class="substitution-summary mb-3">
+        <div><span class="summary-label">Lịch thi</span><strong>@Model.SubjectId - @Model.SubjectName</strong><small>Lớp @Model.ClassName, nhóm @Model.GroupNumber · @(string.IsNullOrWhiteSpace(Model.ExamFormatDisplay) ? "Chưa có hình thức thi" : Model.ExamFormatDisplay)</small></div>
+        <div><span class="summary-label">Thời gian</span><strong>@Model.ExamDate.ToString("dd/MM/yyyy")</strong><small>@Model.SlotName (@Model.TimeStart.ToString(@"HH\:mm")) · @Model.RoomDisplay</small></div>
+        <div><span class="summary-label">Trạng thái</span><strong>@Model.ScheduleStatus</strong><small>Vị trí GT @Model.PositionNo</small></div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-5">
+            <div class="form-card compact-card h-100">
+                <h5 class="mb-3">Thông tin đề xuất</h5>
+                <div class="info-row"><span>Người từ chối</span><strong>@Model.RequestUserName (@Model.RequestUserAccount)</strong></div>
+                <div class="info-row"><span>Người được đề xuất</span><strong>@Model.SubstituteUserName (@Model.SubstituteUserAccount)</strong></div>
+                <div class="info-row"><span>Lý do từ chối</span><strong>@(Model.ResponseNote ?? "Không có ghi chú")</strong></div>
+                <div class="info-row"><span>Trạng thái đề xuất</span><strong><span class="badge rounded-pill @(Model.Status == "Đã duyệt" ? "bg-success" : Model.Status == "Từ chối duyệt" ? "bg-danger" : "bg-warning text-dark")">@Model.Status</span></strong></div>
             </div>
         </div>
-        <div class="col-lg-5">
-            <div class="form-card h-100">
-                <h5 class="mb-3">Đề xuất</h5>
-                <div class="mb-3"><label class="form-label">Người từ chối</label><input class="input-modern" readonly value="@Model.RequestUserName (@Model.RequestUserAccount)" /></div>
-                <div class="mb-3"><label class="form-label">Lý do từ chối</label><textarea class="input-modern" rows="2" readonly>@(Model.ResponseNote ?? "Không có ghi chú")</textarea></div>
-                <div class="mb-3"><label class="form-label">Người thay thế được đề xuất</label><input class="input-modern" readonly value="@Model.SubstituteUserName (@Model.SubstituteUserAccount)" /></div>
-                <div class="mb-3"><label class="form-label">Đánh giá điều kiện</label><div class="alert @(Model.CanApprove ? "alert-success" : "alert-warning") mb-0">@Model.ApproveReason<br />@if (Model.SubstituteEvaluation != null) { <span>Tải kỳ: <strong>@Model.SubstituteEvaluation.CurrentLoad</strong> | Ca trong ngày: <strong>@Model.SubstituteEvaluation.SameDayLoad</strong></span> }</div></div>
-                <div class="mb-3"><label class="form-label">Trạng thái đề xuất</label><div><span class="badge rounded-pill @(Model.Status == "Đã duyệt" ? "bg-success" : Model.Status == "Từ chối duyệt" ? "bg-danger" : "bg-warning text-dark")">@Model.Status</span></div></div>
+
+        <div class="col-lg-7">
+            <div class="form-card compact-card h-100">
+                <h5 class="mb-3">Đánh giá người thay thế</h5>
+                <div class="replacement-status @(Model.CanApprove ? "ok" : "warn")">
+                    <strong>@(Model.CanApprove ? "Có thể duyệt" : "Cần chọn người khác")</strong>
+                    <span>@ShortReason(Model.ApproveReason)</span>
+                </div>
+
+                @if (evaluation != null)
+                {
+                    <div class="metric-grid mt-3">
+                        <div><span>Học kỳ</span><strong>@evaluation.CurrentLoad lịch</strong></div>
+                        <div><span>Đợt thi</span><strong>@evaluation.PeriodLoad lịch</strong></div>
+                        <div><span>Ngày thi</span><strong>@evaluation.SameDayLoad lịch</strong></div>
+                        <div><span>Khả dụng</span><strong>@evaluation.AvailabilityLabel</strong></div>
+                    </div>
+                }
+
                 @if (Model.Status == "Đã đề xuất")
                 {
                     <div class="d-flex flex-wrap gap-2 mt-4">
-                        <form asp-action="Approve" asp-route-id="@Model.SubstitutionId" method="post">@Html.AntiForgeryToken()<button class="btn-submit" type="submit" @(Model.CanApprove ? "" : "disabled")><i class="bi bi-check2-circle"></i> Duyệt thay thế</button></form>
-                        <form asp-action="Reject" asp-route-id="@Model.SubstitutionId" method="post">@Html.AntiForgeryToken()<button class="btn btn-danger rounded-3 px-4" type="submit"><i class="bi bi-x-circle"></i> Từ chối</button></form>
+                        <form asp-action="Approve" asp-route-id="@Model.SubstitutionId" method="post">@Html.AntiForgeryToken()<button class="btn-submit" type="submit" @(Model.CanApprove ? "" : "disabled")><i class="bi bi-check2-circle"></i> Duyệt người được đề xuất</button></form>
+                        <a class="btn btn-outline-primary rounded-3 px-4" href="@Url.Action("Assign", "ManualAssignment", new { area = "Secretary", scheduleId = Model.ExamScheduleId, substitutionId = Model.SubstitutionId })"><i class="bi bi-person-plus"></i> Chọn người khác</a>
+                        <form asp-action="Reject" asp-route-id="@Model.SubstitutionId" method="post">@Html.AntiForgeryToken()<button class="btn btn-outline-danger rounded-3 px-4" type="submit"><i class="bi bi-x-circle"></i> Không xử lý đề xuất này</button></form>
                     </div>
                 }
             </div>
         </div>
     </div>
 </div>
+
+<style>
+    .substitution-detail-page .compact-card { padding:1rem; }
+    .substitution-summary { display:grid; grid-template-columns:1.6fr 1fr .8fr; gap:.75rem; border:1px solid #e2e8f0; background:#fff; padding:.85rem 1rem; border-radius:14px; }
+    .substitution-summary strong, .substitution-summary small { display:block; }
+    .substitution-summary small { color:#64748b; margin-top:.15rem; }
+    .summary-label { display:block; color:#64748b; font-size:.76rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; margin-bottom:.15rem; }
+    .info-row { display:grid; grid-template-columns:140px 1fr; gap:.75rem; padding:.65rem 0; border-bottom:1px solid #eef2f7; }
+    .info-row:last-child { border-bottom:0; }
+    .info-row span { color:#64748b; }
+    .replacement-status { border-radius:12px; padding:.8rem 1rem; display:grid; gap:.2rem; }
+    .replacement-status.ok { background:#dcfce7; color:#166534; }
+    .replacement-status.warn { background:#fef3c7; color:#92400e; }
+    .metric-grid { display:grid; grid-template-columns:repeat(4, minmax(120px,1fr)); gap:.7rem; }
+    .metric-grid > div { border:1px solid #e2e8f0; border-radius:12px; padding:.7rem; background:#fff; }
+    .metric-grid span { display:block; color:#64748b; font-size:.78rem; }
+    @@media (max-width: 900px) { .substitution-summary, .metric-grid { grid-template-columns:1fr; } .info-row { grid-template-columns:1fr; } }
+</style>
+
+@functions {
+    private static string ShortReason(string? reason)
+    {
+        if (string.IsNullOrWhiteSpace(reason)) return "Không có ghi chú đánh giá.";
+        return reason.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).FirstOrDefault() ?? reason;
+    }
+}

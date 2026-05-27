@@ -60,6 +60,9 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     SubjectName = x.Offering.Subject.SubjectName,
                     ClassName = x.Offering.ClassName,
                     GroupNumber = x.Offering.GroupNumber,
+                    ExamFormatDisplay = x.ExamFormat != null
+                        ? x.ExamFormat.Code + " - " + x.ExamFormat.Name
+                        : string.Empty,
 
                     ExamDate = x.ExamDate,
                     Status = x.Status
@@ -76,7 +79,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .Where(x =>
                     x.IsActive &&
                     x.FacultyId == facultyId &&
-                    x.Role.RoleName == "Giảng viên")
+                    x.Role.RoleName != "Admin")
                 .Select(x => new AutoAssignLecturerDto
                 {
                     UserId = x.UserId,
@@ -84,6 +87,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     FullName = x.Information.LastName + " " + x.Information.FirstName,
                     FacultyId = x.FacultyId,
                     FacultyName = x.Faculty != null ? x.Faculty.FacultyName : string.Empty,
+                    RoleName = x.Role.RoleName,
                     IsActive = x.IsActive
                 })
                 .ToListAsync(cancellationToken);
@@ -279,7 +283,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 _db.OutboxMessages.Add(new Data.Entities.OutboxMessage
                 {
                     Type = "AutoAssignmentSaved",
-                    Payload = $"{{\"assignmentCount\":{plan.NewInvigilators.Count},\"scheduleCount\":{plan.ScheduleStatuses.Count}}}",
+                    Payload = $"{{\"assignmentCount\":{plan.NewInvigilators.Count},\"scheduleCount\":{plan.ScheduleStatuses.Count},\"recipientIds\":[{plan.NewInvigilators.FirstOrDefault()?.AssignerId ?? 0}],\"createdBy\":{plan.NewInvigilators.FirstOrDefault()?.AssignerId ?? 0}}}",
                     Status = "Pending",
                     RetryCount = 0,
                     CreatedAt = now,

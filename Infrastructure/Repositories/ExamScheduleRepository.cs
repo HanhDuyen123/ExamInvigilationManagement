@@ -30,6 +30,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .Include(x => x.Slot)
                 .Include(x => x.Room)
                     .ThenInclude(r => r.Building)
+                .Include(x => x.ExamFormat)
                 .Include(x => x.Offering)
                     .ThenInclude(o => o.Subject)
                         .ThenInclude(s => s.Faculty)
@@ -92,6 +93,9 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             if (!string.IsNullOrWhiteSpace(filter.GroupNumber))
                 query = query.Where(x => x.Offering.GroupNumber.Contains(filter.GroupNumber));
 
+            if (filter.ExamFormatId.HasValue)
+                query = query.Where(x => x.ExamFormatId == filter.ExamFormatId.Value);
+
             if (!string.IsNullOrWhiteSpace(filter.BuildingId))
                 query = query.Where(x => x.Room.BuildingId == filter.BuildingId);
 
@@ -123,6 +127,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     (x.Offering.ClassName ?? "").ToLower().Contains(kw) ||
                     (x.Offering.GroupNumber ?? "").ToLower().Contains(kw) ||
                     (x.Offering.User.UserName ?? "").ToLower().Contains(kw) ||
+                    (x.ExamFormat != null ? (x.ExamFormat.Code + " " + x.ExamFormat.Name) : "").ToLower().Contains(kw) ||
                     ((x.Offering.User.Information != null
                         ? (x.Offering.User.Information.LastName + " " + x.Offering.User.Information.FirstName)
                         : "")).ToLower().Contains(kw) ||
@@ -159,6 +164,9 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     Credit = x.Offering.Subject.Credit,
                     FacultyId = x.Offering.Subject.FacultyId,
                     FacultyName = x.Offering.Subject.Faculty != null ? x.Offering.Subject.Faculty.FacultyName : null,
+                    ExamFormatId = x.ExamFormatId,
+                    ExamFormatCode = x.ExamFormat != null ? x.ExamFormat.Code : null,
+                    ExamFormatName = x.ExamFormat != null ? x.ExamFormat.Name : null,
                     UserName = x.Offering.User.Information != null
                         ? $"{x.Offering.User.Information.LastName} {x.Offering.User.Information.FirstName}"
                         : x.Offering.User.UserName,
@@ -249,6 +257,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .Include(e => e.Slot)
                 .Include(e => e.Room)
                     .ThenInclude(r => r.Building)
+                .Include(e => e.ExamFormat)
                 .Include(e => e.Offering)
                     .ThenInclude(o => o.Subject)
                         .ThenInclude(s => s.Faculty)
@@ -290,6 +299,9 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 Credit = x.Offering?.Subject?.Credit,
                 FacultyId = x.Offering?.Subject?.FacultyId,
                 FacultyName = x.Offering?.Subject?.Faculty?.FacultyName,
+                ExamFormatId = x.ExamFormatId,
+                ExamFormatCode = x.ExamFormat?.Code,
+                ExamFormatName = x.ExamFormat?.Name,
                 UserName = x.Offering?.User?.Information != null
                     ? $"{x.Offering.User.Information.LastName} {x.Offering.User.Information.FirstName}"
                     : x.Offering?.User?.UserName,
@@ -380,6 +392,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             data.SessionId = entity.SessionId;
             data.RoomId = entity.RoomId;
             data.OfferingId = entity.OfferingId;
+            data.ExamFormatId = entity.ExamFormatId;
             data.ExamDate = entity.ExamDate;
             data.Status = entity.Status;
 
@@ -415,6 +428,26 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
         public async Task<bool> RoomExistsAsync(int roomId)
         {
             return await _context.Rooms.AnyAsync(x => x.RoomId == roomId);
+        }
+
+        public async Task<bool> ExamFormatExistsAsync(int examFormatId)
+        {
+            return await _context.ExamFormats.AnyAsync(x => x.ExamFormatId == examFormatId && x.IsActive);
+        }
+
+        public async Task<List<ExamFormatDto>> GetExamFormatsAsync(CancellationToken cancellationToken = default)
+        {
+            return await _context.ExamFormats
+                .AsNoTracking()
+                .Where(x => x.IsActive)
+                .OrderBy(x => x.ExamFormatId)
+                .Select(x => new ExamFormatDto
+                {
+                    Id = x.ExamFormatId,
+                    Code = x.Code,
+                    Name = x.Name
+                })
+                .ToListAsync(cancellationToken);
         }
 
         public async Task<ExamScheduleValidationContextDto?> GetOfferingContextAsync(int offeringId)
@@ -548,7 +581,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 _context.OutboxMessages.Add(new Data.Entities.OutboxMessage
                 {
                     Type = "ApprovalRequestCreated",
-                    Payload = $"{{\"scheduleCount\":{ids.Count},\"approverCount\":{deans.Count}}}",
+                    Payload = $"{{\"scheduleCount\":{ids.Count},\"approverCount\":{deans.Count},\"recipientIds\":[{string.Join(",", deans)}],\"relatedId\":{approvalRequest?.ApprovalRequestId ?? 0},\"createdBy\":{requestedById ?? 0}}}",
                     Status = "Pending",
                     RetryCount = 0,
                     CreatedAt = now,

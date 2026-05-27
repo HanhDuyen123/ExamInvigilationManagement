@@ -1,0 +1,32 @@
+@model ExamInvigilationManagement.ViewModel.CrudIndexViewModel
+
+@{
+    ViewData["Title"] = "Theo dõi Outbox";
+}
+
+@await Html.PartialAsync("_CrudIndex", Model)
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script>
+        $(function () {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('status')) $('#status').val(params.get('status'));
+            CrudPage.init({
+                api: '@Url.Action("GetList", "Outbox", new { area = "Admin" })',
+                tableId: '#crudTable',
+                filterSelector: '.crud-filter',
+                pageSize: '#pageSize',
+                extraData: function () {
+                    return {
+                        keyword: $('#keyword').val()?.trim() || null,
+                        status: $('#status').val() || null,
+                        type: $('#type').val()?.trim() || null,
+                        fromDate: $('#fromDate').val() || null,
+                        toDate: $('#toDate').val() || null
+                    };
+                }
+            });
+        });
+    </script>
+}

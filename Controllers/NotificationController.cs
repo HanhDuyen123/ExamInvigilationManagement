@@ -64,10 +64,12 @@ namespace ExamInvigilationManagement.Controllers
             var userId = GetCurrentUserId();
             if (userId is null) return Unauthorized();
 
-            var item = await _service.GetByIdAsync(id, userId.Value, cancellationToken);
+            var item = await _service.GetByIdAsync(id, userId.Value, User.IsInRole("Admin"), cancellationToken);
             if (item is null) return NotFound();
 
-            await _service.MarkAsReadAsync(id, userId.Value, cancellationToken);
+            if (item.UserId == userId.Value)
+                await _service.MarkAsReadAsync(id, userId.Value, cancellationToken);
+
             return Redirect(NotificationRouteHelper.ResolveUrl(item.Type, item.RelatedId));
         }
 

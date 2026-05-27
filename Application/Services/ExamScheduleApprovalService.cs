@@ -47,6 +47,7 @@ namespace ExamInvigilationManagement.Application.Services
                 normalizedSearch,
                 page,
                 pageSize,
+                context.RoleName.Equals(RoleDean, StringComparison.OrdinalIgnoreCase) ? userId : null,
                 cancellationToken);
 
             return new ExamScheduleApprovalIndexPageDto
@@ -96,6 +97,7 @@ namespace ExamInvigilationManagement.Application.Services
             var targets = await _repository.GetBulkTargetsAsync(
                 context.FacultyId.Value,
                 selectedIds,
+                context.RoleName.Equals(RoleDean, StringComparison.OrdinalIgnoreCase) ? userId : null,
                 cancellationToken);
 
             if (targets.Count != selectedIds.Count)

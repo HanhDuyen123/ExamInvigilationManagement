@@ -62,9 +62,10 @@ namespace ExamInvigilationManagement.Application.Services
         public Task<NotificationDetailDto?> GetByIdAsync(
             int id,
             int userId,
+            bool canViewAll,
             CancellationToken cancellationToken = default)
         {
-            return _notificationRepository.GetByIdAsync(id, userId, cancellationToken);
+            return _notificationRepository.GetByIdAsync(id, userId, canViewAll, cancellationToken);
         }
 
         public async Task<bool> MarkAsReadAsync(

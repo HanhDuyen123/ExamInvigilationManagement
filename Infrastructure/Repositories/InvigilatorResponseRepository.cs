@@ -1,6 +1,7 @@
 using ExamInvigilationManagement.Application.DTOs.InvigilatorResponse;
 using ExamInvigilationManagement.Application.Interfaces.Repositories;
 using ExamInvigilationManagement.Common;
+using ExamInvigilationManagement.Common.Workflow;
 using ExamInvigilationManagement.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -28,6 +29,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             var query = _db.ExamInvigilators
                 .AsNoTracking()
                 .Where(x => x.AssigneeId == userId)
+                .Where(x => x.ExamSchedule.Status == "Đã duyệt" && x.ConfirmationSentAt.HasValue)
                 .Select(x => new
                 {
                     Invigilator = x,
@@ -83,6 +85,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 query = query.Where(x =>
                     (x.Schedule.Offering.SubjectId ?? "").ToLower().Contains(keyword) ||
                     (x.Schedule.Offering.Subject.SubjectName ?? "").ToLower().Contains(keyword) ||
+                    (x.Schedule.ExamFormat != null ? (x.Schedule.ExamFormat.Code + " " + x.Schedule.ExamFormat.Name) : "").ToLower().Contains(keyword) ||
                     (x.Schedule.Offering.ClassName ?? "").ToLower().Contains(keyword));
             }
 
@@ -95,6 +98,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 SubjectName = x.Schedule.Offering.Subject.SubjectName,
                 ClassName = x.Schedule.Offering.ClassName,
                 GroupNumber = x.Schedule.Offering.GroupNumber,
+                ExamFormatDisplay = x.Schedule.ExamFormat != null ? x.Schedule.ExamFormat.Code + " - " + x.Schedule.ExamFormat.Name : string.Empty,
                 BuildingId = x.Schedule.Room.BuildingId,
                 RoomName = x.Schedule.Room.RoomName,
                 AcademyYearName = x.Schedule.AcademyYear.AcademyYearName,
@@ -141,6 +145,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             {
                 item.Status = "Chờ xác nhận";
                 item.UpdateAt = DateTime.Now;
+                item.ConfirmationSentAt = DateTime.Now;
             }
 
             await _db.SaveChangesAsync(cancellationToken);
@@ -150,7 +155,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
         {
             var deadline = DateTime.Now.Subtract(responseWindow);
             var targets = await _db.ExamInvigilators
-                .Where(x => x.Status == "Chờ xác nhận" && x.UpdateAt.HasValue && x.UpdateAt.Value <= deadline && !x.InvigilatorResponses.Any(r => r.UserId == x.AssigneeId))
+                .Where(x => x.Status == "Chờ xác nhận" && x.ConfirmationSentAt.HasValue && x.ConfirmationSentAt.Value <= deadline && !x.InvigilatorResponses.Any(r => r.UserId == x.AssigneeId))
                 .ToListAsync(cancellationToken);
 
             foreach (var target in targets)
@@ -186,6 +191,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     AssigneeId = x.AssigneeId,
                     FacultyId = x.ExamSchedule.Offering.Subject.FacultyId,
                     ScheduleStatus = x.ExamSchedule.Status,
+                    ConfirmationSentAt = x.ConfirmationSentAt,
                     SubjectId = x.ExamSchedule.Offering.SubjectId
                 })
                 .ToListAsync(cancellationToken);
@@ -208,6 +214,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 var response = existing.FirstOrDefault(x => x.ExamInvigilatorId == id);
                 if (response == null)
                 {
+                    InvigilatorWorkflowGuard.EnsureResponseStatusChange(null, status, $"Phản hồi coi thi #{id}");
                     _db.InvigilatorResponses.Add(new Data.Entities.InvigilatorResponse
                     {
                         ExamInvigilatorId = id,
@@ -219,6 +226,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 }
                 else
                 {
+                    InvigilatorWorkflowGuard.EnsureResponseStatusChange(response.Status, status, $"Phản hồi coi thi #{id}");
                     response.Status = status;
                     response.Note = note;
                     response.ResponseAt = DateTime.Now;
@@ -284,6 +292,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     SubjectName = x.Offering.Subject.SubjectName,
                     ClassName = x.Offering.ClassName,
                     GroupNumber = x.Offering.GroupNumber,
+                    ExamFormatDisplay = x.ExamFormat != null ? x.ExamFormat.Code + " - " + x.ExamFormat.Name : string.Empty,
                     BuildingId = x.Room.BuildingId,
                     RoomName = x.Room.RoomName,
                     ExamDate = x.ExamDate,

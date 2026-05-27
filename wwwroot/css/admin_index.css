@@ -180,13 +180,13 @@
 
 .modern-table {
     width: 100%;
-    min-width: max-content;
-    table-layout: auto;
+    min-width: 0;
+    table-layout: fixed;
     border-collapse: separate;
     border-spacing: 0 4px;
 }
     .modern-table.wide-table {
-        min-width: max-content;
+        min-width: 0;
     }
 
     /* mỗi row */
@@ -220,12 +220,16 @@
         font-size: 12px;
         text-transform: uppercase;
         color: #94a3b8;
-        white-space: nowrap;
+        white-space: normal;
+        overflow-wrap: anywhere;
     }
 
     .modern-table td {
         padding: 9px 11px;
         vertical-align: middle;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        word-break: normal;
     }
 
     .modern-table .col-id,
@@ -233,7 +237,7 @@
     .modern-table .col-status,
     .modern-table .col-date,
     .modern-table .col-action {
-        white-space: nowrap;
+        white-space: normal;
         width: auto;
     }
 
@@ -242,14 +246,14 @@
     .modern-table .col-status { min-width: 96px; text-align: center; }
     .modern-table .col-date { min-width: 104px; text-align: center; }
     .modern-table .col-action { min-width: 84px; }
-    .modern-table .col-code { width: auto; min-width: 92px; white-space: nowrap; }
-    .modern-table .col-year { width: auto; min-width: 104px; white-space: nowrap; }
-    .modern-table .col-phone { width: auto; min-width: 112px; white-space: nowrap; }
-    .modern-table .col-role { min-width: 120px; }
-    .modern-table .col-person { min-width: 150px; }
-    .modern-table .col-faculty { min-width: 150px; }
-    .modern-table .col-email { min-width: 180px; }
-    .modern-table .col-name { min-width: 180px; }
+    .modern-table .col-code { width: auto; min-width: 0; white-space: normal; }
+    .modern-table .col-year { width: auto; min-width: 0; white-space: normal; }
+    .modern-table .col-phone { width: auto; min-width: 0; white-space: normal; }
+    .modern-table .col-role { min-width: 0; }
+    .modern-table .col-person { min-width: 0; }
+    .modern-table .col-faculty { min-width: 0; }
+    .modern-table .col-email { min-width: 0; }
+    .modern-table .col-name { min-width: 0; }
 
     .modern-table .badge {
         white-space: nowrap;
@@ -482,7 +486,8 @@
         display: none;
         max-height: 200px;
         overflow: auto;
-        width: 100%;
+        width: max(100%, min(420px, calc(100vw - 32px)));
+        max-width: calc(100vw - 32px);
         z-index: 1060;
     }
 

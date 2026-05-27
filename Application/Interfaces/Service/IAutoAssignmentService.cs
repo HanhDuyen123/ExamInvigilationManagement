@@ -7,5 +7,9 @@ namespace ExamInvigilationManagement.Application.Interfaces.Service
         Task<AutoAssignResultDto> AutoAssignAsync(
             AutoAssignRequestDto request,
             CancellationToken cancellationToken = default);
+
+        Task<AutoAssignResultDto> PreviewAsync(
+            AutoAssignRequestDto request,
+            CancellationToken cancellationToken = default);
     }
 }

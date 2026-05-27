@@ -1,0 +1,24 @@
+<div class="role-filter-compact">
+    <div class="role-filter-main email-notification-search-grid">
+        <div class="search-modern search-field search-field-wide">
+            <i class="bi bi-search"></i>
+            <input type="text" id="keyword" class="crud-filter" placeholder="Tìm nghiệp vụ, bảng, mã dữ liệu, ghi chú..." />
+        </div>
+        <div class="search-field"><input id="entityName" class="input-modern crud-filter" placeholder="Bảng dữ liệu" /></div>
+        <div class="search-field">
+            <select id="action" class="select-modern crud-filter">
+                <option value="">-- Hành động --</option>
+                <option value="Added">Thêm</option>
+                <option value="Modified">Sửa</option>
+                <option value="Deleted">Xóa</option>
+                <option value="RequestApproval">Gửi duyệt</option>
+                <option value="BulkReview">Duyệt hàng loạt</option>
+                <option value="SavePlan">Lưu phương án</option>
+                <option value="Approve">Duyệt</option>
+            </select>
+        </div>
+        <div class="search-field"><input type="date" id="fromDate" class="input-modern crud-filter" /></div>
+        <div class="search-field"><input type="date" id="toDate" class="input-modern crud-filter" /></div>
+        <div class="search-field search-page-size"><select id="pageSize" class="select-modern"><option value="10" selected>10/trang</option><option value="20">20/trang</option><option value="50">50/trang</option><option value="100">100/trang</option></select></div>
+    </div>
+</div>

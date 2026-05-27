@@ -11,6 +11,7 @@ namespace ExamInvigilationManagement.Application.Interfaces.Service
         Task CreateAsync(ExamScheduleDto dto);
         Task UpdateAsync(ExamScheduleDto dto);
         Task DeleteAsync(int id);
+        Task<List<ExamFormatDto>> GetExamFormatsAsync(CancellationToken cancellationToken = default);
         Task MarkApprovalRequestedAsync(IEnumerable<int> scheduleIds, IEnumerable<int> approverIds, int? requestedById = null, int? facultyId = null, string? note = null, CancellationToken cancellationToken = default);
     }
 }

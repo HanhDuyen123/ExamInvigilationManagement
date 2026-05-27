@@ -33,6 +33,7 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
         Task<NotificationDetailDto?> GetByIdAsync(
             int id,
             int userId,
+            bool canViewAll,
             CancellationToken cancellationToken = default);
 
         Task<bool> MarkAsReadAsync(

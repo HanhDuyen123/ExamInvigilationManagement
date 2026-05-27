@@ -27,6 +27,8 @@ public partial class ExamSchedule
 
     public int OfferingId { get; set; }
 
+    public int? ExamFormatId { get; set; }
+
     [Column(TypeName = "datetime")]
     public DateTime ExamDate { get; set; }
 
@@ -42,6 +44,10 @@ public partial class ExamSchedule
 
     [InverseProperty("ExamSchedule")]
     public virtual ICollection<ExamScheduleApproval> ExamScheduleApprovals { get; set; } = new List<ExamScheduleApproval>();
+
+    [ForeignKey("ExamFormatId")]
+    [InverseProperty("ExamSchedules")]
+    public virtual ExamFormat? ExamFormat { get; set; }
 
     [ForeignKey("OfferingId")]
     [InverseProperty("ExamSchedules")]

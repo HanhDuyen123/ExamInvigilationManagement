@@ -139,9 +139,16 @@ builder.Services.Configure<EmailSettings>(
     builder.Configuration.GetSection("EmailSettings"));
 
 builder.Services.AddSignalR();
+builder.Services.AddHostedService<OutboxBackgroundService>();
 
 
 var app = builder.Build();
+
+//using (var scope = app.Services.CreateScope())
+//{
+//    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+//    await EnsureOperationalColumnsAsync(db);
+//}
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
@@ -199,3 +206,5 @@ app.MapControllerRoute(
 //    pattern: "{controller=Home}/{action=Index}/{id?}");
 
 app.Run();
+
+

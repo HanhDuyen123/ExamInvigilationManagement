@@ -30,6 +30,7 @@
         <div class="detail-grid">
             <div class="detail-item"><span>Giảng viên</span><strong>@(Model.UserName ?? "-")</strong></div>
             <div class="detail-item"><span>Khoa</span><strong>@(Model.FacultyName ?? "-")</strong></div>
+            <div class="detail-item"><span>Hình thức thi</span><strong>@(string.IsNullOrWhiteSpace(Model.ExamFormatCode) ? Model.ExamFormatName ?? "-" : $"{Model.ExamFormatCode} - {Model.ExamFormatName}")</strong></div>
             <div class="detail-item"><span>Năm học</span><strong>@(Model.AcademyYearName ?? "-")</strong></div>
             <div class="detail-item"><span>Học kỳ</span><strong>@(Model.SemesterName ?? "-")</strong></div>
         </div>

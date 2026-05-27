@@ -26,6 +26,7 @@
         public string SubjectName { get; set; } = string.Empty;
         public string ClassName { get; set; } = string.Empty;
         public string GroupNumber { get; set; } = string.Empty;
+        public string ExamFormatDisplay { get; set; } = string.Empty;
 
         public DateTime ExamDate { get; set; }
         public string Status { get; set; } = string.Empty;

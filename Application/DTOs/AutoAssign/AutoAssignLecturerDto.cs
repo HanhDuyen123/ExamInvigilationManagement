@@ -10,6 +10,9 @@
         public int? FacultyId { get; set; }
         public string FacultyName { get; set; } = string.Empty;
 
+        public string RoleName { get; set; } = string.Empty;
+        public bool IsLecturerRole => string.Equals(RoleName, "Giảng viên", StringComparison.OrdinalIgnoreCase);
+
         public bool IsActive { get; set; }
     }
 }

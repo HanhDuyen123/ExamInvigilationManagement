@@ -27,6 +27,7 @@ namespace ExamInvigilationManagement.Application.DTOs.InvigilatorResponse
         public string? SubjectName { get; set; }
         public string? ClassName { get; set; }
         public string? GroupNumber { get; set; }
+        public string? ExamFormatDisplay { get; set; }
         public string? BuildingId { get; set; }
         public string? RoomName { get; set; }
         public string RoomDisplay => string.IsNullOrWhiteSpace(BuildingId) ? (RoomName ?? "-") : $"{BuildingId}.{RoomName}";
@@ -72,6 +73,7 @@ namespace ExamInvigilationManagement.Application.DTOs.InvigilatorResponse
         public int AssigneeId { get; set; }
         public int FacultyId { get; set; }
         public string ScheduleStatus { get; set; } = string.Empty;
+        public DateTime? ConfirmationSentAt { get; set; }
         public string SubjectId { get; set; } = string.Empty;
     }
 
@@ -108,6 +110,7 @@ namespace ExamInvigilationManagement.Application.DTOs.InvigilatorResponse
         public string SubjectName { get; set; } = string.Empty;
         public string ClassName { get; set; } = string.Empty;
         public string GroupNumber { get; set; } = string.Empty;
+        public string ExamFormatDisplay { get; set; } = string.Empty;
         public string BuildingId { get; set; } = string.Empty;
         public string RoomName { get; set; } = string.Empty;
         public DateTime ExamDate { get; set; }

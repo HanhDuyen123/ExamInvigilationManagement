@@ -20,3 +20,7 @@ html {
 body {
   margin-bottom: 60px;
 }
+/* Keep Bootstrap modals above blurred/sticky app shells and custom panels. */
+.modal-backdrop { z-index: 2000 !important; }
+.modal { z-index: 2010 !important; }
+.modal-dialog { z-index: 2020; }

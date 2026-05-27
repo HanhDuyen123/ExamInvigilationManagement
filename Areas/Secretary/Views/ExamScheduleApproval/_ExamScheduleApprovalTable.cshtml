@@ -65,7 +65,7 @@
                         }
                     </td>
                     <td class="cell-code">@item.SubjectId</td>
-                    <td class="cell-wrap cell-subject">@item.SubjectName</td>
+                    <td class="cell-wrap cell-subject">@item.SubjectName<br /><span class="text-muted small">@(string.IsNullOrWhiteSpace(item.ExamFormatDisplay) ? "Chưa có hình thức thi" : item.ExamFormatDisplay)</span></td>
                     <td class="cell-nowrap">@item.AcademyYearName</td>
                     <td class="cell-nowrap">@item.SemesterName</td>
                     <td class="cell-nowrap">@item.PeriodName</td>

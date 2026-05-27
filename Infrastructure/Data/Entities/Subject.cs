@@ -15,7 +15,7 @@ public partial class Subject
 
     public int FacultyId { get; set; }
 
-    [StringLength(100)]
+    [StringLength(255)]
     public string SubjectName { get; set; } = null!;
 
     public byte Credit { get; set; }

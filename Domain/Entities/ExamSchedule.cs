@@ -11,6 +11,7 @@
         public int SessionId { get; set; }
         public int RoomId { get; set; }
         public int OfferingId { get; set; }
+        public int? ExamFormatId { get; set; }
 
         public DateTime ExamDate { get; set; }
         public string Status { get; set; } = null!;

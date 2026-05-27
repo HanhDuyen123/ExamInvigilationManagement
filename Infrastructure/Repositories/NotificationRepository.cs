@@ -205,11 +205,17 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
         public async Task<NotificationDetailDto?> GetByIdAsync(
             int id,
             int userId,
+            bool canViewAll,
             CancellationToken cancellationToken = default)
         {
-            return await _db.Notifications
+            var query = _db.Notifications
                 .AsNoTracking()
-                .Where(x => x.NotificationId == id && x.UserId == userId)
+                .Where(x => x.NotificationId == id);
+
+            if (!canViewAll)
+                query = query.Where(x => x.UserId == userId);
+
+            return await query
                 .Select(x => new NotificationDetailDto
                 {
                     Id = x.NotificationId,

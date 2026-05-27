@@ -25,6 +25,34 @@ namespace ExamInvigilationManagement.Areas.Secretary.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Preview(AutoAssignRequestDto request, CancellationToken cancellationToken)
+        {
+            if (!ModelState.IsValid)
+                return View("Index", request);
+
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdClaim, out var assignerId))
+            {
+                ModelState.AddModelError(string.Empty, "Không xác định được người dùng hiện tại.");
+                return View("Index", request);
+            }
+
+            request.AssignerId = assignerId;
+
+            try
+            {
+                var result = await _autoAssignmentService.PreviewAsync(request, cancellationToken);
+                return View("Result", result);
+            }
+            catch (Exception ex)
+            {
+                ModelState.AddModelError(string.Empty, ex.Message);
+                return View("Index", request);
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
         public async Task<IActionResult> Run(AutoAssignRequestDto request, CancellationToken cancellationToken)
         {
             if (!ModelState.IsValid)

@@ -9,6 +9,9 @@
         public int AssignedInvigilators { get; set; }
         public int FullyAssignedSchedules { get; set; }
         public int MissingSchedules { get; set; }
+        public bool IsPreview { get; set; }
+        public int? SemesterId { get; set; }
+        public int? PeriodId { get; set; }
 
         public List<string> Warnings { get; set; } = new();
         public List<AutoAssignScheduleResultDto> Details { get; set; } = new();
@@ -22,6 +25,7 @@
         public string RoomDisplay { get; set; } = string.Empty;
         public string SubjectName { get; set; } = string.Empty;
         public string ClassName { get; set; } = string.Empty;
+        public string ExamFormatDisplay { get; set; } = string.Empty;
 
         public string StatusBefore { get; set; } = string.Empty;
         public string StatusAfter { get; set; } = string.Empty;

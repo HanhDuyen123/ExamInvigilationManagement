@@ -2,7 +2,6 @@
 @model PagedResult<ExamInvigilationManagement.Application.DTOs.ExamSchedule.ExamScheduleDto>
 
 @{
-    int stt = (Model.Page - 1) * Model.PageSize + 1;
     var actionMode = ViewBag.ScheduleActionMode as string ?? "";
     var canSendApprovalRequest = ViewBag.CanSendApprovalRequest as bool? ?? false;
     var canSendConfirmationRequest = ViewBag.CanSendConfirmationRequest as bool? ?? false;
@@ -10,11 +9,11 @@
     var canSelectSchedule = canSendApprovalRequest || canSendConfirmationRequest || canSendSupportRequest;
     var showActionColumn = true;
     var colSpan = 14 + (canSelectSchedule ? 1 : 0);
+    var actionHeader = actionMode == "secretary" ? "Phân công" : "Thao tác";
 }
 
 <table class="table modern-table schedule-table-compact">
     <colgroup>
-        <col style="width:3%;" />
         @if (canSelectSchedule)
         {
             <col style="width:3%;" />
@@ -22,6 +21,7 @@
         <col style="width:6%;" />
         <col style="width:16%;" />
         <col style="width:9%;" />
+        <col style="width:7%;" />
         <col style="width:4%;" />
         <col style="width:7%;" />
         <col style="width:5%;" />
@@ -44,10 +44,10 @@
                     <input type="checkbox" id="selectAllApprovalSchedules" class="form-check-input" title="Chọn tất cả lịch hợp lệ trên trang" />
                 </th>
             }
-            <th class="col-id">STT</th>
             <th>Mã môn</th>
             <th>Môn học</th>
             <th>Lớp học phần</th>
+            <th>Hình thức</th>
             <th>Nhóm</th>
             <th>Năm học</th>
             <th>Học kỳ</th>
@@ -59,7 +59,7 @@
             <th>Trạng thái</th>
             @if (showActionColumn)
             {
-                <th class="col-action">Thao tác</th>
+                <th class="col-action">@actionHeader</th>
             }
         </tr>
     </thead>
@@ -99,10 +99,10 @@
                             }
                         </td>
                     }
-                    <td class="col-id">@stt</td>
                     <td class="cell-code">@item.SubjectId</td>
                     <td class="cell-wrap cell-subject">@item.SubjectName</td>
                     <td class="cell-wrap">@item.ClassName</td>
+                    <td class="cell-nowrap">@(string.IsNullOrWhiteSpace(item.ExamFormatCode) ? item.ExamFormatName ?? "-" : item.ExamFormatCode)</td>
                     <td class="cell-code">@item.GroupNumber</td>
                     <td class="cell-nowrap">@item.AcademyYearName</td>
                     <td class="cell-nowrap">@item.SemesterName</td>
@@ -124,12 +124,6 @@
                     {
                         <td class="col-action">
                             <div class="action-group">
-                                <a href="@Url.Action("Details", "ExamSchedule", new { id = item.Id })"
-                                   class="btn-icon detail"
-                                   title="Xem chi tiết">
-                                    <i class="bi bi-eye"></i>
-                                </a>
-
                                 @if (actionMode == "admin")
                                 {
                                     <a href="@Url.Action("Edit", "ExamSchedule", new { id = item.Id })"
@@ -156,7 +150,6 @@
                         </td>
                     }
                 </tr>
-                stt++;
             }
         }
         else

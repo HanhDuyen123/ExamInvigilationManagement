@@ -19,7 +19,7 @@ public partial class CourseOffering
     [StringLength(10)]
     public string SubjectId { get; set; } = null!;
 
-    [StringLength(10)]
+    [StringLength(30)]
     public string ClassName { get; set; } = null!;
 
     [StringLength(2)]

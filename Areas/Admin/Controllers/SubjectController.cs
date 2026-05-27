@@ -35,6 +35,7 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
                 Subtitle = "Danh sách môn học và khoa phụ trách trong chương trình đào tạo.",
                 CreateUrl = Url.Action("Create", "Subject", new { area = "Admin" }),
                 SearchPartialView = "_SubjectSearch",
+                TableClass = "full-width",
                 ImportUrl = Url.Action("Index", "BulkImport", new { area = "", module = "subject" })
             };
 

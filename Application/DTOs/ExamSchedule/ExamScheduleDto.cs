@@ -29,6 +29,11 @@ namespace ExamInvigilationManagement.Application.DTOs.ExamSchedule
         public string? ClassName { get; set; }
         public string? GroupNumber { get; set; }
 
+        [Required(ErrorMessage = "Vui lòng chọn hình thức thi.")]
+        public int? ExamFormatId { get; set; }
+        public string? ExamFormatCode { get; set; }
+        public string? ExamFormatName { get; set; }
+
         public int? AcademyYearId { get; set; }
         public string? AcademyYearName { get; set; }
 

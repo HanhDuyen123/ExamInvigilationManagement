@@ -38,6 +38,7 @@ namespace ExamInvigilationManagement.Application.DTOs.Approval
         public string SubjectName { get; set; } = string.Empty;
         public string ClassName { get; set; } = string.Empty;
         public string GroupNumber { get; set; } = string.Empty;
+        public string ExamFormatDisplay { get; set; } = string.Empty;
 
         public int AcademyYearId { get; set; }
         public string AcademyYearName { get; set; } = string.Empty;

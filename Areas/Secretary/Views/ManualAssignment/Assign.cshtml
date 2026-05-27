@@ -69,8 +69,8 @@
     <section class="assignment-hero">
         <div class="assignment-hero-top">
             <div>
-                <h3 class="assignment-title">@(isSubstitutionReview ? "Duyệt đề xuất đổi giám thị" : "Phân công giám thị thủ công")</h3>
-                <div class="assignment-subtitle">Theo dõi đầy đủ lịch thi, giám thị hiện tại, người thay thế và lịch sử thao tác.</div>
+                <h3 class="assignment-title">@(isSubstitutionReview ? "Chọn giám thị thay thế" : "Phân công giám thị")</h3>
+                <div class="assignment-subtitle">Kiểm tra lịch thi, người đang coi thi và chọn giảng viên phù hợp.</div>
             </div>
             <a href="@Url.Action("Index", "ExamSchedule", new { area = "" })" class="btn-back">
                 <i class="bi bi-arrow-left"></i> Quay lại danh sách
@@ -81,7 +81,7 @@
             <div class="info-tile primary">
                 <div class="info-label">Môn thi</div>
                 <div class="info-value">@schedule?.SubjectId - @schedule?.SubjectName</div>
-                <div class="info-note">Lớp @schedule?.ClassName, nhóm @schedule?.GroupNumber</div>
+                <div class="info-note">Lớp @schedule?.ClassName, nhóm @schedule?.GroupNumber, @(string.IsNullOrWhiteSpace(schedule?.ExamFormatDisplay) ? "chưa có hình thức thi" : schedule.ExamFormatDisplay)</div>
             </div>
             <div class="info-tile">
                 <div class="info-label">Ngày thi</div>
@@ -117,7 +117,7 @@
                 <div class="section-head">
                     <div>
                         <h5 class="section-title">Giám thị hiện tại</h5>
-                        <p class="section-desc">Trạng thái phản hồi được lấy từ phản hồi mới nhất của giảng viên.</p>
+                        <p class="section-desc">Theo dõi người đang được phân công cho lịch này.</p>
                     </div>
                     <span class="status-pill status-soft">@Model.CurrentInvigilators.Count vị trí đã có người</span>
                 </div>
@@ -171,8 +171,8 @@
                 {
                     <div class="section-head">
                         <div>
-                            <h5 class="section-title">Duyệt người thay thế</h5>
-                            <p class="section-desc">Chỉ được duyệt một lần. Sau khi duyệt, lịch quay về trạng thái Chờ duyệt.</p>
+                            <h5 class="section-title">Người thay thế</h5>
+                            <p class="section-desc">Chọn người được đề xuất hoặc một giảng viên phù hợp khác.</p>
                         </div>
                         <span class="status-pill @ScheduleStatusClass(review.Status)">@review.Status</span>
                     </div>
@@ -189,7 +189,7 @@
                             @Html.AntiForgeryToken()
                             <input type="hidden" name="substitutionId" value="@review.SubstitutionId" />
                             <div class="mb-3">
-                                <label class="form-label">Giảng viên thay thế sẽ trình duyệt</label>
+                                <label class="form-label">Giảng viên thay thế</label>
                                 <select name="replacementUserId" class="select-modern">
                                     @foreach (var lecturer in Model.LecturerOptions)
                                     {
@@ -198,10 +198,10 @@
                                         <option value="@lecturer.UserId" selected="@(selected ? "selected" : null)" disabled="@(lecturer.CanSelect ? null : "disabled")">@label</option>
                                     }
                                 </select>
-                                <div class="form-text">Các giảng viên không đủ điều kiện sẽ bị khóa để tránh chọn nhầm.</div>
+                                <div class="form-text">Người không phù hợp với lịch này sẽ không thể chọn.</div>
                             </div>
                             <button type="submit" class="btn-submit w-100">
-                                <i class="bi bi-check2-circle"></i> Duyệt và chuyển lịch về Chờ duyệt
+                                <i class="bi bi-check2-circle"></i> Duyệt giám thị thay thế
                             </button>
                         </form>
                     }
@@ -214,8 +214,8 @@
                 {
                     <div class="section-head">
                         <div>
-                            <h5 class="section-title">Phân công thủ công</h5>
-                            <p class="section-desc">Chọn giảng viên cho các vị trí còn thiếu. Vị trí đã có giám thị sẽ không bị thay đổi tại màn hình này.</p>
+                            <h5 class="section-title">Bổ sung giám thị</h5>
+                            <p class="section-desc">Chọn giảng viên cho vị trí còn thiếu.</p>
                         </div>
                     </div>
 
@@ -232,7 +232,7 @@
                                 <div>
                                     <label class="form-label">Vị trí giám thị 1</label>
                                     <select class="select-modern" name="Position1AssigneeId" @(canEdit ? "" : "disabled")>
-                                        <option value="">-- Chọn giảng viên phù hợp --</option>
+                                        <option value="">-- Chọn giảng viên --</option>
                                         @foreach (var lecturer in Model.LecturerOptions)
                                         {
                                             <option value="@lecturer.UserId" disabled="@(lecturer.CanSelect ? null : "disabled")">@lecturer.FullName - @lecturer.RecommendationLabel</option>
@@ -246,7 +246,7 @@
                                 <div>
                                     <label class="form-label">Vị trí giám thị 2</label>
                                     <select class="select-modern" name="Position2AssigneeId" @(canEdit ? "" : "disabled")>
-                                        <option value="">-- Chọn giảng viên phù hợp --</option>
+                                        <option value="">-- Chọn giảng viên --</option>
                                         @foreach (var lecturer in Model.LecturerOptions)
                                         {
                                             <option value="@lecturer.UserId" disabled="@(lecturer.CanSelect ? null : "disabled")">@lecturer.FullName - @lecturer.RecommendationLabel</option>
@@ -258,7 +258,7 @@
                         }
                         else
                         {
-                            <div class="alert alert-success mb-0">Lịch thi đã có đủ giám thị. Không cần phân công thêm.</div>
+                            <div class="alert alert-success mb-0">Lịch thi đã đủ giám thị.</div>
                         }
 
                         @if (canEdit && Model.MissingPositions.Any())
@@ -269,7 +269,7 @@
                         }
                         else if (Model.MissingPositions.Any())
                         {
-                            <div class="alert alert-info mt-4 mb-0">Lịch thi hiện không ở trạng thái cho phép phân công thủ công.</div>
+                            <div class="alert alert-info mt-4 mb-0">Lịch thi hiện chưa thể phân công thêm.</div>
                         }
                     </form>
                 }
@@ -282,8 +282,8 @@
     <section class="assignment-card">
         <div class="section-head">
             <div>
-                <h5 class="section-title">Danh sách giảng viên có thể cân nhắc</h5>
-                <p class="section-desc">Sắp xếp người phù hợp lên trước. Lý do được viết theo nghiệp vụ để Thư ký khoa dễ lựa chọn.</p>
+                <h5 class="section-title">Giảng viên phù hợp</h5>
+                <p class="section-desc">Người có thể chọn được đưa lên trước, kèm lý do ngắn gọn.</p>
             </div>
             <span class="status-pill status-soft">@selectableLecturers người có thể chọn</span>
         </div>
@@ -311,9 +311,6 @@
                                 <td><span class="status-pill @(item.CanSelect ? "status-ok" : "status-bad")">@item.AvailabilityLabel</span></td>
                                 <td>
                                     <div class="status-pill @(item.CanSelect ? "status-soft" : "status-wait")">@item.RecommendationLabel</div>
-                                    <div class="metric-row mt-2">
-                                        <span class="metric-chip">Điểm @item.PriorityScore</span>
-                                    </div>
                                 </td>
                                 <td>
                                     <div class="reason-list">
@@ -340,7 +337,7 @@
         <div class="section-head">
             <div>
                 <h5 class="section-title">Nhật ký phân công</h5>
-                <p class="section-desc">Ghi nhận các mốc phân công, phản hồi và đổi giám thị để dễ kiểm tra lại.</p>
+                <p class="section-desc">Ghi lại các lần phân công, phản hồi và đổi giám thị.</p>
             </div>
         </div>
 

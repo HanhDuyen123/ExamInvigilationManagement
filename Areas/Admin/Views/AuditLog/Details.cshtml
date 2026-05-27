@@ -1,0 +1,30 @@
+@model ExamInvigilationManagement.Application.DTOs.Admin.Audit.AuditLogDto
+
+@{
+    ViewData["Title"] = "Chi tiết lịch sử";
+}
+
+<div class="role-page">
+    <div class="role-header mb-4">
+        <div>
+            <h3 class="title-gradient">Chi tiết lịch sử</h3>
+            <div class="subtitle">Xem dữ liệu trước/sau và nguồn thao tác.</div>
+        </div>
+        <a asp-area="Admin" asp-controller="AuditLog" asp-action="Index" class="btn btn-create"><i class="bi bi-arrow-left"></i><span>Quay lại</span></a>
+    </div>
+
+    <div class="content-card">
+        <div class="row g-3">
+            <div class="col-md-4"><div class="form-label">Nghiệp vụ</div><div class="fw-semibold">@Model.EventType</div></div>
+            <div class="col-md-4"><div class="form-label">Dữ liệu</div><div>@Model.EntityName #@(Model.EntityId ?? "-")</div></div>
+            <div class="col-md-4"><div class="form-label">Hành động</div><div>@Model.Action</div></div>
+            <div class="col-md-4"><div class="form-label">Người thực hiện</div><div>@(string.IsNullOrWhiteSpace(Model.ActorFullName) ? Model.ActorUserName ?? "Hệ thống" : Model.ActorFullName)</div></div>
+            <div class="col-md-4"><div class="form-label">Thời gian</div><div>@Model.CreatedAt.ToString("dd/MM/yyyy HH:mm:ss")</div></div>
+            <div class="col-md-4"><div class="form-label">Nguồn</div><div>@(Model.Source ?? "-")</div></div>
+            <div class="col-12"><div class="form-label">Ghi chú</div><pre class="p-3 rounded-3 border bg-light mb-0" style="white-space:pre-wrap;">@(string.IsNullOrWhiteSpace(Model.Note) ? "Không có ghi chú." : Model.Note)</pre></div>
+            <div class="col-md-6"><div class="form-label">Dữ liệu trước</div><pre class="p-3 rounded-3 border bg-light mb-0" style="white-space:pre-wrap;">@(string.IsNullOrWhiteSpace(Model.OldValues) ? "-" : Model.OldValues)</pre></div>
+            <div class="col-md-6"><div class="form-label">Dữ liệu sau</div><pre class="p-3 rounded-3 border bg-light mb-0" style="white-space:pre-wrap;">@(string.IsNullOrWhiteSpace(Model.NewValues) ? "-" : Model.NewValues)</pre></div>
+            <div class="col-12"><div class="form-label">CorrelationId</div><code>@Model.CorrelationId</code></div>
+        </div>
+    </div>
+</div>

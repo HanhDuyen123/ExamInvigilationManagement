@@ -1083,13 +1083,22 @@ body.app-shell-body .table-inner.full-width:has(.schedule-table-compact) {
 body.app-shell-body .table-inner,
 body.app-shell-body .table-responsive {
     max-width: 100%;
-    overflow-x: auto !important;
+    overflow-x: clip !important;
     overflow-y: visible;
     -webkit-overflow-scrolling: touch;
 }
 
 body.app-shell-body .modern-table {
-    table-layout: auto;
+    width: 100%;
+    min-width: 0 !important;
+    table-layout: fixed;
+}
+
+body.app-shell-body .modern-table th,
+body.app-shell-body .modern-table td {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    word-break: normal;
 }
 
 body.app-shell-body .schedule-table-compact {
@@ -1194,7 +1203,8 @@ body.app-shell-body .schedule-table-compact .btn-icon {
 }
 
 .role-filter-main.user-search-grid {
-    grid-template-columns: minmax(170px, 1.1fr) minmax(150px, .8fr) minmax(190px, 1fr) minmax(190px, 1fr) minmax(150px, .8fr) max-content;
+    grid-template-columns: minmax(190px, 1.1fr) minmax(170px, .8fr) minmax(220px, 1fr) minmax(220px, 1fr) minmax(170px, .8fr) minmax(112px, max-content);
+    max-width: 100%;
 }
 
 @media (max-width: 1200px) {
@@ -1209,7 +1219,7 @@ body.app-shell-body .schedule-table-compact .btn-icon {
 
 .role-filter-compact .search-page-size {
     justify-self: end;
-    width: max-content;
+    width: 100%;
     min-width: 112px;
 }
 

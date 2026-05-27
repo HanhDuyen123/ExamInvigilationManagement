@@ -8,6 +8,8 @@
 
         public int? FacultyId { get; set; }
         public string FacultyName { get; set; } = string.Empty;
+        public string RoleName { get; set; } = string.Empty;
+        public bool IsLecturerRole { get; set; }
 
         public int CurrentLoad { get; set; }
         public int SameDayLoad { get; set; }

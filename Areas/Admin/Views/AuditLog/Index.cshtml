@@ -1,0 +1,30 @@
+@model ExamInvigilationManagement.ViewModel.CrudIndexViewModel
+
+@{
+    ViewData["Title"] = "Lịch sử hệ thống";
+}
+
+@await Html.PartialAsync("_CrudIndex", Model)
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script>
+        $(function () {
+            CrudPage.init({
+                api: '@Url.Action("GetList", "AuditLog", new { area = "Admin" })',
+                tableId: '#crudTable',
+                filterSelector: '.crud-filter',
+                pageSize: '#pageSize',
+                extraData: function () {
+                    return {
+                        keyword: $('#keyword').val()?.trim() || null,
+                        entityName: $('#entityName').val() || null,
+                        action: $('#action').val() || null,
+                        fromDate: $('#fromDate').val() || null,
+                        toDate: $('#toDate').val() || null
+                    };
+                }
+            });
+        });
+    </script>
+}

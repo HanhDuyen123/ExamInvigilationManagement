@@ -33,9 +33,9 @@ namespace ExamInvigilationManagement.Application.Services
 
             if (!string.IsNullOrWhiteSpace(keyword))
             {
-                var kw = NormalizeName(keyword);
+                var kw = NormalizeComparableName(keyword);
                 data = data
-                    .Where(x => NormalizeName(x.Name).Contains(kw, StringComparison.OrdinalIgnoreCase))
+                    .Where(x => NormalizeComparableName(x.Name).Contains(kw, StringComparison.OrdinalIgnoreCase))
                     .ToList();
             }
 
@@ -77,7 +77,8 @@ namespace ExamInvigilationManagement.Application.Services
             var name = NormalizeName(dto.Name);
             ValidateName(name);
 
-            if (await _repo.ExistsByNameAsync(name))
+            var existing = await _repo.GetAllAsync();
+            if (existing.Any(x => NormalizeComparableName(x.Name) == NormalizeComparableName(name)))
                 throw new InvalidOperationException("Tên khoa đã tồn tại.");
 
             await _repo.AddAsync(new Faculty
@@ -95,7 +96,8 @@ namespace ExamInvigilationManagement.Application.Services
             var name = NormalizeName(dto.Name);
             ValidateName(name);
 
-            if (await _repo.ExistsByNameAsync(name, excludeId: dto.Id))
+            var all = await _repo.GetAllAsync();
+            if (all.Any(x => x.Id != dto.Id && NormalizeComparableName(x.Name) == NormalizeComparableName(name)))
                 throw new InvalidOperationException("Tên khoa đã tồn tại.");
 
             await _repo.UpdateAsync(new Faculty
@@ -132,11 +134,18 @@ namespace ExamInvigilationManagement.Application.Services
             if (string.IsNullOrWhiteSpace(name))
                 throw new InvalidOperationException("Vui lòng nhập tên khoa.");
 
-            if (name.Length > 50)
-                throw new InvalidOperationException("Tên khoa tối đa 50 ký tự.");
+            if (name.Length > 100)
+                throw new InvalidOperationException("Tên khoa tối đa 100 ký tự.");
 
             if (string.IsNullOrWhiteSpace(name.Trim()))
                 throw new InvalidOperationException("Tên khoa không được chỉ chứa khoảng trắng.");
+        }
+
+        private static string NormalizeComparableName(string? name)
+        {
+            var value = NormalizeName(name).ToLowerInvariant();
+            value = Regex.Replace(value, @"^(khoa|trung tâm|trung tam|trường|truong)\s+", string.Empty, RegexOptions.IgnoreCase);
+            return value;
         }
     }
 }

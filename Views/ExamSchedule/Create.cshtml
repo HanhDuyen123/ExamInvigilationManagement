@@ -72,6 +72,22 @@
                 </div>
             </div>
 
+            <div class="form-group">
+                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+           {
+               Label = "Hình thức thi",
+               InputId = "examFormatInput",
+               HiddenId = "examFormatId",
+               HiddenName = "ExamFormatId",
+               MenuId = "examFormatDropdown",
+               Placeholder = "Chọn hình thức thi...",
+               InputClass = "input-modern",
+               InitialValue = Model.ExamFormatId?.ToString(),
+               InitialText = string.Join(" - ", new[] { Model.ExamFormatCode, Model.ExamFormatName }.Where(x => !string.IsNullOrWhiteSpace(x)))
+           })
+                <span asp-validation-for="ExamFormatId" class="text-danger"></span>
+            </div>
+
             <div class="row g-3 mb-3">
                 <div class="col-md-4">
                     @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
@@ -282,6 +298,17 @@
                     clearLookup('slot-create');
                     clearSlotSummary();
                 }
+            });
+
+            AdminLookup.create({
+                key: 'exam-format-create',
+                input: '#examFormatInput',
+                hidden: '#examFormatId',
+                menu: '#examFormatDropdown',
+                url: '@Url.Action("ExamFormats", "Lookup")',
+                queryParam: 'keyword',
+                valueField: 'id',
+                textField: 'name'
             });
 
             AdminLookup.create({

@@ -36,6 +36,9 @@ namespace ExamInvigilationManagement.Application.Services
             if (slotCtx == null)
                 throw new InvalidOperationException("Không tìm thấy ca thi.");
 
+            if (!await _repo.ExamFormatExistsAsync(dto.ExamFormatId!.Value))
+                throw new InvalidOperationException("Hình thức thi không tồn tại hoặc đã ngừng sử dụng.");
+
             var roomIds = dto.RoomIds?
                 .Where(x => x > 0)
                 .Distinct()
@@ -65,6 +68,7 @@ namespace ExamInvigilationManagement.Application.Services
                 var entity = new ExamSchedule
                 {
                     OfferingId = dto.OfferingId.Value,
+                    ExamFormatId = dto.ExamFormatId.Value,
                     SlotId = dto.SlotId.Value,
                     RoomId = roomId,
                     ExamDate = dto.ExamDate.Value,
@@ -94,6 +98,9 @@ namespace ExamInvigilationManagement.Application.Services
             if (slotCtx == null)
                 throw new InvalidOperationException("Không tìm thấy ca thi.");
 
+            if (!await _repo.ExamFormatExistsAsync(dto.ExamFormatId!.Value))
+                throw new InvalidOperationException("Hình thức thi không tồn tại hoặc đã ngừng sử dụng.");
+
             if (!dto.RoomId.HasValue)
                 throw new InvalidOperationException("Vui lòng chọn phòng thi.");
 
@@ -113,6 +120,7 @@ namespace ExamInvigilationManagement.Application.Services
             {
                 Id = dto.Id,
                 OfferingId = dto.OfferingId.Value,
+                ExamFormatId = dto.ExamFormatId.Value,
                 SlotId = dto.SlotId.Value,
                 RoomId = dto.RoomId.Value,
                 ExamDate = dto.ExamDate.Value,
@@ -129,6 +137,9 @@ namespace ExamInvigilationManagement.Application.Services
 
         public Task DeleteAsync(int id) => _repo.DeleteAsync(id);
 
+        public Task<List<ExamFormatDto>> GetExamFormatsAsync(CancellationToken cancellationToken = default)
+            => _repo.GetExamFormatsAsync(cancellationToken);
+
         public Task MarkApprovalRequestedAsync(IEnumerable<int> scheduleIds, IEnumerable<int> approverIds, int? requestedById = null, int? facultyId = null, string? note = null, CancellationToken cancellationToken = default)
             => _repo.MarkApprovalRequestedAsync(scheduleIds, approverIds, requestedById, facultyId, note, cancellationToken);
 
@@ -137,6 +148,7 @@ namespace ExamInvigilationManagement.Application.Services
             if (dto == null) throw new ArgumentNullException(nameof(dto));
             if (!dto.OfferingId.HasValue) throw new InvalidOperationException("Vui lòng chọn học phần mở.");
             if (!dto.SlotId.HasValue) throw new InvalidOperationException("Vui lòng chọn ca thi.");
+            if (!dto.ExamFormatId.HasValue) throw new InvalidOperationException("Vui lòng chọn hình thức thi.");
             if (!dto.ExamDate.HasValue) throw new InvalidOperationException("Vui lòng chọn ngày thi.");
 
             if (!ExamScheduleStatusHelper.IsValid(dto.Status))
