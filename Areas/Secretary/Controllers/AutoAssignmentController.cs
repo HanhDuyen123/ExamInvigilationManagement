@@ -11,16 +11,44 @@ namespace ExamInvigilationManagement.Areas.Secretary.Controllers
     public class AutoAssignmentController : Controller
     {
         private readonly IAutoAssignmentService _autoAssignmentService;
+        private readonly ISemesterService _semesterService;
+        private readonly IPeriodService _periodService;
 
-        public AutoAssignmentController(IAutoAssignmentService autoAssignmentService)
+        public AutoAssignmentController(
+            IAutoAssignmentService autoAssignmentService,
+            ISemesterService semesterService,
+            IPeriodService periodService)
         {
             _autoAssignmentService = autoAssignmentService;
+            _semesterService = semesterService;
+            _periodService = periodService;
         }
 
         [HttpGet]
-        public IActionResult Index()
+        public async Task<IActionResult> Index(int? semesterId, int? periodId)
         {
-            return View(new AutoAssignRequestDto());
+            if (semesterId.HasValue && semesterId.Value > 0)
+            {
+                var semester = (await _semesterService.GetAllAsync()).FirstOrDefault(x => x.Id == semesterId.Value);
+                if (semester != null)
+                {
+                    ViewBag.InitialAcademyYearId = semester.AcademyYearId;
+                    ViewBag.InitialAcademyYearName = semester.AcademicYear;
+                    ViewBag.InitialSemesterName = semester.Name;
+                }
+            }
+
+            if (periodId.HasValue && periodId.Value > 0 && semesterId.HasValue && semesterId.Value > 0)
+            {
+                var period = (await _periodService.GetAllBySemesterAsync(semesterId.Value)).FirstOrDefault(x => x.Id == periodId.Value);
+                ViewBag.InitialPeriodName = period?.Name;
+            }
+
+            return View(new AutoAssignRequestDto
+            {
+                SemesterId = semesterId,
+                PeriodId = periodId
+            });
         }
 
         [HttpPost]

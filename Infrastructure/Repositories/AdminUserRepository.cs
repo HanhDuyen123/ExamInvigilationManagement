@@ -168,6 +168,16 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             await _context.SaveChangesAsync();
         }
 
+        public async Task SetActiveAsync(int id, bool isActive)
+        {
+            var data = await _context.Users.FindAsync(id);
+            if (data == null)
+                throw new InvalidOperationException("Không tìm thấy tài khoản cần cập nhật trạng thái.");
+
+            data.IsActive = isActive;
+            await _context.SaveChangesAsync();
+        }
+
         public async Task UpdateAsync(User entity)
         {
             var data = await _context.Users.FindAsync(entity.Id);

@@ -1,0 +1,37 @@
+@model ExamInvigilationManagement.Common.PagedResult<ExamInvigilationManagement.Application.DTOs.ExamSchedule.ExamFormatDto>
+
+@{
+    var stt = (Model.Page - 1) * Model.PageSize + 1;
+}
+
+<table class="table modern-table">
+    <thead>
+        <tr>
+            <th class="col-id">STT</th>
+            <th>Mã</th>
+            <th>Tên hình thức thi</th>
+            <th>Trạng thái</th>
+            <th class="col-action">Action</th>
+        </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model.Items)
+    {
+        <tr>
+            <td class="col-id">@stt</td>
+            <td><strong>@item.Code</strong></td>
+            <td>@item.Name</td>
+            <td>@(item.IsActive ? "Đang dùng" : "Ngừng dùng")</td>
+            <td class="col-action">
+                <div class="action-group">
+                    <a href="/Admin/ExamFormat/Edit/@item.Id" class="btn-icon edit"><i class="bi bi-pencil"></i></a>
+                    <a href="#" class="btn-icon delete btn-delete" data-id="@item.Id" data-name="@item.DisplayName"><i class="bi bi-trash"></i></a>
+                </div>
+            </td>
+        </tr>
+        stt++;
+    }
+    </tbody>
+</table>
+
+@await Html.PartialAsync("_Pagination", Model)

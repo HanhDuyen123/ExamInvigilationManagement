@@ -131,9 +131,15 @@
 }
 
 .notification-menu {
+    width: min(520px, calc(100vw - 24px));
     border: 1px solid rgba(15, 23, 42, 0.08);
     border-radius: 16px;
     overflow: hidden;
+}
+
+.notification-menu .notification-item .small {
+    white-space: normal;
+    overflow-wrap: anywhere;
 }
 
 .notification-live-toast i {

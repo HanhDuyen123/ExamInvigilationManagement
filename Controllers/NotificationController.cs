@@ -70,7 +70,7 @@ namespace ExamInvigilationManagement.Controllers
             if (item.UserId == userId.Value)
                 await _service.MarkAsReadAsync(id, userId.Value, cancellationToken);
 
-            return Redirect(NotificationRouteHelper.ResolveUrl(item.Type, item.RelatedId));
+            return Redirect(NotificationRouteHelper.ResolveUrl(item.Type, item.RelatedId, item.Title, item.Content));
         }
 
         [HttpGet]

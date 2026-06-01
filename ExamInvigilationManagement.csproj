@@ -30,4 +30,12 @@
     <PackageReference Include="QuestPDF" Version="2026.5.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Remove="wwwroot\templates\Lich thi chinh thuc cuoi ki,hoc ky 2, nam hoc 2024-2025 (Dot 2).xlsx" />
+    <Content Remove="wwwroot\templates\LỊCH THI CUỐI KỲ - KỲ 2-2025- 2026.xlsx" />
+    <Content Remove="wwwroot\templates\~$*.xlsx" />
+    <None Include="wwwroot\templates\Lich thi chinh thuc cuoi ki,hoc ky 2, nam hoc 2024-2025 (Dot 2).xlsx" />
+    <None Include="wwwroot\templates\LỊCH THI CUỐI KỲ - KỲ 2-2025- 2026.xlsx" />
+  </ItemGroup>
+
 </Project>

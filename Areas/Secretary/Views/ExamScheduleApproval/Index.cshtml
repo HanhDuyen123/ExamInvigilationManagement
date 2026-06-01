@@ -95,24 +95,7 @@
     </form>
 </div>
 
-<div class="modal fade" id="approvalRejectModal" tabindex="-1" aria-labelledby="approvalRejectModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4">
-            <div class="modal-header">
-                <h5 class="modal-title" id="approvalRejectModalLabel">Lý do từ chối lịch thi</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-            </div>
-            <div class="modal-body">
-                <label class="form-label" for="approvalRejectNote">Ghi chú gửi kèm</label>
-                <textarea id="approvalRejectNote" class="input-modern w-100" rows="4" maxlength="500" placeholder="Nhập lý do để người lập lịch biết cần điều chỉnh gì."></textarea>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-outline-danger" id="confirmApprovalRejectBtn">Từ chối lịch thi</button>
-            </div>
-        </div>
-    </div>
-</div>
+
 
 @section Scripts {
     <script src="~/js/admin_crud.js" asp-append-version="true"></script>

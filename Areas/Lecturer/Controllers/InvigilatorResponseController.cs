@@ -7,7 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace ExamInvigilationManagement.Areas.Lecturer.Controllers
 {
     [Area("Lecturer")]
-    [Authorize(Roles = "Giảng viên")]
+    [Authorize(Roles = "Giảng viên,Trưởng khoa,Thư ký khoa")]
     public class InvigilatorResponseController : Controller
     {
         private readonly IInvigilatorResponseService _service;

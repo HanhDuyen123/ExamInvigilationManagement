@@ -32,7 +32,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
         {
             return await _db.ExamSchedules
                 .AsNoTracking()
-                .Where(x => x.ExamScheduleId == scheduleId && x.Offering.User.FacultyId == facultyId)
+                .Where(x => x.ExamScheduleId == scheduleId && x.Offering.Subject.FacultyId == facultyId)
                 .Select(x => new ManualAssignmentScheduleDto
                 {
                     ExamScheduleId = x.ExamScheduleId,
@@ -49,7 +49,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     OfferingUserId = x.Offering.UserId,
                     OfferingUserName = x.Offering.User.UserName,
                     OfferingUserFullName = x.Offering.User.Information.LastName + " " + x.Offering.User.Information.FirstName,
-                    OfferingFacultyId = x.Offering.User.FacultyId,
+                    OfferingFacultyId = x.Offering.Subject.FacultyId,
                     SubjectId = x.Offering.SubjectId,
                     SubjectName = x.Offering.Subject.SubjectName,
                     ClassName = x.Offering.ClassName,
@@ -74,6 +74,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 {
                     ExamInvigilatorId = x.ExamInvigilatorId,
                     UserId = x.AssigneeId,
+                    InformationId = x.Assignee.InformationId,
                     UserName = x.Assignee.UserName,
                     FullName = x.Assignee.Information.LastName + " " + x.Assignee.Information.FirstName,
                     NewUserId = x.NewAssigneeId,
@@ -161,17 +162,27 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
         public async Task<List<ManualAssignmentLecturerOptionDto>> GetActiveLecturersAsync(
             int facultyId,
+            string subjectId,
+            int ownerUserId,
             CancellationToken cancellationToken = default)
         {
+            var subjectLecturerIds = await _db.CourseOfferings
+                .AsNoTracking()
+                .Where(x => x.SubjectId == subjectId && x.User.IsActive && x.User.Role.RoleName == "Giảng viên")
+                .Select(x => x.UserId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
             return await _db.Users
                 .AsNoTracking()
                 .Where(x =>
                     x.IsActive &&
-                    x.FacultyId == facultyId &&
+                    (x.FacultyId == facultyId || x.UserId == ownerUserId || subjectLecturerIds.Contains(x.UserId)) &&
                     x.Role.RoleName != "Admin")
                 .Select(x => new ManualAssignmentLecturerOptionDto
                 {
                     UserId = x.UserId,
+                    InformationId = x.InformationId,
                     UserName = x.UserName,
                     FullName = x.Information.LastName + " " + x.Information.FirstName,
                     FacultyId = x.FacultyId,
@@ -184,15 +195,22 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
         public async Task<Dictionary<int, int>> GetLecturerLoadsAsync(
             int semesterId,
-            int facultyId,
+            IEnumerable<int> userIds,
             CancellationToken cancellationToken = default)
         {
+            var userIdList = userIds.Distinct().ToList();
             return await _db.ExamInvigilators
                 .AsNoTracking()
                 .Where(x =>
                     x.ExamSchedule.SemesterId == semesterId &&
-                    x.Assignee.FacultyId == facultyId &&
-                    x.Assignee.IsActive)
+                    userIdList.Contains(x.AssigneeId) &&
+                    x.Assignee.IsActive &&
+                    x.Status != "Từ chối" &&
+                    (x.InvigilatorResponses
+                        .Where(r => r.UserId == x.AssigneeId)
+                        .OrderByDescending(r => r.ResponseAt)
+                        .Select(r => r.Status)
+                        .FirstOrDefault() ?? string.Empty) != "Từ chối")
                 .GroupBy(x => x.AssigneeId)
                 .Select(g => new
                 {
@@ -204,16 +222,23 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
         public async Task<Dictionary<int, int>> GetSameDayLoadsAsync(
             int semesterId,
-            int facultyId,
+            IEnumerable<int> userIds,
             DateTime examDate,
             CancellationToken cancellationToken = default)
         {
+            var userIdList = userIds.Distinct().ToList();
             return await _db.ExamInvigilators
                 .AsNoTracking()
                 .Where(x =>
                     x.ExamSchedule.SemesterId == semesterId &&
-                    x.Assignee.FacultyId == facultyId &&
-                    x.ExamSchedule.ExamDate == examDate)
+                    userIdList.Contains(x.AssigneeId) &&
+                    x.ExamSchedule.ExamDate == examDate &&
+                    x.Status != "Từ chối" &&
+                    (x.InvigilatorResponses
+                        .Where(r => r.UserId == x.AssigneeId)
+                        .OrderByDescending(r => r.ResponseAt)
+                        .Select(r => r.Status)
+                        .FirstOrDefault() ?? string.Empty) != "Từ chối")
                 .GroupBy(x => x.AssigneeId)
                 .Select(g => new
                 {
@@ -221,6 +246,20 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     Count = g.Count()
                 })
                 .ToDictionaryAsync(x => x.UserId, x => x.Count, cancellationToken);
+        }
+
+        public async Task<HashSet<int>> GetSubjectLecturerIdsAsync(
+            string subjectId,
+            CancellationToken cancellationToken = default)
+        {
+            var rows = await _db.CourseOfferings
+                .AsNoTracking()
+                .Where(x => x.SubjectId == subjectId && x.User.IsActive && x.User.Role.RoleName == "Giảng viên")
+                .Select(x => x.UserId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            return rows.ToHashSet();
         }
 
         public async Task<List<int>> GetBusyLecturerIdsAsync(
@@ -291,9 +330,9 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     .Where(x => x.ExamScheduleId == plan.ExamScheduleId)
                     .ToListAsync(cancellationToken);
 
-                var existingUserIds = existing.Select(x => x.AssigneeId).ToHashSet();
+                var existingUserIds = existing.Select(x => x.NewAssigneeId ?? x.AssigneeId).ToHashSet();
 
-                if (existing.Count >= 2)
+                if (existing.Count >= 2 && plan.NewInvigilators.Any())
                     throw new InvalidOperationException("Lịch thi này đã đủ 2 giám thị, không thể phân công thêm.");
 
                 foreach (var item in plan.NewInvigilators)
@@ -311,6 +350,22 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                         CreateAt = item.CreateAt,
                         UpdateAt = item.UpdateAt
                     });
+                }
+
+                foreach (var item in plan.ReplaceInvigilators)
+                {
+                    var existingItem = existing.FirstOrDefault(x => x.ExamInvigilatorId == item.ExamInvigilatorId);
+                    if (existingItem is null)
+                        throw new InvalidOperationException("Không tìm thấy vị trí giám thị cần thay thế.");
+
+                    if (existingUserIds.Contains(item.NewAssigneeId))
+                        throw new InvalidOperationException("Một giảng viên đã được phân công cho lịch thi này.");
+
+                    existingItem.NewAssigneeId = item.NewAssigneeId;
+                    existingItem.AssignerId = item.AssignerId;
+                    existingItem.Status = "Chưa gửi xác nhận";
+                    existingItem.UpdateAt = item.UpdateAt;
+                    existingUserIds.Add(item.NewAssigneeId);
                 }
 
                 schedule.Status = plan.StatusAfter;

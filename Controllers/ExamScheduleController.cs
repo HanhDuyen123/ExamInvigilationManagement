@@ -22,6 +22,7 @@ namespace ExamInvigilationManagement.Controllers
     public class ExamScheduleController : BaseRoleController
     {
         private readonly IExamScheduleService _service;
+        private readonly ICourseOfferingService _courseOfferingService;
         private readonly INotificationService _notificationService;
         private readonly IInvigilatorResponseService _invigilatorResponseService;
         private readonly IEmailService _emailService;
@@ -31,6 +32,7 @@ namespace ExamInvigilationManagement.Controllers
 
         public ExamScheduleController(
             IExamScheduleService service,
+            ICourseOfferingService courseOfferingService,
             IAdminUserService userService,
             INotificationService notificationService,
             IInvigilatorResponseService invigilatorResponseService,
@@ -41,6 +43,7 @@ namespace ExamInvigilationManagement.Controllers
             : base(userService)
         {
             _service = service;
+            _courseOfferingService = courseOfferingService;
             _notificationService = notificationService;
             _invigilatorResponseService = invigilatorResponseService;
             _emailService = emailService;
@@ -256,9 +259,14 @@ namespace ExamInvigilationManagement.Controllers
         [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Create(ExamScheduleDto dto)
         {
+            foreach (var key in ModelState.Keys.Where(x => x == nameof(dto.RoomIds) || x.StartsWith($"{nameof(dto.RoomIds)}[", StringComparison.OrdinalIgnoreCase)).ToList())
+                ModelState.Remove(key);
+
             if (!ModelState.IsValid)
             {
                 TempData.SetNotification("error", "Vui lòng kiểm tra lại dữ liệu nhập vào.");
+                dto.RoomCount = Math.Max(dto.RoomCount, dto.RoomIds?.Count(x => x > 0) ?? 0);
+                await HydrateCreateLookupsAsync(dto);
                 return View(dto);
             }
 
@@ -270,8 +278,41 @@ namespace ExamInvigilationManagement.Controllers
             }
             catch (Exception ex)
             {
+                ModelState.AddModelError(string.Empty, ex.Message);
                 TempData.SetNotification("error", ex.Message);
+                dto.RoomCount = Math.Max(dto.RoomCount, dto.RoomIds?.Count(x => x > 0) ?? 0);
+                await HydrateCreateLookupsAsync(dto);
                 return View(dto);
+            }
+        }
+
+        private async Task HydrateCreateLookupsAsync(ExamScheduleDto dto)
+        {
+            if (dto.OfferingId.HasValue)
+            {
+                var offering = await _courseOfferingService.GetByIdAsync(dto.OfferingId.Value);
+                if (offering != null)
+                {
+                    dto.SubjectId = offering.SubjectId;
+                    dto.SubjectName = offering.SubjectName;
+                    dto.UserName = offering.UserName;
+                    dto.AcademyYearName = offering.AcademicYearName;
+                    dto.SemesterName = offering.SemesterName;
+                    dto.ClassName = offering.ClassName;
+                    dto.GroupNumber = offering.GroupNumber;
+                    dto.OfferingAcademyYearId = offering.AcademyYearId;
+                    dto.OfferingSemesterId = offering.SemesterId;
+                }
+            }
+
+            if (dto.ExamFormatId.HasValue)
+            {
+                var format = (await _service.GetExamFormatsAsync()).FirstOrDefault(x => x.Id == dto.ExamFormatId.Value);
+                if (format != null)
+                {
+                    dto.ExamFormatCode = format.Code;
+                    dto.ExamFormatName = format.Name;
+                }
             }
         }
 
@@ -280,6 +321,12 @@ namespace ExamInvigilationManagement.Controllers
         {
             var data = await _service.GetByIdAsync(id);
             if (data == null) return NotFound();
+
+            if (data.IsLockedForScheduleEdit)
+            {
+                TempData.SetNotification("warning", "Lịch thi đã được phân công giám thị nên không thể chỉnh sửa.");
+                return RedirectToAction(nameof(Details), new { id });
+            }
 
             return View(data);
         }

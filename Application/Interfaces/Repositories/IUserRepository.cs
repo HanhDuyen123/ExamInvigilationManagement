@@ -19,5 +19,6 @@
 
 
         Task<Domain.Entities.User?> GetProfileByIdAsync(int userId);
+        Task<bool> HasActiveLecturerAccountForSamePersonAsync(int userId);
     }
 }

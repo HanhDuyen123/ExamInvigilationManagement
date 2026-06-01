@@ -32,6 +32,7 @@
                 Semester = entity.Semester != null ? new Domain.Entities.Semester
                 {
                     Id = entity.Semester.SemesterId,
+                    AcademyYearId = entity.Semester.AcademyYearId,
                     Name = entity.Semester.SemesterName,
 
                     AcademyYear = entity.Semester.AcademyYear != null

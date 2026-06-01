@@ -139,6 +139,17 @@ namespace ExamInvigilationManagement.Application.Services
             await _repo.AddAsync(entity);
         }
 
+        public async Task<int> CreateAndReturnIdAsync(InformationDto dto)
+        {
+            var entity = BuildEntity(dto, isUpdate: false);
+            ValidateEntity(entity, isUpdate: false, dto.Id);
+
+            if (await _repo.ExistsByEmailAsync(entity.Email))
+                throw new InvalidOperationException("Email đã tồn tại.");
+
+            return await _repo.AddAndReturnIdAsync(entity);
+        }
+
         public async Task UpdateAsync(InformationDto dto)
         {
             var existing = await _repo.GetByIdAsync(dto.Id);

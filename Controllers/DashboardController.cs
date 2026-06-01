@@ -62,8 +62,13 @@ namespace ExamInvigilationManagement.Controllers
         private async Task AddDeanItemsAsync(DashboardIndexViewModel model, int userId, CancellationToken cancellationToken)
         {
             var today = DateTime.Today;
-            var overdue = await _db.ExamScheduleApprovals.CountAsync(x => x.ApproverId == userId && x.Status == ExamScheduleStatuses.PendingApproval && x.ExamSchedule.ExamDate.Date <= today.AddDays(3), cancellationToken);
-            model.WorkItems.Add(new() { Title = "Lịch chờ duyệt", Description = "Cần trưởng khoa duyệt hoặc từ chối.", Count = await _db.ExamScheduleApprovals.CountAsync(x => x.ApproverId == userId && x.Status == ExamScheduleStatuses.PendingApproval, cancellationToken), Url = Url.Action("Index", "ExamScheduleApproval", new { area = "Secretary", status = ExamScheduleStatuses.PendingApproval }) ?? "#", Icon = "bi-check2-circle", Tone = overdue > 0 ? "warning" : "primary", BadgeText = overdue > 0 ? $"{overdue} lịch sát ngày thi" : null });
+            var pendingApprovals = _db.ExamScheduleApprovals
+                .Where(x =>
+                    x.ApproverId == userId &&
+                    x.Status == ExamScheduleStatuses.PendingApproval &&
+                    x.ExamSchedule.Status == ExamScheduleStatuses.PendingApproval);
+            var overdue = await pendingApprovals.CountAsync(x => x.ExamSchedule.ExamDate.Date <= today.AddDays(3), cancellationToken);
+            model.WorkItems.Add(new() { Title = "Lịch chờ duyệt", Description = "Cần trưởng khoa duyệt hoặc từ chối.", Count = await pendingApprovals.CountAsync(cancellationToken), Url = Url.Action("Index", "ExamScheduleApproval", new { area = "Secretary", status = ExamScheduleStatuses.PendingApproval }) ?? "#", Icon = "bi-check2-circle", Tone = overdue > 0 ? "warning" : "primary", BadgeText = overdue > 0 ? $"{overdue} lịch sát ngày thi" : null });
         }
 
         private async Task AddLecturerItemsAsync(DashboardIndexViewModel model, int userId, CancellationToken cancellationToken)

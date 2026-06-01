@@ -23,9 +23,9 @@ namespace ExamInvigilationManagement.Common.Helpers
 
             return name switch
             {
-                "1" or "hk1" or "học kỳ 1" => SemesterType.Semester1,
-                "2" or "hk2" or "học kỳ 2" => SemesterType.Semester2,
-                "hè" or "hk hè" or "summer" => SemesterType.Summer,
+                "1" or "hk1" or "học kỳ 1" or "hoc ky 1" or "học kì 1" or "hoc ki 1" => SemesterType.Semester1,
+                "2" or "hk2" or "học kỳ 2" or "hoc ky 2" or "học kì 2" or "hoc ki 2" => SemesterType.Semester2,
+                "hè" or "he" or "hk hè" or "hk he" or "summer" => SemesterType.Summer,
                 _ => null
             };
         }
@@ -39,6 +39,12 @@ namespace ExamInvigilationManagement.Common.Helpers
                 SemesterType.Summer => "Hè",
                 _ => name
             };
+        }
+
+        public static string ToCanonicalName(string name)
+        {
+            var type = ToType(name);
+            return type.HasValue ? ToName(type.Value) : (name ?? string.Empty).Trim();
         }
     }
 }

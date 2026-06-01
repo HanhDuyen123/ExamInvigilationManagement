@@ -88,6 +88,9 @@ namespace ExamInvigilationManagement.Application.Services
         {
             ValidateDto(dto);
 
+            if (await _repo.HasInvigilatorsAsync(dto.Id))
+                throw new InvalidOperationException("Lịch thi đã được phân công giám thị, không thể sửa để tránh lệch dữ liệu phân công.");
+
             dto.Status = ExamScheduleStatusHelper.Normalize(dto.Status);
 
             var offeringCtx = await _repo.GetOfferingContextAsync(dto.OfferingId!.Value);
@@ -135,7 +138,13 @@ namespace ExamInvigilationManagement.Application.Services
             await _repo.UpdateAsync(entity);
         }
 
-        public Task DeleteAsync(int id) => _repo.DeleteAsync(id);
+        public async Task DeleteAsync(int id)
+        {
+            if (await _repo.HasInvigilatorsAsync(id))
+                throw new InvalidOperationException("Lịch thi đã được phân công giám thị, không thể xóa để tránh mất dữ liệu nghiệp vụ liên quan.");
+
+            await _repo.DeleteAsync(id);
+        }
 
         public Task<List<ExamFormatDto>> GetExamFormatsAsync(CancellationToken cancellationToken = default)
             => _repo.GetExamFormatsAsync(cancellationToken);

@@ -51,6 +51,26 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             return user?.ToDomain();
         }
 
+        public async Task<bool> HasActiveLecturerAccountForSamePersonAsync(int userId)
+        {
+            var informationId = await _context.Users
+                .AsNoTracking()
+                .Where(x => x.UserId == userId)
+                .Select(x => (int?)x.InformationId)
+                .FirstOrDefaultAsync();
+
+            if (!informationId.HasValue)
+                return false;
+
+            return await _context.Users
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.UserId != userId &&
+                    x.InformationId == informationId.Value &&
+                    x.IsActive &&
+                    x.Role.RoleName == "Giảng viên");
+        }
+
         public async Task UpdateAsync(Domain.Entities.User user)
         {
             var entity = await _context.Users

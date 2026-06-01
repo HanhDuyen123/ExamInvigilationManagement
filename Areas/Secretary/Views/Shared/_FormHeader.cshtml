@@ -1,16 +1,19 @@
-﻿@{
+﻿@model object
+@{
     var action = ViewContext.RouteData.Values["action"]?.ToString();
     var controller = ViewContext.RouteData.Values["controller"]?.ToString();
     var area = ViewContext.RouteData.Values["area"]?.ToString();
     var isEdit = action?.ToLower() == "edit";
     var subtitle = ViewBag.Subtitle as string;
     var backUrl = Url.Action("Index", controller, new { area = string.IsNullOrWhiteSpace(area) ? null : area });
+    var explicitTitle = Model as string;
+    var title = !string.IsNullOrWhiteSpace(explicitTitle) ? explicitTitle : (isEdit ? "Cập nhật dữ liệu" : "Tạo dữ liệu");
 }
 
 <div class="form-header mb-4">
     <div>
         <h3 class="title-gradient @(isEdit ? "edit" : "")">
-            @(isEdit ? "Edit" : "Create") @controller
+            @title
         </h3>
         <div class="subtitle">
             @(string.IsNullOrEmpty(subtitle)
@@ -20,6 +23,8 @@
     </div>
 
     <a href="@(backUrl ?? "#")" class="btn-back">
-        <i class="bi bi-arrow-left"></i> Back
+        <i class="bi bi-arrow-left"></i> Quay lại
     </a>
 </div>
+
+@* <div asp-validation-summary="All" class="alert alert-danger validation-summary-all mb-4"></div> *@

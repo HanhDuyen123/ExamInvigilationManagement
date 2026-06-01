@@ -13,6 +13,37 @@
         <a href="@Model.BackUrl" class="btn btn-create"><i class="bi bi-arrow-left"></i><span>Quay lại</span></a>
     </div>
 
+    @if (Model.Result != null)
+    {
+        <div id="importResult" class="form-card import-result mb-4" tabindex="-1">
+            <div class="import-result-head">
+                <div>
+                    <h5 class="import-result-title"><i class="bi bi-clipboard-check"></i> Kết quả import</h5>
+                    <div class="import-result-subtitle">Kết quả kiểm tra file vừa upload. Dữ liệu chỉ được lưu khi không có lỗi.</div>
+                </div>
+            </div>
+            @if (Model.Result.Success)
+            {
+                <div class="alert alert-success mb-0"><i class="bi bi-check-circle"></i> Import thành công @Model.Result.InsertedRows dòng.</div>
+            }
+            else
+            {
+                <div class="alert alert-danger mb-3"><i class="bi bi-exclamation-triangle"></i> File có @Model.Result.Errors.Count lỗi. Chưa có dữ liệu nào được lưu.</div>
+                <div class="import-error-panel">
+                    <table class="table import-error-table mb-0">
+                        <thead><tr><th>Dòng Excel</th><th>Cột</th><th>Giá trị</th><th>Lỗi</th></tr></thead>
+                        <tbody>
+                        @foreach (var err in Model.Result.Errors)
+                        {
+                            <tr><td>@err.RowNumber</td><td>@err.Column</td><td><code>@err.Value</code></td><td>@err.Message</td></tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    }
+
     <div class="import-flow mb-4">
         <div class="import-step"><strong>1</strong><span>Tải template</span><small>Dòng 1 là header, dòng 2 là ví dụ, dòng 3 là mô tả.</small></div>
         <div class="import-step"><strong>2</strong><span>Nhập dữ liệu</span><small>Nhập dữ liệu từ dòng 4. Hệ thống tự bỏ qua dòng ví dụ/mô tả.</small></div>
@@ -64,30 +95,6 @@
         </div>
     </div>
 
-    @if (Model.Result != null)
-    {
-        <div class="form-card import-result mt-4">
-            @if (Model.Result.Success)
-            {
-                <div class="alert alert-success mb-3"><i class="bi bi-check-circle"></i> Import thành công @Model.Result.InsertedRows dòng.</div>
-            }
-            else
-            {
-                <div class="alert alert-danger mb-3"><i class="bi bi-exclamation-triangle"></i> File có @Model.Result.Errors.Count lỗi. Chưa có dữ liệu nào được lưu.</div>
-                <div class="table-responsive">
-                    <table class="table modern-table import-error-table mb-0">
-                        <thead><tr><th>Dòng Excel</th><th>Cột</th><th>Giá trị</th><th>Lỗi</th></tr></thead>
-                        <tbody>
-                        @foreach (var err in Model.Result.Errors)
-                        {
-                            <tr><td>@err.RowNumber</td><td>@err.Column</td><td><code>@err.Value</code></td><td>@err.Message</td></tr>
-                        }
-                        </tbody>
-                    </table>
-                </div>
-            }
-        </div>
-    }
 </div>
 
 <style>
@@ -97,6 +104,24 @@
     .import-step span { font-weight:900; color:var(--text-strong); }
     .import-step small { color:var(--text-muted); }
     .import-card h5 { display:flex; align-items:center; gap:8px; margin-bottom:10px; color:var(--text-strong); font-weight:900; }
-    .import-column-table td, .import-error-table td { vertical-align:top; }
-    .import-error-table code, .import-column-table code { white-space:normal; }
+    .import-result { border-left: 5px solid var(--app-primary); max-width: none; }
+    .import-result-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:12px; }
+    .import-result-title { display:flex; align-items:center; gap:8px; margin:0; color:var(--text-strong); font-weight:900; }
+    .import-result-subtitle { margin-top:3px; color:var(--text-muted,#64748b); font-size:13px; }
+    .import-column-table td { vertical-align:top; }
+    .import-column-table code { white-space:normal; }
+    .import-error-panel { max-height: 460px; overflow: auto !important; border:1px solid rgba(15,23,42,.08); border-radius:16px; background:#fff; }
+    .import-error-table { min-width: 860px; table-layout:auto; border-collapse:separate; border-spacing:0; }
+    .import-error-table thead th { position:sticky; top:0; z-index:1; background:#f8fafc; color:#475569; font-size:12px; text-transform:uppercase; padding:10px 12px; border-bottom:1px solid #e2e8f0; }
+    .import-error-table td { vertical-align:top; padding:10px 12px; border-bottom:1px solid #eef2f7; overflow-wrap:anywhere; }
+    .import-error-table code { white-space:normal; color:#b91c1c; background:#fef2f2; border-radius:8px; padding:2px 5px; }
 </style>
+
+@if (Model.Result != null)
+{
+    <script>
+        requestAnimationFrame(function () {
+            document.getElementById('importResult')?.focus({ preventScroll: true });
+        });
+    </script>
+}

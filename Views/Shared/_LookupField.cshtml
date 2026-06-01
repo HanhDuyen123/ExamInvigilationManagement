@@ -22,5 +22,19 @@
     </div>
 
     <div id="@Model.MenuId" class="dropdown-menu autocomplete-menu w-100"></div>
-    <input type="hidden" id="@Model.HiddenId" name="@Model.HiddenName" value="@Model.InitialValue" />
+    @{
+        var requiredMessage = Model.RequiredMessage;
+        if (string.IsNullOrWhiteSpace(requiredMessage) && !string.IsNullOrWhiteSpace(Model.HiddenName) && !string.IsNullOrWhiteSpace(Model.Label))
+        {
+            requiredMessage = $"Vui lòng chọn {Model.Label.ToLowerInvariant()}.";
+        }
+    }
+    @if (string.IsNullOrWhiteSpace(Model.HiddenName))
+    {
+        <input type="hidden" id="@Model.HiddenId" value="@Model.InitialValue" />
+    }
+    else
+    {
+        <input type="hidden" id="@Model.HiddenId" name="@Model.HiddenName" value="@Model.InitialValue" data-val="@(string.IsNullOrWhiteSpace(requiredMessage) ? null : "true")" data-val-required="@requiredMessage" />
+    }
 </div>

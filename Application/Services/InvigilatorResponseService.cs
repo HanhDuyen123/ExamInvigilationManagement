@@ -61,7 +61,8 @@ namespace ExamInvigilationManagement.Application.Services
                 return Fail("Vui lòng nhập lý do khi từ chối lịch coi thi.");
 
             var items = await _repository.GetSubmitItemsAsync(ids, cancellationToken);
-            if (items.Count != ids.Count || items.Any(x => x.AssigneeId != userId))
+            var userInformationId = await _repository.GetUserInformationIdAsync(userId, cancellationToken);
+            if (items.Count != ids.Count || items.Any(x => x.AssigneeId != userId && (!userInformationId.HasValue || x.AssigneeInformationId != userInformationId.Value)))
                 return Fail("Có lịch coi thi không hợp lệ hoặc không thuộc tài khoản của bạn.");
 
             if (items.Any(x => !string.Equals(x.ScheduleStatus, ExamScheduleStatusHelper.Approved, StringComparison.OrdinalIgnoreCase)))
@@ -169,7 +170,7 @@ namespace ExamInvigilationManagement.Application.Services
             return new InvigilatorConfirmationResultDto
             {
                 Success = true,
-                Message = $"Đã gửi email xác nhận đến {sentCount} giảng viên.",
+                Message = "Đã gửi email xác nhận lịch coi thi.",
                 LecturerCount = sentCount,
                 ScheduleCount = schedules.Count
             };
@@ -183,9 +184,11 @@ namespace ExamInvigilationManagement.Application.Services
             CancellationToken cancellationToken)
         {
             var lecturer = await _repository.GetUserAsync(lecturerId, cancellationToken);
-            var secretaries = await _repository.GetActiveSecretariesAsync(items.Select(x => x.FacultyId), cancellationToken);
+            var secretaries = (await _repository.GetActiveSecretariesAsync(items.Select(x => x.FacultyId), cancellationToken))
+                .Where(x => x.UserId != lecturerId)
+                .ToList();
             var lecturerName = string.IsNullOrWhiteSpace(lecturer?.FullName) ? lecturer?.UserName : lecturer.FullName;
-            var relatedId = items.FirstOrDefault()?.ExamScheduleId;
+            var relatedId = items.Count == 1 ? items[0].ExamScheduleId : (int?)null;
             var content = $"Giảng viên {lecturerName} đã phản hồi {status.ToLower()} {items.Count} lịch coi thi." +
                           (string.IsNullOrWhiteSpace(note) ? string.Empty : $"\nGhi chú: {note.Trim()}");
 

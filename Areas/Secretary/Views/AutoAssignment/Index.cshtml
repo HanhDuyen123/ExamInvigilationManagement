@@ -33,21 +33,21 @@
 
             <div class="lookup-modern position-relative">
                 <label class="form-label mb-1">Năm học</label>
-                <input id="yearInput" class="input-modern" placeholder="Chọn năm học..." autocomplete="off" />
+                <input id="yearInput" class="input-modern" placeholder="Chọn năm học..." autocomplete="off" value="@ViewBag.InitialAcademyYearName" />
                 <div id="yearDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
-                <input type="hidden" id="yearId" />
+                <input type="hidden" id="yearId" value="@ViewBag.InitialAcademyYearId" />
             </div>
 
             <div class="lookup-modern position-relative">
                 <label class="form-label mb-1">Học kỳ <span class="text-danger">*</span></label>
-                <input id="semesterInput" class="input-modern" placeholder="Chọn học kỳ..." autocomplete="off" />
+                <input id="semesterInput" class="input-modern" placeholder="Chọn học kỳ..." autocomplete="off" value="@ViewBag.InitialSemesterName" />
                 <div id="semesterDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
                 <input type="hidden" id="SemesterId" name="SemesterId" value="@(Model.SemesterId.GetValueOrDefault() > 0 ? Model.SemesterId.ToString() : "")" />
             </div>
 
             <div class="lookup-modern position-relative auto-assign-full">
                 <label class="form-label mb-1">Đợt thi <span class="text-danger">*</span></label>
-                <input id="periodInput" class="input-modern" placeholder="Chọn đợt thi..." autocomplete="off" />
+                <input id="periodInput" class="input-modern" placeholder="Chọn đợt thi..." autocomplete="off" value="@ViewBag.InitialPeriodName" />
                 <div id="periodDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
                 <input type="hidden" id="PeriodId" name="PeriodId" value="@(Model.PeriodId.GetValueOrDefault() > 0 ? Model.PeriodId.ToString() : "")" />
             </div>
@@ -221,6 +221,8 @@
                 url: '@Url.Action("AcademyYears", "Lookup", new { area = "" })',
                 valueField: 'id',
                 textField: 'name',
+                initialValue: $('#yearId').val(),
+                initialText: $('#yearInput').val(),
                 onSelect: function () {
                     clearLookup('auto-semester');
                     clearLookup('auto-period');
@@ -239,6 +241,8 @@
                 url: '@Url.Action("Semesters", "Lookup", new { area = "" })',
                 valueField: 'id',
                 textField: 'name',
+                initialValue: $('#SemesterId').val(),
+                initialText: $('#semesterInput').val(),
                 extraParams: function () { return { academyYearId: val('#yearId') }; },
                 beforeSearch: function () { return val('#yearId') ? true : 'Vui lòng chọn năm học'; },
                 onSelect: function () { clearLookup('auto-period'); },
@@ -253,6 +257,8 @@
                 url: '@Url.Action("Periods", "Lookup", new { area = "" })',
                 valueField: 'id',
                 textField: 'name',
+                initialValue: $('#PeriodId').val(),
+                initialText: $('#periodInput').val(),
                 extraParams: function () { return { semesterId: val('#SemesterId') }; },
                 beforeSearch: function () { return val('#yearId') && val('#SemesterId') ? true : 'Vui lòng chọn năm học và học kỳ'; }
             });

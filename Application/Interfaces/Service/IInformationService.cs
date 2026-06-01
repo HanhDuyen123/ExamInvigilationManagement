@@ -11,6 +11,7 @@ namespace ExamInvigilationManagement.Application.Interfaces.Service
         Task<List<InformationDto>> GetAllAsync();
 
         Task CreateAsync(InformationDto dto);
+        Task<int> CreateAndReturnIdAsync(InformationDto dto);
         Task UpdateAsync(InformationDto dto);
         Task DeleteAsync(int id);
     }

@@ -43,8 +43,8 @@
                 button: '#btnPosition',
                 url: '@Url.Action("Search", "Position", new { area = "Admin" })',
                 queryParam: 'keyword',
-                valueField: 'positionId',
-                textField: 'positionName',
+                valueField: 'id',
+                textField: 'name',
 
                 onSelect: function () {
                     CrudPage.loadData(1);

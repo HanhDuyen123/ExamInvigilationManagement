@@ -67,7 +67,7 @@ namespace ExamInvigilationManagement.Application.Services
 
         public async Task UpdateAsync(SemesterDto dto)
         {
-            dto.Name = (dto.Name ?? string.Empty).Trim();
+            dto.Name = SemesterHelper.ToCanonicalName(dto.Name ?? string.Empty);
             if (SemesterHelper.ToType(dto.Name) == null)
                 throw new InvalidOperationException("Học kỳ không đúng cấu trúc chuẩn.");
 

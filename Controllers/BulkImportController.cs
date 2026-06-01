@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using ExamInvigilationManagement.Application.DTOs.Import;
 using ExamInvigilationManagement.Application.Interfaces.Service;
+using ExamInvigilationManagement.Common.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -45,6 +46,10 @@ namespace ExamInvigilationManagement.Controllers
             var userId = int.TryParse(userIdText, out var id) ? id : 0;
             var role = User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Role)?.Value ?? string.Empty;
             var result = await _service.ImportAsync(module, file, userId, role, cancellationToken);
+            if (result.Success)
+                TempData.SetNotification("success", $"Import thành công {result.InsertedRows} dòng.");
+            else
+                TempData.SetNotification("error", $"File có {result.Errors.Count} lỗi. Chưa có dữ liệu nào được lưu.");
 
             var model = BuildPage(module);
             model.Result = result;

@@ -144,6 +144,7 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
             {
                 if (!ModelState.IsValid)
                 {
+                    TempData.SetNotification("error", "Vui lòng kiểm tra lại dữ liệu nhập vào.");
                     await FillLookupNamesAsync(dto);
                     return View(dto);
                 }
@@ -155,6 +156,7 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
             catch (Exception ex)
             {
                 ModelState.AddModelError(string.Empty, ex.Message);
+                TempData.SetNotification("error", ex.Message);
                 await FillLookupNamesAsync(dto);
                 return View(dto);
             }
@@ -182,6 +184,7 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
             {
                 if (!ModelState.IsValid)
                 {
+                    TempData.SetNotification("error", "Vui lòng kiểm tra lại dữ liệu nhập vào.");
                     await FillLookupNamesAsync(dto);
                     return View(dto);
                 }
@@ -193,6 +196,7 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
             catch (Exception ex)
             {
                 ModelState.AddModelError(string.Empty, ex.Message);
+                TempData.SetNotification("error", ex.Message);
                 await FillLookupNamesAsync(dto);
                 return View(dto);
             }
@@ -239,6 +243,8 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
             {
                 var semester = semesters.FirstOrDefault(x => x.Id == dto.SemesterId.Value);
                 dto.SemesterName = semester?.Name;
+                dto.AcademyYearId ??= semester?.AcademyYearId;
+                dto.AcademicYearName = semester?.AcademicYear;
             }
         }
 

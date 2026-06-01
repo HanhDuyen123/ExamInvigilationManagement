@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using DocumentFormat.OpenXml;
 using DocumentFormat.OpenXml.Packaging;
 using DocumentFormat.OpenXml.Spreadsheet;
@@ -172,7 +173,7 @@ namespace ExamInvigilationManagement.Application.Services
             result.TotalRows = rows.Count;
             if (result.Errors.Any() || rows.Count == 0)
             {
-                if (rows.Count == 0) result.Errors.Add(Error(0, "File", file.FileName, "File không có dòng dữ liệu. Dòng 1 là header, dữ liệu bắt đầu từ dòng 2."));
+                if (rows.Count == 0) result.Errors.Add(Error(0, "File", file.FileName, "File không có dòng dữ liệu. Không tìm thấy header hoặc dòng dữ liệu hợp lệ trong file."));
                 return result;
             }
 
@@ -180,11 +181,10 @@ namespace ExamInvigilationManagement.Application.Services
             if (result.Errors.Any()) return result;
 
             await using var tx = await _db.Database.BeginTransactionAsync(cancellationToken);
-            AddEntities(module, entities);
+            result.InsertedRows = await AddEntitiesAsync(module, entities, cancellationToken);
             await _db.SaveChangesAsync(cancellationToken);
             await tx.CommitAsync(cancellationToken);
 
-            result.InsertedRows = rows.Count;
             return result;
         }
 
@@ -194,7 +194,7 @@ namespace ExamInvigilationManagement.Application.Services
             {
                 "subject" => (await MapSubjects(rows, result, ct)).Cast<object>().ToList(),
                 "information-user" => (await MapInformationUsers(rows, result, ct)).Cast<object>().ToList(),
-                "course-offering" => (await MapCourseOfferings(rows, result, ct)).Cast<object>().ToList(),
+                "course-offering" => (await MapCourseOfferingsWithSubjects(rows, result, ct)).Cast<object>().ToList(),
                 "exam-schedule" => (await MapExamSchedules(rows, result, ct)).Cast<object>().ToList(),
                 "lecturer-busy-slot" => (await MapBusySlots(rows, result, currentUserId, currentRole, ct)).Cast<object>().ToList(),
                 "exam-invigilator" => (await MapInvigilators(rows, result, currentUserId, ct)).Cast<object>().ToList(),
@@ -205,7 +205,6 @@ namespace ExamInvigilationManagement.Application.Services
         private async Task<List<E.Subject>> MapSubjects(List<Dictionary<string, string>> rows, ImportResultDto result, CancellationToken ct)
         {
             var faculties = await _db.Faculties.Select(x => new { x.FacultyId, x.FacultyName }).ToListAsync(ct);
-            var existing = (await _db.Subjects.Select(x => x.SubjectId).ToListAsync(ct)).ToHashSet(StringComparer.OrdinalIgnoreCase);
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var list = new List<E.Subject>();
             foreach (var row in rows)
@@ -215,8 +214,7 @@ namespace ExamInvigilationManagement.Application.Services
                 var name = Val(row, "Tên môn").Trim();
                 if (Required(result, r, "Mã môn", id) && id.Length > 10) result.Errors.Add(Error(r, "Mã môn", id, "Tối đa 10 ký tự."));
                 if (Required(result, r, "Tên môn", name) && name.Length > 255) result.Errors.Add(Error(r, "Tên môn", name, "Tối đa 255 ký tự."));
-                if (!seen.Add(id)) result.Errors.Add(Error(r, "Mã môn", id, "Bị trùng trong file import."));
-                if (existing.Contains(id)) result.Errors.Add(Error(r, "Mã môn", id, "Đã tồn tại trong hệ thống."));
+                if (!seen.Add(id)) continue;
                 if (!TryByte(row, "Số tín chỉ", result, r, out var credit) || credit is < 1 or > 20) result.Errors.Add(Error(r, "Số tín chỉ", Val(row, "Số tín chỉ"), "Phải là số từ 1 đến 20."));
                 var faculty = ResolveFaculty(faculties, x => x.FacultyName, Val(row, "Tên khoa"), result, r, "Tên khoa");
                 var facultyId = faculty?.FacultyId ?? 0;
@@ -289,7 +287,9 @@ namespace ExamInvigilationManagement.Application.Services
             var users = (await _db.Users.Include(x => x.Role).ToListAsync(ct)).ToDictionary(x => x.UserName, StringComparer.OrdinalIgnoreCase);
             var years = await _db.AcademyYears.Select(x => new { x.AcademyYearId, x.AcademyYearName }).ToListAsync(ct);
             var semesters = await _db.Semesters.Select(x => new { x.SemesterId, x.SemesterName, x.AcademyYearId }).ToListAsync(ct);
-            var subjects = (await _db.Subjects.Select(x => x.SubjectId).ToListAsync(ct)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var subjects = (await _db.Subjects.Select(x => x.SubjectId).ToListAsync(ct))
+                .Concat(_db.Subjects.Local.Select(x => x.SubjectId))
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
             var list = new List<E.CourseOffering>();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var row in rows)
@@ -313,8 +313,65 @@ namespace ExamInvigilationManagement.Application.Services
             return list;
         }
 
+        private async Task<List<E.CourseOffering>> MapCourseOfferingsWithSubjects(List<Dictionary<string, string>> rows, ImportResultDto result, CancellationToken ct)
+        {
+            if (rows.Any(x => Val(x, "__SchoolSchedule") == "1"))
+                await StageSubjectsFromSchoolScheduleRowsAsync(rows, result, ct);
+
+            return await MapCourseOfferings(rows, result, ct);
+        }
+
+        private async Task StageSubjectsFromSchoolScheduleRowsAsync(List<Dictionary<string, string>> rows, ImportResultDto result, CancellationToken ct)
+        {
+            var faculties = await _db.Faculties.Select(x => new { x.FacultyId, x.FacultyName }).ToListAsync(ct);
+            var existing = (await _db.Subjects.Select(x => x.SubjectId).ToListAsync(ct)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var staged = _db.Subjects.Local.Select(x => x.SubjectId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var row in rows)
+            {
+                var r = RowNo(row);
+                var subjectId = Val(row, "Mã môn").Trim();
+                if (string.IsNullOrWhiteSpace(subjectId) || existing.Contains(subjectId) || staged.Contains(subjectId) || !seen.Add(subjectId))
+                    continue;
+
+                var subjectName = Val(row, "Tên môn").Trim();
+                if (Required(result, r, "Tên môn", subjectName) && subjectName.Length > 255)
+                    result.Errors.Add(Error(r, "Tên môn", subjectName, "Tối đa 255 ký tự."));
+
+                if (!TryByte(row, "Số tín chỉ", result, r, out var credit) || credit is < 1 or > 20)
+                    result.Errors.Add(Error(r, "Số tín chỉ", Val(row, "Số tín chỉ"), "Phải là số từ 1 đến 20."));
+
+                var faculty = ResolveFaculty(faculties, x => x.FacultyName, Val(row, "Tên khoa"), result, r, "Tên khoa");
+                var facultyId = faculty?.FacultyId ?? 0;
+
+                if (facultyId > 0 && !string.IsNullOrWhiteSpace(subjectName) && credit is >= 1 and <= 20)
+                {
+                    _db.Subjects.Add(new E.Subject
+                    {
+                        SubjectId = subjectId,
+                        SubjectName = subjectName,
+                        Credit = credit,
+                        FacultyId = facultyId
+                    });
+                    staged.Add(subjectId);
+                }
+            }
+        }
+
         private async Task<List<E.ExamSchedule>> MapExamSchedules(List<Dictionary<string, string>> rows, ImportResultDto result, CancellationToken ct)
         {
+            if (rows.Any(x => Val(x, "__SchoolSchedule") == "1"))
+            {
+                var offeringRows = rows
+                    .GroupBy(x => string.Join("|", Val(x, "Tên đăng nhập giảng viên"), Val(x, "Năm học"), Val(x, "Học kỳ"), Val(x, "Mã môn"), Val(x, "Lớp học phần"), Val(x, "Nhóm")), StringComparer.OrdinalIgnoreCase)
+                    .Select(x => x.First())
+                    .ToList();
+                var stagedOfferings = await MapCourseOfferingsWithSubjects(offeringRows, result, ct);
+                if (!result.Errors.Any())
+                    await UpsertCourseOfferingsAsync(stagedOfferings, ct);
+            }
+
             var years = await _db.AcademyYears.Select(x => new { x.AcademyYearId, x.AcademyYearName }).ToListAsync(ct);
             var semesters = await _db.Semesters.Select(x => new { x.SemesterId, x.SemesterName, x.AcademyYearId }).ToListAsync(ct);
             var periods = await _db.ExamPeriods.Select(x => new { x.PeriodId, x.PeriodName, x.SemesterId }).ToListAsync(ct);
@@ -322,7 +379,20 @@ namespace ExamInvigilationManagement.Application.Services
             var slots = await _db.ExamSlots.Select(x => new { x.SlotId, x.SlotName, x.SessionId }).ToListAsync(ct);
             var rooms = await _db.Rooms.Select(x => new { x.RoomId, x.RoomName, x.BuildingId }).ToListAsync(ct);
             var examFormats = await _db.ExamFormats.Where(x => x.IsActive).Select(x => new { x.ExamFormatId, x.Code, x.Name }).ToListAsync(ct);
-            var offerings = await _db.CourseOfferings.Include(x => x.User).Select(x => new { x.OfferingId, x.User.UserName, x.SemesterId, x.SubjectId, x.ClassName, x.GroupNumber }).ToListAsync(ct);
+            var usersById = await _db.Users.Select(x => new { x.UserId, x.UserName }).ToDictionaryAsync(x => x.UserId, x => x.UserName, ct);
+            var offerings = (await _db.CourseOfferings
+                    .Include(x => x.User)
+                    .Select(x => new ImportOfferingLookup(x.OfferingId, x.User.UserName, x.SemesterId, x.SubjectId, x.ClassName, x.GroupNumber, null))
+                    .ToListAsync(ct))
+                .Concat(_db.CourseOfferings.Local.Select(x => new ImportOfferingLookup(
+                    0,
+                    usersById.TryGetValue(x.UserId, out var userName) ? userName : string.Empty,
+                    x.SemesterId,
+                    x.SubjectId,
+                    x.ClassName,
+                    x.GroupNumber,
+                    x)))
+                .ToList();
             var list = new List<E.ExamSchedule>();
             foreach (var row in rows)
             {
@@ -331,12 +401,16 @@ namespace ExamInvigilationManagement.Application.Services
                 var yearId = year?.AcademyYearId ?? 0;
                 var semester = ResolveOne(semesters.Where(x => year == null || x.AcademyYearId == year.AcademyYearId), x => x.SemesterName, Val(row, "Học kỳ"), result, r, "Học kỳ");
                 var semesterId = semester?.SemesterId ?? 0;
-                var period = ResolveOne(periods.Where(x => semester == null || x.SemesterId == semester.SemesterId), x => x.PeriodName, Val(row, "Đợt thi"), result, r, "Đợt thi");
+                var period = ResolveExamPeriod(periods.Where(x => semester == null || x.SemesterId == semester.SemesterId), x => x.PeriodName, Val(row, "Đợt thi"), result, r, "Đợt thi");
                 var periodId = period?.PeriodId ?? 0;
                 var session = ResolveOne(sessions.Where(x => period == null || x.PeriodId == period.PeriodId), x => x.SessionName, Val(row, "Buổi thi"), result, r, "Buổi thi");
                 var sessionId = session?.SessionId ?? 0;
-                var slot = ResolveOne(slots.Where(x => session == null || x.SessionId == session.SessionId), x => x.SlotName, Val(row, "Ca thi"), result, r, "Ca thi");
-                var slotId = slot?.SlotId ?? 0;
+                var slotRaw = Val(row, "Ca thi");
+                var sessionSlots = slots
+                    .Where(x => session != null && x.SessionId == session.SessionId)
+                    .Select(x => (x.SlotId, SlotName: (string?)x.SlotName))
+                    .ToList();
+                var targetSlotIds = ResolveScheduleSlotIds(sessionSlots, slotRaw, result, r);
                 var buildingId = Val(row, "Mã giảng đường").Trim();
                 Required(result, r, "Mã giảng đường", buildingId);
                 var room = ResolveOne(rooms.Where(x => string.Equals(x.BuildingId, buildingId, StringComparison.OrdinalIgnoreCase)), x => x.RoomName, Val(row, "Tên phòng"), result, r, "Tên phòng");
@@ -344,7 +418,7 @@ namespace ExamInvigilationManagement.Application.Services
                 var examFormatValue = Val(row, "Hình thức thi").Trim();
                 Required(result, r, "Hình thức thi", examFormatValue);
                 var examFormat = examFormats.FirstOrDefault(x =>
-                    string.Equals(x.Code, examFormatValue, StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(NormalizeExamFormat(x.Code), NormalizeExamFormat(examFormatValue), StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(x.Name, examFormatValue, StringComparison.OrdinalIgnoreCase) ||
                     string.Equals(x.Code + " - " + x.Name, examFormatValue, StringComparison.OrdinalIgnoreCase));
                 if (examFormat == null) result.Errors.Add(Error(r, "Hình thức thi", examFormatValue, "Không tồn tại trong danh mục hình thức thi."));
@@ -355,9 +429,35 @@ namespace ExamInvigilationManagement.Application.Services
                 var status = Val(row, "Trạng thái").Trim();
                 if (string.IsNullOrWhiteSpace(status)) status = "Chờ phân công";
                 if (!ValidScheduleStatuses.Contains(status)) result.Errors.Add(Error(r, "Trạng thái", status, "Không hợp lệ."));
-                list.Add(new E.ExamSchedule { OfferingId = offeringId, AcademyYearId = yearId, SemesterId = semesterId, PeriodId = periodId, SessionId = sessionId, SlotId = slotId, RoomId = roomId, ExamFormatId = examFormat?.ExamFormatId, ExamDate = examDate!.Value, Status = status });
+                foreach (var targetSlotId in targetSlotIds)
+                {
+                    var schedule = new E.ExamSchedule { OfferingId = offeringId, AcademyYearId = yearId, SemesterId = semesterId, PeriodId = periodId, SessionId = sessionId, SlotId = targetSlotId, RoomId = roomId, ExamFormatId = examFormat?.ExamFormatId, ExamDate = examDate!.Value, Status = status };
+                    if (offering?.Entity != null) schedule.Offering = offering.Entity;
+                    list.Add(schedule);
+                }
             }
             return list;
+        }
+
+        private static List<int> ResolveScheduleSlotIds(IEnumerable<(int SlotId, string? SlotName)> source, string raw, ImportResultDto result, int row)
+        {
+            var slots = source.ToList();
+            if (!Required(result, row, "Ca thi", raw)) return [];
+
+            if (IsFullSessionSlot(raw))
+            {
+                if (slots.Count > 0) return slots.Select(x => x.SlotId).ToList();
+
+                result.Errors.Add(Error(row, "Ca thi", raw, "Không tìm thấy ca thi nào thuộc buổi thi đã chọn."));
+                return [];
+            }
+
+            var normalized = NormalizeLookup(NormalizeSlotName(raw));
+            var matches = slots.Where(x => NormalizeLookup(x.SlotName) == normalized).ToList();
+            if (matches.Count >= 1) return [matches.OrderBy(x => x.SlotId).First().SlotId];
+
+            result.Errors.Add(Error(row, "Ca thi", raw, matches.Count == 0 ? "Không tìm thấy dữ liệu khớp trong hệ thống." : "Tên bị trùng trong hệ thống hoặc trong phạm vi cha, cần kiểm tra lại dữ liệu."));
+            return [];
         }
 
         private async Task<List<E.LecturerBusySlot>> MapBusySlots(List<Dictionary<string, string>> rows, ImportResultDto result, int currentUserId, string currentRole, CancellationToken ct)
@@ -381,7 +481,7 @@ namespace ExamInvigilationManagement.Application.Services
                 if (currentRole == "Thư ký khoa" && user != null && user.FacultyId != currentFacultyId) result.Errors.Add(Error(r, "Tên đăng nhập giảng viên", userName, "Không thuộc khoa của thư ký hiện tại."));
                 var year = ResolveOne(years, x => x.AcademyYearName, Val(row, "Năm học"), result, r, "Năm học");
                 var semester = ResolveOne(semesters.Where(x => year == null || x.AcademyYearId == year.AcademyYearId), x => x.SemesterName, Val(row, "Học kỳ"), result, r, "Học kỳ");
-                var period = ResolveOne(periods.Where(x => semester == null || x.SemesterId == semester.SemesterId), x => x.PeriodName, Val(row, "Đợt thi"), result, r, "Đợt thi");
+                var period = ResolveExamPeriod(periods.Where(x => semester == null || x.SemesterId == semester.SemesterId), x => x.PeriodName, Val(row, "Đợt thi"), result, r, "Đợt thi");
                 var session = ResolveOne(sessions.Where(x => period == null || x.PeriodId == period.PeriodId), x => x.SessionName, Val(row, "Buổi thi"), result, r, "Buổi thi");
                 var slot = ResolveOne(slots.Where(x => session == null || x.SessionId == session.SessionId), x => x.SlotName, Val(row, "Ca thi"), result, r, "Ca thi");
                 var slotId = slot?.SlotId ?? 0;
@@ -422,18 +522,129 @@ namespace ExamInvigilationManagement.Application.Services
             return list;
         }
 
-        private void AddEntities(string module, List<object> entities)
+        private async Task<int> AddEntitiesAsync(string module, List<object> entities, CancellationToken ct)
         {
             switch (module)
             {
-                case "subject": _db.Subjects.AddRange(entities.Cast<E.Subject>()); break;
-                case "information-user": _db.Users.AddRange(entities.Cast<E.User>()); break;
-                case "course-offering": _db.CourseOfferings.AddRange(entities.Cast<E.CourseOffering>()); break;
-                case "exam-schedule": _db.ExamSchedules.AddRange(entities.Cast<E.ExamSchedule>()); break;
-                case "lecturer-busy-slot": _db.LecturerBusySlots.AddRange(entities.Cast<E.LecturerBusySlot>()); break;
-                case "exam-invigilator": _db.ExamInvigilators.AddRange(entities.Cast<E.ExamInvigilator>()); break;
+                case "subject": return await UpsertSubjectsAsync(entities.Cast<E.Subject>(), ct);
+                case "information-user": _db.Users.AddRange(entities.Cast<E.User>()); return entities.Count;
+                case "course-offering": return await UpsertCourseOfferingsAsync(entities.Cast<E.CourseOffering>(), ct);
+                case "exam-schedule": return await UpsertExamSchedulesAsync(entities.Cast<E.ExamSchedule>(), ct);
+                case "lecturer-busy-slot": _db.LecturerBusySlots.AddRange(entities.Cast<E.LecturerBusySlot>()); return entities.Count;
+                case "exam-invigilator": _db.ExamInvigilators.AddRange(entities.Cast<E.ExamInvigilator>()); return entities.Count;
             }
+
+            return 0;
         }
+
+        private async Task<int> UpsertSubjectsAsync(IEnumerable<E.Subject> subjects, CancellationToken ct)
+        {
+            var incoming = subjects
+                .Where(x => !string.IsNullOrWhiteSpace(x.SubjectId))
+                .GroupBy(x => x.SubjectId, StringComparer.OrdinalIgnoreCase)
+                .Select(x => x.Last())
+                .ToList();
+
+            if (incoming.Count == 0) return 0;
+
+            var ids = incoming.Select(x => x.SubjectId).ToList();
+            var existing = await _db.Subjects
+                .Where(x => ids.Contains(x.SubjectId))
+                .ToListAsync(ct);
+            var existingById = existing.ToDictionary(x => x.SubjectId, StringComparer.OrdinalIgnoreCase);
+
+            foreach (var item in incoming)
+            {
+                if (existingById.TryGetValue(item.SubjectId, out var current))
+                {
+                    current.SubjectName = item.SubjectName;
+                    current.Credit = item.Credit;
+                    current.FacultyId = item.FacultyId;
+                    continue;
+                }
+
+                _db.Subjects.Add(item);
+            }
+
+            return incoming.Count;
+        }
+
+        private async Task<int> UpsertCourseOfferingsAsync(IEnumerable<E.CourseOffering> offerings, CancellationToken ct)
+        {
+            var incoming = offerings
+                .GroupBy(x => CourseOfferingImportKey(x.UserId, x.SemesterId, x.SubjectId, x.ClassName, x.GroupNumber), StringComparer.OrdinalIgnoreCase)
+                .Select(x => x.Last())
+                .ToList();
+
+            if (incoming.Count == 0) return 0;
+
+            var userIds = incoming.Select(x => x.UserId).Distinct().ToList();
+            var semesterIds = incoming.Select(x => x.SemesterId).Distinct().ToList();
+            var subjectIds = incoming.Select(x => x.SubjectId).Distinct().ToList();
+            var existing = await _db.CourseOfferings
+                .Where(x => userIds.Contains(x.UserId)
+                    && semesterIds.Contains(x.SemesterId)
+                    && subjectIds.Contains(x.SubjectId))
+                .ToListAsync(ct);
+            var existingByKey = existing.ToDictionary(x => CourseOfferingImportKey(x.UserId, x.SemesterId, x.SubjectId, x.ClassName, x.GroupNumber), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var item in incoming)
+            {
+                if (existingByKey.ContainsKey(CourseOfferingImportKey(item.UserId, item.SemesterId, item.SubjectId, item.ClassName, item.GroupNumber)))
+                    continue;
+
+                _db.CourseOfferings.Add(item);
+            }
+
+            return incoming.Count;
+        }
+
+        private static string CourseOfferingImportKey(int userId, int semesterId, string subjectId, string className, string groupNumber)
+            => $"{userId}|{semesterId}|{subjectId}|{className}|{groupNumber}";
+
+        private async Task<int> UpsertExamSchedulesAsync(IEnumerable<E.ExamSchedule> schedules, CancellationToken ct)
+        {
+            var incoming = schedules
+                .GroupBy(x => ScheduleImportKey(x.OfferingId, x.RoomId, x.ExamDate, x.SlotId), StringComparer.OrdinalIgnoreCase)
+                .Select(x => x.Last())
+                .ToList();
+
+            if (incoming.Count == 0) return 0;
+
+            var offeringIds = incoming.Select(x => x.OfferingId).Distinct().ToList();
+            var roomIds = incoming.Select(x => x.RoomId).Distinct().ToList();
+            var slotIds = incoming.Select(x => x.SlotId).Distinct().ToList();
+            var dates = incoming.Select(x => x.ExamDate.Date).Distinct().ToList();
+            var existing = await _db.ExamSchedules
+                .Where(x => offeringIds.Contains(x.OfferingId)
+                    && roomIds.Contains(x.RoomId)
+                    && slotIds.Contains(x.SlotId)
+                    && dates.Contains(x.ExamDate.Date))
+                .ToListAsync(ct);
+
+            var existingByKey = existing.ToDictionary(x => ScheduleImportKey(x.OfferingId, x.RoomId, x.ExamDate, x.SlotId), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var item in incoming)
+            {
+                if (existingByKey.TryGetValue(ScheduleImportKey(item.OfferingId, item.RoomId, item.ExamDate, item.SlotId), out var current))
+                {
+                    current.AcademyYearId = item.AcademyYearId;
+                    current.SemesterId = item.SemesterId;
+                    current.PeriodId = item.PeriodId;
+                    current.SessionId = item.SessionId;
+                    current.ExamFormatId = item.ExamFormatId;
+                    current.Status = item.Status;
+                    continue;
+                }
+
+                _db.ExamSchedules.Add(item);
+            }
+
+            return incoming.Count;
+        }
+
+        private static string ScheduleImportKey(int offeringId, int roomId, DateTime examDate, int slotId)
+            => $"{offeringId}|{roomId}|{examDate:yyyy-MM-dd}|{slotId}";
 
         private List<Dictionary<string, string>> ReadRows(string module, IFormFile file, ImportResultDto result)
         {
@@ -459,8 +670,8 @@ namespace ExamInvigilationManagement.Application.Services
                     return expectedHeaders.Count > 0 && expectedHeaders.All(rowHeaders.Contains);
                 });
 
-                if (headerRow == null && module == "exam-schedule")
-                    return ReadSchoolExamScheduleRows(workbookPart, excelRows);
+                if (headerRow == null && module is "subject" or "course-offering" or "exam-schedule")
+                    return ReadSchoolExamScheduleRows(module, workbookPart, excelRows, file.FileName);
 
                 headerRow ??= excelRows[0];
 
@@ -485,13 +696,16 @@ namespace ExamInvigilationManagement.Application.Services
             return rows;
         }
 
-        private static List<Dictionary<string, string>> ReadSchoolExamScheduleRows(WorkbookPart workbookPart, List<Row> excelRows)
+        private static List<Dictionary<string, string>> ReadSchoolExamScheduleRows(string module, WorkbookPart workbookPart, List<Row> excelRows, string fileName)
         {
             var rows = new List<Dictionary<string, string>>();
             var headerRow = excelRows.FirstOrDefault(row =>
             {
                 var values = ReadRowCells(workbookPart, row).Values.Select(NormalizeLookup).ToHashSet();
-                return values.Contains(NormalizeLookup("Mã học phần")) || values.Contains(NormalizeLookup("Ma HP"));
+                return values.Contains(NormalizeLookup("Mã học phần"))
+                    || values.Contains(NormalizeLookup("Ma học phần"))
+                    || values.Contains(NormalizeLookup("Ma HP"))
+                    || values.Contains(NormalizeLookup("Mã HP"));
             });
 
             if (headerRow == null) return rows;
@@ -501,6 +715,7 @@ namespace ExamInvigilationManagement.Application.Services
             var title = excelRows.TakeWhile(x => (x.RowIndex?.Value ?? 0) < headerIndex)
                 .SelectMany(x => ReadRowCells(workbookPart, x).Values)
                 .FirstOrDefault(x => NormalizeLookup(x).Contains("danh sach hoc phan") || NormalizeLookup(x).Contains("danh sách học phần")) ?? string.Empty;
+            var periodSource = FirstNonEmpty(title, fileName);
 
             foreach (var row in excelRows.Where(x => (x.RowIndex?.Value ?? 0) > headerIndex))
             {
@@ -515,24 +730,30 @@ namespace ExamInvigilationManagement.Application.Services
                     return string.Empty;
                 }
 
-                var subjectId = Get("Mã học phần", "Ma HP");
+                var subjectId = Get("Mã học phần", "Ma học phần", "Ma HP", "Mã HP");
                 if (string.IsNullOrWhiteSpace(subjectId)) continue;
 
                 var lecturer = Get("Cán bộ giảng dạy");
-                var roomRaw = Get("Tên phòng thi", "phòng thi");
-                var building = Get("Dãy phòng");
+                var roomRaw = Get("Tên phòng thi", "Tên phòng", "phòng thi");
+                var building = Get("Dãy phòng", "Day phòng");
                 if (string.IsNullOrWhiteSpace(building)) building = ParseBuilding(roomRaw);
+                var credit = FirstNonEmpty(Get("Tên chữ"), Get("Số tín chỉ"), Get("Tin chỉ"), Get("Tín chỉ"));
+                var subjectFaculty = ParseOrgName(FirstNonEmpty(Get("Đơn vị quản lý học phần"), Get("Don vị quản lý học phần"), Get("Don vi quản lý học phần"), Get("Đơn vị quản lí học phần")));
 
                 var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
                     ["__RowNumber"] = row.RowIndex?.Value.ToString() ?? "0",
+                    ["__SchoolSchedule"] = "1",
                     ["Mã môn"] = subjectId,
+                    ["Tên môn"] = Get("Tên học phần"),
+                    ["Số tín chỉ"] = credit,
+                    ["Tên khoa"] = subjectFaculty,
                     ["Tên đăng nhập giảng viên"] = ParseLecturerCode(lecturer),
                     ["Lớp học phần"] = Get("Lớp HP"),
                     ["Nhóm"] = FirstNonEmpty(Get("Nhóm HP"), Get("Nhóm thi"), "01"),
                     ["Năm học"] = InferAcademyYear(title, Get("Ngày thi")),
                     ["Học kỳ"] = "Học kỳ 2",
-                    ["Đợt thi"] = InferPeriod(title),
+                    ["Đợt thi"] = InferPeriod(periodSource),
                     ["Buổi thi"] = Get("Buổi thi"),
                     ["Ca thi"] = NormalizeSlotName(Get("Ca thi")),
                     ["Mã giảng đường"] = building,
@@ -545,7 +766,18 @@ namespace ExamInvigilationManagement.Application.Services
                 rows.Add(dict);
             }
 
-            return rows;
+            return module switch
+            {
+                "subject" => rows
+                    .GroupBy(x => Val(x, "Mã môn"), StringComparer.OrdinalIgnoreCase)
+                    .Select(x => x.First())
+                    .ToList(),
+                "course-offering" => rows
+                    .GroupBy(x => string.Join("|", Val(x, "Tên đăng nhập giảng viên"), Val(x, "Năm học"), Val(x, "Học kỳ"), Val(x, "Mã môn"), Val(x, "Lớp học phần"), Val(x, "Nhóm")), StringComparer.OrdinalIgnoreCase)
+                    .Select(x => x.First())
+                    .ToList(),
+                _ => rows
+            };
         }
 
         private static Dictionary<string, string> ReadRowCells(WorkbookPart workbookPart, Row row)
@@ -577,7 +809,30 @@ namespace ExamInvigilationManagement.Application.Services
                 room = room[building.Length..].TrimStart('.', '-').Trim();
             return room;
         }
-        private static string NormalizeSlotName(string slot) => slot.Trim().StartsWith("Ca", StringComparison.OrdinalIgnoreCase) ? slot.Trim() : $"Ca {slot.Trim()}";
+
+        private static string ParseOrgName(string value)
+        {
+            value = (value ?? string.Empty).Trim();
+            var parts = value.Split('-', 2, StringSplitOptions.TrimEntries);
+            return parts.Length == 2 ? parts[1] : value;
+        }
+
+        private static string NormalizeSlotName(string slot)
+        {
+            slot = (slot ?? string.Empty).Trim();
+            if (string.IsNullOrWhiteSpace(slot) || IsFullSessionSlot(slot)) return slot;
+            return NormalizeLookup(slot).StartsWith("ca ") ? slot : $"Ca {slot}";
+        }
+
+        private static bool IsFullSessionSlot(string value)
+        {
+            var normalized = NormalizeLookup(value);
+            return normalized is "nguyen buoi" or "ca nguyen buoi" or "ca nguyen" or "nguyen ca" or "ca buoi" or "ca buong"
+                || normalized.Contains("nguyen buoi")
+                || normalized.Contains("ca buoi")
+                || normalized.Contains("ca buổi")
+                || normalized.Contains("cả buổi");
+        }
         private static string InferAcademyYear(string title, string date)
         {
             var normalized = title ?? string.Empty;
@@ -588,19 +843,49 @@ namespace ExamInvigilationManagement.Application.Services
         }
         private static string InferPeriod(string title)
         {
-            var match = System.Text.RegularExpressions.Regex.Match(title ?? string.Empty, @"[ĐD]ợt\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            return match.Success ? $"Đợt {match.Groups[1].Value}" : "Đợt 1";
+            var normalized = NormalizeLookup(title);
+            var dotMatch = System.Text.RegularExpressions.Regex.Match(normalized, @"\b(?:dot|đot|đợt)\s*(\d+)\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (dotMatch.Success) return $"Đợt {dotMatch.Groups[1].Value}";
+            if (ContainsFinalExamPeriod(normalized)) return "Cuối kỳ";
+            if (ContainsMidtermExamPeriod(normalized)) return "Giữa kỳ";
+            return "Cuối kỳ";
+        }
+
+        private static bool ContainsFinalExamPeriod(string normalized)
+        {
+            return normalized.Contains("cuoi ky")
+                || normalized.Contains("cuoi ki")
+                || normalized.Contains("ket thuc hoc ky")
+                || normalized.Contains("ket thuc hoc ki")
+                || normalized.Contains("thi ket thuc")
+                || normalized.Contains("final");
+        }
+
+        private static bool ContainsMidtermExamPeriod(string normalized)
+        {
+            return normalized.Contains("giua ky")
+                || normalized.Contains("giua ki")
+                || normalized.Contains("midterm")
+                || normalized.Contains("mid term");
         }
         private static string NormalizeExamFormat(string value)
         {
-            var code = (value ?? string.Empty).Split('-', 2)[0].Trim().ToUpperInvariant();
+            value = (value ?? string.Empty).Trim();
+            var separator = value.IndexOf(" - ", StringComparison.Ordinal);
+            var code = (separator >= 0 ? value[..separator] : value).Trim().ToUpperInvariant();
+            code = System.Text.RegularExpressions.Regex.Replace(code, @"\s*[-/]\s*", "-");
             return code switch
             {
-                "TN" or "TN/TL" or "TN-TL" => "TN/TL",
-                "BTL" or "BTL/VD" or "BTL-VD" => "BTL-VD",
+                "TN" => "TN",
+                "TN-TL" => "TN/TL",
+                "BTL" => "BTL",
+                "BTL-VD" => "BTL-VD",
+                "TL-VD" => "TL-VD",
+                "NTL-VD" => "NTL-VD",
                 "TL" => "TL",
                 "PM" => "PM",
-                "PTH" => "PTH",
+                "PTH" or "TH" => "TH",
+                "DA" => "DA",
                 "VD" => "VD",
                 _ => string.IsNullOrWhiteSpace(code) ? value : code
             };
@@ -624,7 +909,9 @@ namespace ExamInvigilationManagement.Application.Services
 
         private static string GetCellValue(WorkbookPart workbookPart, Cell? cell)
         {
-            if (cell?.CellValue == null) return string.Empty;
+            if (cell == null) return string.Empty;
+            if (cell.DataType?.Value == CellValues.InlineString) return cell.InlineString?.InnerText ?? string.Empty;
+            if (cell.CellValue == null) return string.Empty;
             var value = cell.CellValue.InnerText;
             if (cell.DataType?.Value == CellValues.SharedString)
             {
@@ -653,7 +940,7 @@ namespace ExamInvigilationManagement.Application.Services
                 value = DateTime.FromOADate(oaDate).Date;
                 return true;
             }
-            if (DateTime.TryParseExact(raw, ["yyyy-MM-dd", "dd/MM/yyyy", "M/d/yyyy", "d/M/yyyy"], CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt) || DateTime.TryParse(raw, out dt)) { value = dt.Date; return true; }
+            if (DateTime.TryParseExact(raw, ["yyyy-MM-dd", "dd/MM/yyyy", "d/M/yyyy", "M/d/yyyy", "dd-MM-yyyy", "d-M-yyyy", "M-d-yyyy"], CultureInfo.InvariantCulture, DateTimeStyles.None, out var dt) || DateTime.TryParse(raw, out dt)) { value = dt.Date; return true; }
             value = null; result.Errors.Add(Error(rowNo, column, raw, "Ngày không hợp lệ. Dùng yyyy-MM-dd hoặc dd/MM/yyyy.")); return false;
         }
         private static bool TryBool(string raw, bool defaultValue) => string.IsNullOrWhiteSpace(raw) ? defaultValue : raw.Trim().ToLowerInvariant() is "true" or "1" or "yes" or "y" or "có" or "co" or "active" or "hoạt động";
@@ -664,6 +951,32 @@ namespace ExamInvigilationManagement.Application.Services
             var normalized = NormalizeLookup(raw);
             var matches = source.Where(x => NormalizeLookup(selector(x)) == normalized).ToList();
             if (matches.Count == 1) return matches[0];
+            result.Errors.Add(Error(row, column, raw, matches.Count == 0 ? "Không tìm thấy dữ liệu khớp trong hệ thống." : "Tên bị trùng trong hệ thống hoặc trong phạm vi cha, cần kiểm tra lại dữ liệu."));
+            return null;
+        }
+
+        private static T? ResolveExamPeriod<T>(IEnumerable<T> source, Func<T, string?> selector, string raw, ImportResultDto result, int row, string column) where T : class
+        {
+            if (!Required(result, row, column, raw)) return null;
+
+            var list = source.ToList();
+            var normalized = NormalizeLookup(raw);
+            var matches = list.Where(x => NormalizeLookup(selector(x)) == normalized).ToList();
+            if (matches.Count == 1) return matches[0];
+
+            var fallbackNames = new List<string>();
+            if (normalized.StartsWith("dot ") || normalized.StartsWith("dot")) fallbackNames.Add("Cuối kỳ");
+            if (ContainsFinalExamPeriod(normalized)) fallbackNames.Add("Đợt 1");
+            if (ContainsMidtermExamPeriod(normalized)) fallbackNames.Add("Giữa kỳ");
+
+            foreach (var fallback in fallbackNames.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                var fallbackMatches = list.Where(x => NormalizeLookup(selector(x)) == NormalizeLookup(fallback)).ToList();
+                if (fallbackMatches.Count == 1) return fallbackMatches[0];
+            }
+
+            if (matches.Count == 0 && list.Count == 1) return list[0];
+
             result.Errors.Add(Error(row, column, raw, matches.Count == 0 ? "Không tìm thấy dữ liệu khớp trong hệ thống." : "Tên bị trùng trong hệ thống hoặc trong phạm vi cha, cần kiểm tra lại dữ liệu."));
             return null;
         }
@@ -700,6 +1013,26 @@ namespace ExamInvigilationManagement.Application.Services
             var normalized = NormalizeLookup(value);
             return System.Text.RegularExpressions.Regex.Replace(normalized, @"^(khoa|trung tâm|trung tam|trường|truong)\s+", string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         }
-        private static string NormalizeLookup(string? value) => (value ?? string.Empty).Trim().ToLowerInvariant();
+        private static string NormalizeLookup(string? value)
+        {
+            var normalized = (value ?? string.Empty).Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD);
+            var builder = new StringBuilder(normalized.Length);
+            foreach (var ch in normalized)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark)
+                    builder.Append(ch == 'đ' ? 'd' : ch);
+            }
+
+            return string.Join(' ', builder.ToString().Normalize(NormalizationForm.FormC).Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        }
+
+        private sealed record ImportOfferingLookup(
+            int OfferingId,
+            string UserName,
+            int SemesterId,
+            string SubjectId,
+            string ClassName,
+            string GroupNumber,
+            E.CourseOffering? Entity);
     }
 }

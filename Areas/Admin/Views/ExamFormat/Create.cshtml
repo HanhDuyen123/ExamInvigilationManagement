@@ -1,0 +1,29 @@
+@model ExamInvigilationManagement.Application.DTOs.ExamSchedule.ExamFormatDto
+
+@{
+    ViewBag.Subtitle = "Tạo hình thức thi";
+}
+
+<form asp-area="Admin" asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+    <div class="form-page">
+        @await Html.PartialAsync("_FormHeader")
+        <div class="form-card">
+            <div class="form-group mb-3">
+                <label class="form-label">Mã hình thức thi</label>
+                <input asp-for="Code" class="input-modern" placeholder="VD, PM, TL-VD..." />
+                <span asp-validation-for="Code" class="text-danger"></span>
+            </div>
+            <div class="form-group mb-3">
+                <label class="form-label">Tên hình thức thi</label>
+                <input asp-for="Name" class="input-modern" placeholder="Vấn đáp, Thi tại phòng máy..." />
+                <span asp-validation-for="Name" class="text-danger"></span>
+            </div>
+            <div class="form-check mb-3">
+                <input asp-for="IsActive" class="form-check-input" />
+                <label asp-for="IsActive" class="form-check-label">Đang sử dụng</label>
+            </div>
+            @await Html.PartialAsync("_FormFooter")
+        </div>
+    </div>
+</form>

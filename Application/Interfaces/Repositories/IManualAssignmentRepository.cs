@@ -23,17 +23,23 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
 
         Task<List<ManualAssignmentLecturerOptionDto>> GetActiveLecturersAsync(
             int facultyId,
+            string subjectId,
+            int ownerUserId,
             CancellationToken cancellationToken = default);
 
         Task<Dictionary<int, int>> GetLecturerLoadsAsync(
             int semesterId,
-            int facultyId,
+            IEnumerable<int> userIds,
             CancellationToken cancellationToken = default);
 
         Task<Dictionary<int, int>> GetSameDayLoadsAsync(
             int semesterId,
-            int facultyId,
+            IEnumerable<int> userIds,
             DateTime examDate,
+            CancellationToken cancellationToken = default);
+
+        Task<HashSet<int>> GetSubjectLecturerIdsAsync(
+            string subjectId,
             CancellationToken cancellationToken = default);
 
         Task<List<int>> GetBusyLecturerIdsAsync(

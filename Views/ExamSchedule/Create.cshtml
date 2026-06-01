@@ -6,7 +6,7 @@
     ViewData["Title"] = "Thêm lịch thi";
 }
 
-<form asp-action="Create" method="post">
+<form asp-action="Create" method="post" id="examScheduleCreateForm">
     <div class="form-page">
         @await Html.PartialAsync("_FormHeader", "Tạo lịch thi mới")
 
@@ -34,10 +34,11 @@
                 Model.GroupNumber
                 }.Where(x => !string.IsNullOrWhiteSpace(x)))
            })
+                <span asp-validation-for="OfferingId" class="text-danger"></span>
             </div>
 
-            <input type="hidden" id="offeringAcademyYearId" value="" />
-            <input type="hidden" id="offeringSemesterId" value="" />
+            <input type="hidden" id="offeringAcademyYearId" name="OfferingAcademyYearId" value="@Model.OfferingAcademyYearId" />
+            <input type="hidden" id="offeringSemesterId" name="OfferingSemesterId" value="@Model.OfferingSemesterId" />
 
             <div class="row g-3 mb-3">
                 <div class="col-md-4">
@@ -101,7 +102,8 @@
                    InputClass = "input-modern",
                    InitialValue = Model.PeriodId?.ToString(),
                    InitialText = Model.PeriodName ?? ""
-               })
+                })
+                    <span asp-validation-for="PeriodId" class="text-danger"></span>
                 </div>
 
                 <div class="col-md-4">
@@ -116,7 +118,8 @@
                    InputClass = "input-modern",
                    InitialValue = Model.SessionId?.ToString(),
                    InitialText = Model.SessionName ?? ""
-               })
+                })
+                    <span asp-validation-for="SessionId" class="text-danger"></span>
                 </div>
 
                 <div class="col-md-4">
@@ -131,7 +134,8 @@
                    InputClass = "input-modern",
                    InitialValue = Model.SlotId?.ToString(),
                    InitialText = Model.SlotName ?? ""
-               })
+                })
+                    <span asp-validation-for="SlotId" class="text-danger"></span>
                 </div>
             </div>
 
@@ -143,7 +147,7 @@
 
             <div class="form-group">
                 <label>Số lượng phòng thi</label>
-                <input type="number" id="roomCount" class="input-modern" min="1" value="@(Model.RoomCount <= 0 ? 1 : Model.RoomCount)" />
+                <input type="number" id="roomCount" name="RoomCount" class="input-modern" min="1" value="@(Model.RoomCount <= 0 ? Math.Max(Model.RoomIds?.Count ?? 0, 1) : Model.RoomCount)" />
             </div>
 
             <div class="form-group">
@@ -160,6 +164,8 @@
             </div>
 
             <div id="roomBlocks" class="d-grid gap-3"></div>
+            <div id="roomIdsPostFields"></div>
+            <span asp-validation-for="RoomIds" class="text-danger"></span>
 
             <div class="form-group mt-3">
                 <label>Trạng thái</label>
@@ -182,6 +188,7 @@
     <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
     <script>
         $(function () {
+            const initialRoomIds = @Html.Raw(JsonSerializer.Serialize(Model.RoomIds ?? new List<int>()));
             function clearLookup(key) {
                 const lookup = AdminLookup.get(key);
                 if (lookup) lookup.clear();
@@ -240,7 +247,7 @@
                                     <label class="form-label">Phòng thi ${i + 1}</label>
                                     <input id="roomInput_${i}" class="input-modern" placeholder="Chọn phòng thi..." autocomplete="off" />
                                     <div id="roomDropdown_${i}" class="dropdown-menu autocomplete-menu w-100"></div>
-                                    <input type="hidden" name="RoomIds" id="roomId_${i}" />
+                                    <input type="hidden" class="room-id-value" id="roomId_${i}" value="${initialRoomIds[i] || ''}" />
                                 </div>
                             </div>
                         </div>
@@ -250,12 +257,15 @@
                 $('#roomBlocks').html(html);
 
                 for (let i = 0; i < count; i++) {
+                    if (initialRoomIds[i]) {
+                        $('#roomInput_' + i).val('Đã chọn phòng #' + initialRoomIds[i]);
+                    }
                     AdminLookup.create({
                         key: 'room-' + i,
                         input: '#roomInput_' + i,
                         hidden: '#roomId_' + i,
                         menu: '#roomDropdown_' + i,
-                        url: '@Url.Action("SearchByBuilding", "Room")',
+                        url: '@Url.Action("SearchByBuilding", "Room", new { area = "Admin" })',
                         queryParam: 'keyword',
                         extraParams: function () {
                             return {
@@ -270,9 +280,29 @@
                                 return false;
                             }
                             return true;
+                        },
+                        onSelect: function () {
+                            syncRoomPostFields();
+                        },
+                        onClear: function () {
+                            syncRoomPostFields();
                         }
                     });
                 }
+            }
+
+            function syncRoomPostFields() {
+                const values = $('.room-id-value').map(function () {
+                    return $(this).val();
+                }).get().filter(function (value, index, self) {
+                    return value && Number(value) > 0 && self.indexOf(value) === index;
+                });
+
+                const html = values.map(function (value, index) {
+                    return `<input type="hidden" name="RoomIds[${index}]" value="${value}" />`;
+                }).join('');
+
+                $('#roomIdsPostFields').html(html);
             }
 
             AdminLookup.create({
@@ -413,27 +443,35 @@
                 queryParam: 'keyword',
                 valueField: 'id',
                 textField: 'name',
-                onSelect: function () {
-                    const count = Math.max(parseInt($('#roomCount').val() || '1', 10), 1);
-                    for (let i = 0; i < count; i++) {
-                        const roomLookup = AdminLookup.get('room-' + i);
-                        if (roomLookup) roomLookup.clear();
-                    }
-                },
-                onClear: function () {
-                    const count = Math.max(parseInt($('#roomCount').val() || '1', 10), 1);
-                    for (let i = 0; i < count; i++) {
-                        const roomLookup = AdminLookup.get('room-' + i);
-                        if (roomLookup) roomLookup.clear();
-                    }
-                }
-            });
+                        onSelect: function () {
+                            const count = Math.max(parseInt($('#roomCount').val() || '1', 10), 1);
+                            for (let i = 0; i < count; i++) {
+                                const roomLookup = AdminLookup.get('room-' + i);
+                                if (roomLookup) roomLookup.clear();
+                            }
+                            syncRoomPostFields();
+                        },
+                        onClear: function () {
+                            const count = Math.max(parseInt($('#roomCount').val() || '1', 10), 1);
+                            for (let i = 0; i < count; i++) {
+                                const roomLookup = AdminLookup.get('room-' + i);
+                                if (roomLookup) roomLookup.clear();
+                            }
+                            syncRoomPostFields();
+                        }
+                    });
 
             $('#roomCount').on('change', function () {
                 renderRoomBlocks();
+                syncRoomPostFields();
+            });
+
+            $('#examScheduleCreateForm').on('submit', function () {
+                syncRoomPostFields();
             });
 
             renderRoomBlocks();
+            syncRoomPostFields();
         });
     </script>
 }

@@ -40,6 +40,11 @@ namespace ExamInvigilationManagement.Application.Services
             };
         }
 
+        public Task<bool> HasActiveLecturerAccountForSamePersonAsync(int userId)
+        {
+            return _repo.HasActiveLecturerAccountForSamePersonAsync(userId);
+        }
+
         public async Task UpdateProfileAsync(int userId, UpdateProfileDto dto)
         {
             var user = await _repo.GetByIdAsync(userId);

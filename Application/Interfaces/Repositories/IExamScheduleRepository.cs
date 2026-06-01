@@ -17,6 +17,7 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
         Task<bool> ExistsRoomConflictAsync(int roomId, DateTime examDate, int slotId, int? ignoreId = null);
         Task<bool> RoomExistsAsync(int roomId);
         Task<bool> ExamFormatExistsAsync(int examFormatId);
+        Task<bool> HasInvigilatorsAsync(int id);
         Task<List<ExamFormatDto>> GetExamFormatsAsync(CancellationToken cancellationToken = default);
 
         Task<ExamScheduleValidationContextDto?> GetOfferingContextAsync(int offeringId);

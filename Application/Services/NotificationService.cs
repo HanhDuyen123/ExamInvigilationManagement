@@ -22,6 +22,9 @@ namespace ExamInvigilationManagement.Application.Services
             NotificationWriteDto dto,
             CancellationToken cancellationToken = default)
         {
+            if (dto.CreatedBy.HasValue && dto.CreatedBy.Value == dto.UserId)
+                return;
+
             await _notificationRepository.CreateAsync(dto, cancellationToken);
             await _realtimePublisher.PublishToUserAsync(dto.UserId, cancellationToken);
         }
@@ -30,6 +33,9 @@ namespace ExamInvigilationManagement.Application.Services
             NotificationWriteDto dto,
             CancellationToken cancellationToken = default)
         {
+            if (dto.CreatedBy.HasValue && dto.CreatedBy.Value == dto.UserId)
+                return;
+
             await _notificationRepository.UpsertAsync(dto, cancellationToken);
             await _realtimePublisher.PublishToUserAsync(dto.UserId, cancellationToken);
         }

@@ -38,6 +38,7 @@
     <tbody>
         @foreach (var item in Model.Items)
         {
+            var busySlotName = $"lịch bận ngày {item.BusyDate:dd/MM/yyyy} - {item.ExamSessionName} - {item.ExamSlotName}";
             <tr>
                 <td>@stt</td>
                 <td class="cell-wrap ui-col-person">@item.UserName</td>
@@ -64,7 +65,7 @@
                                class="btn-icon delete btn-delete"
                                data-id="@item.Id"
                                title="Xóa"
-                               data-name="@item.UserName">
+                               data-name="@busySlotName">
                                 <i class="bi bi-trash"></i>
                             </a>
                         }

@@ -486,14 +486,17 @@
         display: none;
         max-height: 200px;
         overflow: auto;
-        width: max(100%, min(420px, calc(100vw - 32px)));
+        width: max(100%, min(560px, calc(100vw - 32px)));
         max-width: calc(100vw - 32px);
-        z-index: 1060;
+        z-index: 3000;
     }
 
     .lookup-modern .lookup-item {
         cursor: pointer;
         padding: 6px 10px;
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.35;
     }
 
         .lookup-modern .lookup-item:hover,

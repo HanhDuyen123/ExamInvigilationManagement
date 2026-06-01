@@ -31,6 +31,7 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
             int? excludeUserId = null);
 
         Task<bool> HasDependenciesAsync(int userId);
+        Task SetActiveAsync(int id, bool isActive);
 
         Task AddAsync(User entity);
         Task UpdateAsync(User entity);

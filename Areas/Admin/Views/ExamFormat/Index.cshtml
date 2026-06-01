@@ -1,0 +1,25 @@
+@using ExamInvigilationManagement.ViewModel
+@model CrudIndexViewModel
+
+@{
+    ViewData["Title"] = "Quản lý hình thức thi";
+}
+
+@await Html.PartialAsync("_CrudIndex", Model)
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script>
+        $(function () {
+            CrudPage.init({
+                api: '@Url.Action("GetList", "ExamFormat", new { area = "Admin" })',
+                deleteUrl: '@Url.Action("Delete", "ExamFormat", new { area = "Admin" })',
+                tableId: '#crudTable',
+                filterSelector: '.crud-filter',
+                pageSize: '#pageSize',
+                deleteName: '#deleteName',
+                extraData: function () { return { keyword: $('#searchBox').val()?.trim() }; }
+            });
+        });
+    </script>
+}

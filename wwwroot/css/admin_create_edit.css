@@ -49,12 +49,19 @@
     margin-bottom: 20px;
 }
 
-    .form-group label {
-        display: block;
-        font-size: 13px;
-        color: #64748b;
-        margin-bottom: 6px;
-    }
+.form-group label {
+    display: block;
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+
+.required-label::after,
+.form-label.required-label::after {
+    content: " *";
+    color: #dc2626;
+    font-weight: 900;
+}
 
 /* INPUT */
 .input-modern {
@@ -458,3 +465,10 @@
 .invigilator-card strong { color: #1e293b; font-weight: 750; }
 .invigilator-strip { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
 .invigilator-card { display: flex; align-items: center; gap: 12px; }
+.validation-summary-valid {
+    display: none;
+}
+
+.validation-summary-all ul {
+    margin-bottom: 0;
+}

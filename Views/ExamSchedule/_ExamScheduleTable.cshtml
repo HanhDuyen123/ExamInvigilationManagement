@@ -126,17 +126,28 @@
                             <div class="action-group">
                                 @if (actionMode == "admin")
                                 {
-                                    <a href="@Url.Action("Edit", "ExamSchedule", new { id = item.Id })"
-                                       class="btn-icon edit">
-                                        <i class="bi bi-pencil"></i>
-                                    </a>
+                                    @if (!item.IsLockedForScheduleEdit)
+                                    {
+                                        <a href="@Url.Action("Edit", "ExamSchedule", new { id = item.Id })"
+                                           class="btn-icon edit"
+                                           title="Sửa lịch thi">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
 
-                                    <a href="#"
-                                       class="btn-icon delete btn-delete"
-                                       data-id="@item.Id"
-                                       data-name="@($"{item.SubjectId} - {item.ClassName} - {item.GroupNumber}")">
-                                        <i class="bi bi-trash"></i>
-                                    </a>
+                                        <a href="#"
+                                           class="btn-icon delete btn-delete"
+                                           data-id="@item.Id"
+                                           data-name="@($"{item.SubjectId} - {item.ClassName} - {item.GroupNumber}")"
+                                           title="Xóa lịch thi">
+                                            <i class="bi bi-trash"></i>
+                                        </a>
+                                    }
+                                    else
+                                    {
+                                        <span class="btn-icon disabled" title="Đã phân công giám thị, không thể sửa/xóa lịch thi">
+                                            <i class="bi bi-lock"></i>
+                                        </span>
+                                    }
                                 }
                                 else if (actionMode == "secretary")
                                 {

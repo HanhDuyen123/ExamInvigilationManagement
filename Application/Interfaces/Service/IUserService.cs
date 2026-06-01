@@ -6,6 +6,7 @@ namespace ExamInvigilationManagement.Application.Interfaces.Service
     public interface IUserService
     {
         Task<ProfileDto?> GetProfileAsync(int userId);
+        Task<bool> HasActiveLecturerAccountForSamePersonAsync(int userId);
         Task UpdateProfileAsync(int userId, UpdateProfileDto dto);
     }
 }

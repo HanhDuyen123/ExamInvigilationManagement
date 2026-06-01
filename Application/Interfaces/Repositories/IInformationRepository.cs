@@ -11,6 +11,7 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
         Task<bool> HasUsersAsync(int id);
 
         Task AddAsync(Information entity);
+        Task<int> AddAndReturnIdAsync(Information entity);
         Task UpdateAsync(Information entity);
         Task DeleteAsync(int id);
     }

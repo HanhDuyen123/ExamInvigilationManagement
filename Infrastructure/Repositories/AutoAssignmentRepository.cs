@@ -36,7 +36,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .Where(x =>
                     x.SemesterId == semesterId &&
                     x.PeriodId == periodId &&
-                    x.Offering.User.FacultyId == facultyId)
+                    x.Offering.Subject.FacultyId == facultyId)
                 .Select(x => new AutoAssignScheduleDto
                 {
                     ExamScheduleId = x.ExamScheduleId,
@@ -54,7 +54,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
                     OfferingId = x.OfferingId,
                     OfferingUserId = x.Offering.UserId,
-                    OfferingFacultyId = x.Offering.User.FacultyId,
+                    OfferingFacultyId = x.Offering.Subject.FacultyId,
 
                     SubjectId = x.Offering.SubjectId,
                     SubjectName = x.Offering.Subject.SubjectName,
@@ -72,17 +72,29 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
         public async Task<List<AutoAssignLecturerDto>> GetActiveLecturersAsync(
             int facultyId,
+            IEnumerable<string> subjectIds,
+            IEnumerable<int> ownerUserIds,
             CancellationToken cancellationToken = default)
         {
+            var subjectIdList = subjectIds.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().ToList();
+            var ownerIdList = ownerUserIds.Distinct().ToList();
+            var subjectLecturerIds = await _db.CourseOfferings
+                .AsNoTracking()
+                .Where(x => subjectIdList.Contains(x.SubjectId) && x.User.IsActive && x.User.Role.RoleName == "Giảng viên")
+                .Select(x => x.UserId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
             return await _db.Users
                 .AsNoTracking()
                 .Where(x =>
                     x.IsActive &&
-                    x.FacultyId == facultyId &&
+                    (x.FacultyId == facultyId || ownerIdList.Contains(x.UserId) || subjectLecturerIds.Contains(x.UserId)) &&
                     x.Role.RoleName != "Admin")
                 .Select(x => new AutoAssignLecturerDto
                 {
                     UserId = x.UserId,
+                    InformationId = x.InformationId,
                     UserName = x.UserName,
                     FullName = x.Information.LastName + " " + x.Information.FirstName,
                     FacultyId = x.FacultyId,
@@ -95,14 +107,15 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
         public async Task<Dictionary<int, int>> GetLecturerLoadsAsync(
             int semesterId,
-            int facultyId,
+            IEnumerable<int> userIds,
             CancellationToken cancellationToken = default)
         {
+            var userIdList = userIds.Distinct().ToList();
             return await _db.ExamInvigilators
                 .AsNoTracking()
                 .Where(x =>
                     x.ExamSchedule.SemesterId == semesterId &&
-                    x.Assignee.FacultyId == facultyId &&
+                    userIdList.Contains(x.AssigneeId) &&
                     x.Assignee.IsActive &&
                     x.Status != "Từ chối" &&
                     (x.InvigilatorResponses
@@ -121,7 +134,6 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
         public async Task<Dictionary<string, HashSet<int>>> GetSubjectLecturerMapAsync(
             IEnumerable<string> subjectIds,
-            int facultyId,
             CancellationToken cancellationToken = default)
         {
             var subjectIdList = subjectIds
@@ -136,7 +148,6 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .AsNoTracking()
                 .Where(x =>
                     subjectIdList.Contains(x.SubjectId) &&
-                    x.User.FacultyId == facultyId &&
                     x.User.IsActive &&
                     x.User.Role.RoleName == "Giảng viên")
                 .Select(x => new
@@ -192,6 +203,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     ExamInvigilatorId = x.ExamInvigilatorId,
                     ExamScheduleId = x.ExamScheduleId,
                     UserId = x.AssigneeId,
+                    InformationId = x.Assignee.InformationId,
                     PositionNo = x.PositionNo,
                     SlotId = x.ExamSchedule.SlotId,
                     ExamDate = x.ExamSchedule.ExamDate,
@@ -267,14 +279,19 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     }
                 }
 
+                var distinctScheduleIds = plan.NewInvigilators
+                    .Select(x => x.ExamScheduleId)
+                    .Distinct()
+                    .ToList();
+
                 _db.AuditLogs.Add(new Data.Entities.AuditLog
                 {
                     EventType = "AutoAssignment",
-                    EntityName = "ExamInvigilator",
-                    EntityId = string.Join(",", plan.NewInvigilators.Select(x => x.ExamScheduleId).Distinct()),
+                    EntityName = "AutoAssignment",
+                    EntityId = $"Schedules:{distinctScheduleIds.Count}",
                     Action = "SavePlan",
                     ActorUserId = plan.NewInvigilators.FirstOrDefault()?.AssignerId,
-                    NewValues = $"Assignments={plan.NewInvigilators.Count};Schedules={plan.ScheduleStatuses.Count}",
+                    NewValues = $"Assignments={plan.NewInvigilators.Count};Schedules={plan.ScheduleStatuses.Count};ScheduleIds={string.Join(",", distinctScheduleIds)}",
                     CreatedAt = now,
                     CorrelationId = correlationId,
                     Source = nameof(AutoAssignmentRepository)

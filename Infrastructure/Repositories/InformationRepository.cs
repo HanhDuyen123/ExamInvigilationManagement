@@ -61,6 +61,14 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             await _context.SaveChangesAsync();
         }
 
+        public async Task<int> AddAndReturnIdAsync(Information entity)
+        {
+            var data = entity.ToEntity();
+            _context.Information.Add(data);
+            await _context.SaveChangesAsync();
+            return data.InformationId;
+        }
+
         public async Task UpdateAsync(Information entity)
         {
             var data = await _context.Information.FindAsync(entity.Id);

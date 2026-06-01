@@ -58,16 +58,14 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
             {
                 var kw = keyword.Trim();
                 data = data
-                    .Where(x =>
-                        x.Id.ToString().Contains(kw, StringComparison.OrdinalIgnoreCase) ||
-                        $"{x.LastName} {x.FirstName}".Contains(kw, StringComparison.OrdinalIgnoreCase))
+                    .Where(x => $"{x.LastName} {x.FirstName}".Contains(kw, StringComparison.OrdinalIgnoreCase))
                     .ToList();
             }
 
             return Json(data.Select(x => new
             {
                 id = x.Id,
-                fullName = $"{x.Id} - {x.LastName} {x.FirstName}"
+                fullName = $"{x.LastName} {x.FirstName}"
             }));
         }
 

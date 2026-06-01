@@ -51,6 +51,8 @@ namespace ExamInvigilationManagement.Application.Services
                         ? $"{x.Information.LastName} {x.Information.FirstName}"
                         : string.Empty,
                     Email = x.Information?.Email,
+                    Phone = x.Information?.Phone,
+                    Dob = x.Information?.Dob,
                     FacultyName = x.Faculty?.Name,
                     IsActive = x.IsActive
                 })
@@ -83,6 +85,8 @@ namespace ExamInvigilationManagement.Application.Services
                     ? $"{x.Information.LastName} {x.Information.FirstName}" 
                     : string.Empty,
                 Email = x.Information?.Email,
+                Phone = x.Information?.Phone,
+                Dob = x.Information?.Dob,
                 FacultyName = x.Faculty?.Name
             };
         }
@@ -111,6 +115,8 @@ namespace ExamInvigilationManagement.Application.Services
                     ? $"{x.Information.LastName} {x.Information.FirstName}"
                     : string.Empty,
                 Email = x.Information?.Email,
+                Phone = x.Information?.Phone,
+                Dob = x.Information?.Dob,
                 FacultyName = x.Faculty?.Name,
                 IsActive = x.IsActive
             }).ToList();

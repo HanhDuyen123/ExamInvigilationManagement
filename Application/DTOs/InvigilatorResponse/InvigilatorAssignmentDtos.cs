@@ -71,6 +71,7 @@ namespace ExamInvigilationManagement.Application.DTOs.InvigilatorResponse
         public int ExamInvigilatorId { get; set; }
         public int ExamScheduleId { get; set; }
         public int AssigneeId { get; set; }
+        public int AssigneeInformationId { get; set; }
         public int FacultyId { get; set; }
         public string ScheduleStatus { get; set; } = string.Empty;
         public DateTime? ConfirmationSentAt { get; set; }

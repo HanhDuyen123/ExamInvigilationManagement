@@ -5,6 +5,8 @@
         public int ExamInvigilatorId { get; set; }
         public int ExamScheduleId { get; set; }
         public int UserId { get; set; }
+        public int InformationId { get; set; }
+        public int PersonKey => InformationId > 0 ? InformationId : UserId;
         public byte PositionNo { get; set; }
         public int SlotId { get; set; }
         public DateTime ExamDate { get; set; }

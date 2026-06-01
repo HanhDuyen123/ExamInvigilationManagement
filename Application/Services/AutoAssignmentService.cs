@@ -42,18 +42,22 @@ namespace ExamInvigilationManagement.Application.Services
             if (facultyId is null || facultyId <= 0)
                 throw new ArgumentException("Không xác định được khoa của người thực hiện auto assignment.");
 
-            var lecturers = (await _repository.GetActiveLecturersAsync(facultyId.Value, cancellationToken))
-                .ToList();
-
-            if (lecturers.Count == 0)
-                throw new InvalidOperationException("Không có giảng viên hợp lệ trong khoa để phân công.");
-
             var schedules = (await _repository.GetSchedulesAsync(
                     request.SemesterId!.Value,
                     request.PeriodId!.Value,
                     facultyId.Value,
                     cancellationToken))
                 .ToList();
+
+            var lecturers = (await _repository.GetActiveLecturersAsync(
+                    facultyId.Value,
+                    schedules.Select(x => x.SubjectId),
+                    schedules.Select(x => x.OfferingUserId),
+                    cancellationToken))
+                .ToList();
+
+            if (lecturers.Count == 0)
+                throw new InvalidOperationException("Không có giảng viên hợp lệ để phân công.");
 
             var result = new AutoAssignResultDto
             {
@@ -89,12 +93,11 @@ namespace ExamInvigilationManagement.Application.Services
 
             var lecturerLoads = await _repository.GetLecturerLoadsAsync(
                 request.SemesterId!.Value,
-                facultyId.Value,
+                lecturers.Select(x => x.UserId),
                 cancellationToken);
 
             var subjectLecturerMap = await _repository.GetSubjectLecturerMapAsync(
                 schedules.Select(x => x.SubjectId),
-                facultyId.Value,
                 cancellationToken);
             var isLecturerRoleByUser = lecturers.ToDictionary(x => x.UserId, x => x.IsLecturerRole);
 
@@ -115,15 +118,15 @@ namespace ExamInvigilationManagement.Application.Services
                 ? AutoAssignmentMode.RepairRejected
                 : AutoAssignmentMode.InitialAssignment;
 
-            var occupiedKeySet = new HashSet<(int UserId, int SlotId, DateOnly BusyDate)>();
+            var occupiedKeySet = new HashSet<(int PersonKey, int SlotId, DateOnly BusyDate)>();
             foreach (var x in activeExistingAssignments)
-                occupiedKeySet.Add((x.UserId, x.SlotId, DateOnly.FromDateTime(x.ExamDate)));
+                occupiedKeySet.Add((x.PersonKey, x.SlotId, DateOnly.FromDateTime(x.ExamDate)));
 
             var scheduleAssignedUsers = activeExistingAssignments
                 .GroupBy(x => x.ExamScheduleId)
                 .ToDictionary(
                     g => g.Key,
-                    g => g.Select(x => x.UserId).ToHashSet());
+                    g => g.Select(x => x.PersonKey).ToHashSet());
 
             var scheduleAssignedPositions = activeExistingAssignments
                 .GroupBy(x => x.ExamScheduleId)
@@ -132,7 +135,7 @@ namespace ExamInvigilationManagement.Application.Services
                     g => g.Select(x => x.PositionNo).ToHashSet());
 
             var sameDayLoadMap = activeExistingAssignments
-                .GroupBy(x => (x.UserId, DateOnly.FromDateTime(x.ExamDate)))
+                .GroupBy(x => (x.PersonKey, DateOnly.FromDateTime(x.ExamDate)))
                 .ToDictionary(g => g.Key, g => g.Count());
 
             var ownerScheduleCountByLecturer = schedules
@@ -235,9 +238,6 @@ namespace ExamInvigilationManagement.Application.Services
                 var assignedPositions = scheduleAssignedPositions[schedule.ExamScheduleId];
                 var detail = detailByScheduleId[schedule.ExamScheduleId];
                 var day = DateOnly.FromDateTime(schedule.ExamDate);
-
-                if (assignedUsers.Contains(schedule.OfferingUserId))
-                    continue;
 
                 var exactOwner = lecturers.FirstOrDefault(x =>
                     x.UserId == schedule.OfferingUserId &&
@@ -351,11 +351,11 @@ namespace ExamInvigilationManagement.Application.Services
             result.Message = request.PreviewOnly
                 ? BuildPreviewMessage(result)
                 : result.MissingSchedules > 0
-                ? "Auto assignment hoàn thành nhưng còn một số lịch thiếu giám thị."
-                : "Auto assignment hoàn thành.";
+                ? "Tự động phân công hoàn thành nhưng còn một số lịch thiếu giám thị."
+                : "Tự động phân công hoàn thành.";
 
             if (result.MissingSchedules > 0)
-                result.Warnings.Add("Một số lịch không đủ 2 giám thị trong phạm vi cùng khoa.");
+                result.Warnings.Add("Một số lịch không đủ 2 giám thị do không còn người phù hợp theo lịch bận, trùng ca hoặc dữ liệu chuyên môn hiện có.");
 
             return result;
         }
@@ -394,7 +394,7 @@ namespace ExamInvigilationManagement.Application.Services
                 StatusAfter = schedule.Status,
                 RequiredCount = RequiredInvigilatorsPerSchedule,
                 AssignedCount = 0,
-                Message = "Bỏ qua vì lịch thi đã ở trạng thái cuối."
+                Message = "Không gán mới."
             };
         }
 
@@ -403,7 +403,7 @@ namespace ExamInvigilationManagement.Application.Services
             List<AutoAssignLecturerDto> lecturers,
             Dictionary<int, HashSet<int>> scheduleAssignedUsers,
             HashSet<(int UserId, int SlotId, DateOnly BusyDate)> busyKeySet,
-            HashSet<(int UserId, int SlotId, DateOnly BusyDate)> occupiedKeySet)
+            HashSet<(int PersonKey, int SlotId, DateOnly BusyDate)> occupiedKeySet)
         {
             var day = DateOnly.FromDateTime(schedule.ExamDate);
 
@@ -417,9 +417,9 @@ namespace ExamInvigilationManagement.Application.Services
             var fallbackCandidates = lecturers.Count(l =>
                 l.IsActive &&
                 l.UserId != schedule.OfferingUserId &&
-                !assignedUsers.Contains(l.UserId) &&
+                !assignedUsers.Contains(l.PersonKey) &&
                 !busyKeySet.Contains((l.UserId, schedule.SlotId, day)) &&
-                !occupiedKeySet.Contains((l.UserId, schedule.SlotId, day)));
+                !occupiedKeySet.Contains((l.PersonKey, schedule.SlotId, day)));
 
             return (fallbackCandidates + (hasExactOwner ? 1 : 0), hasExactOwner);
         }
@@ -429,16 +429,17 @@ namespace ExamInvigilationManagement.Application.Services
             AutoAssignScheduleDto schedule,
             HashSet<int> assignedUsers,
             HashSet<(int UserId, int SlotId, DateOnly BusyDate)> busyKeySet,
-            HashSet<(int UserId, int SlotId, DateOnly BusyDate)> occupiedKeySet)
+            HashSet<(int PersonKey, int SlotId, DateOnly BusyDate)> occupiedKeySet)
         {
             var day = DateOnly.FromDateTime(schedule.ExamDate);
-            var key = (lecturer.UserId, schedule.SlotId, day);
+            var busyKey = (lecturer.UserId, schedule.SlotId, day);
+            var occupiedKey = (lecturer.PersonKey, schedule.SlotId, day);
 
             return lecturer.IsActive
                    && lecturer.UserId == schedule.OfferingUserId
-                   && !assignedUsers.Contains(lecturer.UserId)
-                   && !busyKeySet.Contains(key)
-                   && !occupiedKeySet.Contains(key);
+                   && !assignedUsers.Contains(lecturer.PersonKey)
+                   && !busyKeySet.Contains(busyKey)
+                   && !occupiedKeySet.Contains(occupiedKey);
         }
 
         private static FallbackCandidate? PickBestFallbackCandidate(
@@ -446,9 +447,9 @@ namespace ExamInvigilationManagement.Application.Services
             List<AutoAssignLecturerDto> lecturers,
             HashSet<int> assignedUsers,
             Dictionary<int, int> lecturerLoads,
-            Dictionary<(int UserId, DateOnly Day), int> sameDayLoadMap,
+            Dictionary<(int PersonKey, DateOnly Day), int> sameDayLoadMap,
             HashSet<(int UserId, int SlotId, DateOnly BusyDate)> busyKeySet,
-            HashSet<(int UserId, int SlotId, DateOnly BusyDate)> occupiedKeySet,
+            HashSet<(int PersonKey, int SlotId, DateOnly BusyDate)> occupiedKeySet,
             Dictionary<int, int> ownerScheduleCountByLecturer,
             Dictionary<string, HashSet<int>> subjectLecturerMap,
             Dictionary<int, bool> isLecturerRoleByUser,
@@ -459,41 +460,44 @@ namespace ExamInvigilationManagement.Application.Services
                 .Select(l =>
                 {
                     var load = lecturerLoads.TryGetValue(l.UserId, out var currentLoad) ? currentLoad : 0;
-                    var sameDayLoad = sameDayLoadMap.TryGetValue((l.UserId, day), out var d) ? d : 0;
+                    var sameDayLoad = sameDayLoadMap.TryGetValue((l.PersonKey, day), out var d) ? d : 0;
                     var ownerCount = ownerScheduleCountByLecturer.TryGetValue(l.UserId, out var c) ? c : 0;
                     var tier = GetCandidateTier(l.UserId, schedule, subjectLecturerMap, isLecturerRoleByUser);
 
                     var score = 0;
                     var reasons = new List<string>();
 
+                    var specialtyPriority = GetExamFormatPriority(schedule.ExamFormatDisplay);
                     if (tier == CandidateTier.SameSubject)
                     {
-                        score += 2500;
-                        reasons.Add("từng dạy cùng môn");
+                        score += specialtyPriority == ExamFormatPriority.Oral ? 9500 : specialtyPriority == ExamFormatPriority.Practical ? 7500 : 2500;
+                        reasons.Add("Có chuyên môn môn thi");
+                    }
+                    else if (tier == CandidateTier.ExactOwner)
+                    {
+                        score += specialtyPriority == ExamFormatPriority.Oral ? 11000 : specialtyPriority == ExamFormatPriority.Practical ? 9000 : 5000;
+                        reasons.Add("Đang dạy lớp học phần");
                     }
                     else if (tier == CandidateTier.FacultyMember)
                     {
                         score -= 6500;
-                        reasons.Add($"nhân sự cùng khoa ({l.RoleName}) dùng khi thiếu giảng viên");
+                        reasons.Add($"Dự phòng từ role {l.RoleName}");
                     }
                     else
                     {
                         score -= 2500;
-                        reasons.Add("giảng viên cùng khoa phù hợp lịch");
+                        reasons.Add("Phù hợp lịch");
                     }
 
                     // Ưu tiên người ít tải
                     score += Math.Max(0, 1000 - load * 120);
-                    reasons.Add($"tải hiện tại: {load}");
 
                     // Ưu tiên ít ca trong ngày
                     score += Math.Max(0, 120 - sameDayLoad * 40);
-                    reasons.Add($"ca trong ngày: {sameDayLoad}");
 
                     // Phạt nhẹ nếu người này là owner của nhiều lịch khác trong batch
                     // để tránh làm họ bị “ăn mất” quá nhiều, nhưng không loại bỏ hoàn toàn
                     score -= ownerCount * 150;
-                    reasons.Add($"số lịch chủ lớp: {ownerCount}");
 
                     return new FallbackCandidate(
                         Lecturer: l,
@@ -512,30 +516,31 @@ namespace ExamInvigilationManagement.Application.Services
             AutoAssignScheduleDto schedule,
             HashSet<int> assignedUsers,
             HashSet<(int UserId, int SlotId, DateOnly BusyDate)> busyKeySet,
-            HashSet<(int UserId, int SlotId, DateOnly BusyDate)> occupiedKeySet)
+            HashSet<(int PersonKey, int SlotId, DateOnly BusyDate)> occupiedKeySet)
         {
             var day = DateOnly.FromDateTime(schedule.ExamDate);
-            var key = (lecturer.UserId, schedule.SlotId, day);
+            var busyKey = (lecturer.UserId, schedule.SlotId, day);
+            var occupiedKey = (lecturer.PersonKey, schedule.SlotId, day);
 
             // Chỉ cấm chính owner của lịch hiện tại.
             // Không cấm toàn bộ lecturer đang là owner của lịch khác,
             // vì pha 1 đã reserve owner rồi.
             return lecturer.IsActive
                    && lecturer.UserId != schedule.OfferingUserId
-                   && !assignedUsers.Contains(lecturer.UserId)
-                   && !busyKeySet.Contains(key)
-                   && !occupiedKeySet.Contains(key);
+                   && !assignedUsers.Contains(lecturer.PersonKey)
+                   && !busyKeySet.Contains(busyKey)
+                   && !occupiedKeySet.Contains(occupiedKey);
         }
 
         private static int CalculateExactOwnerScore(
             AutoAssignLecturerDto lecturer,
             AutoAssignScheduleDto schedule,
             Dictionary<int, int> lecturerLoads,
-            Dictionary<(int UserId, DateOnly Day), int> sameDayLoadMap,
+            Dictionary<(int PersonKey, DateOnly Day), int> sameDayLoadMap,
             DateOnly day)
         {
             var load = lecturerLoads.TryGetValue(lecturer.UserId, out var currentLoad) ? currentLoad : 0;
-            var sameDayLoad = sameDayLoadMap.TryGetValue((lecturer.UserId, day), out var d) ? d : 0;
+            var sameDayLoad = sameDayLoadMap.TryGetValue((lecturer.PersonKey, day), out var d) ? d : 0;
 
             var score = 5000;
             score += Math.Max(0, 500 - load * 100);
@@ -553,8 +558,8 @@ namespace ExamInvigilationManagement.Application.Services
             HashSet<int> assignedUsers,
             HashSet<byte> assignedPositions,
             Dictionary<int, int> lecturerLoads,
-            Dictionary<(int UserId, DateOnly Day), int> sameDayLoadMap,
-            HashSet<(int UserId, int SlotId, DateOnly BusyDate)> occupiedKeySet,
+            Dictionary<(int PersonKey, DateOnly Day), int> sameDayLoadMap,
+            HashSet<(int PersonKey, int SlotId, DateOnly BusyDate)> occupiedKeySet,
             int score,
             string reason)
         {
@@ -572,15 +577,15 @@ namespace ExamInvigilationManagement.Application.Services
                 UpdateAt = DateTime.Now
             });
 
-            assignedUsers.Add(lecturer.UserId);
+            assignedUsers.Add(lecturer.PersonKey);
             assignedPositions.Add(positionNo);
-            occupiedKeySet.Add((lecturer.UserId, schedule.SlotId, day));
+            occupiedKeySet.Add((lecturer.PersonKey, schedule.SlotId, day));
 
             lecturerLoads[lecturer.UserId] = lecturerLoads.TryGetValue(lecturer.UserId, out var load)
                 ? load + 1
                 : 1;
 
-            var sameDayKey = (lecturer.UserId, day);
+            var sameDayKey = (lecturer.PersonKey, day);
             sameDayLoadMap[sameDayKey] = sameDayLoadMap.TryGetValue(sameDayKey, out var dayLoad)
                 ? dayLoad + 1
                 : 1;
@@ -613,10 +618,10 @@ namespace ExamInvigilationManagement.Application.Services
             List<AutoAssignLecturerDto> lecturers,
             Dictionary<int, int> lecturerLoads,
             HashSet<(int UserId, int SlotId, DateOnly BusyDate)> busyKeySet,
-            HashSet<(int UserId, int SlotId, DateOnly BusyDate)> occupiedKeySet,
+            HashSet<(int PersonKey, int SlotId, DateOnly BusyDate)> occupiedKeySet,
             Dictionary<int, HashSet<int>> scheduleAssignedUsers,
             Dictionary<int, HashSet<byte>> scheduleAssignedPositions,
-            Dictionary<(int UserId, DateOnly Day), int> sameDayLoadMap,
+            Dictionary<(int PersonKey, DateOnly Day), int> sameDayLoadMap,
             Dictionary<string, HashSet<int>> subjectLecturerMap,
             Dictionary<int, bool> isLecturerRoleByUser,
             AutoAssignmentMode assignmentMode)
@@ -629,6 +634,8 @@ namespace ExamInvigilationManagement.Application.Services
                 var shortageVars = new List<IntVar>();
                 var exactVars = new List<BoolVar>();
                 var sameSubjectVars = new List<BoolVar>();
+                var oralSpecialistVars = new List<BoolVar>();
+                var practicalSpecialistVars = new List<BoolVar>();
                 var emergencyVars = new List<BoolVar>();
                 var facultyMemberVars = new List<BoolVar>();
                 var scheduleById = schedules.ToDictionary(x => x.ExamScheduleId);
@@ -689,6 +696,13 @@ namespace ExamInvigilationManagement.Application.Services
                             facultyMemberVars.Add(variable);
                         else
                             emergencyVars.Add(variable);
+
+                        if (IsSubjectSpecialist(tier))
+                        {
+                            var formatPriority = GetExamFormatPriority(schedule.ExamFormatDisplay);
+                            if (formatPriority == ExamFormatPriority.Oral) oralSpecialistVars.Add(variable);
+                            if (formatPriority == ExamFormatPriority.Practical) practicalSpecialistVars.Add(variable);
+                        }
                     }
 
                     var shortage = model.NewIntVar(0, need, $"shortage_s{schedule.ExamScheduleId}");
@@ -752,6 +766,8 @@ namespace ExamInvigilationManagement.Application.Services
                 };
 
                 var totalShortage = AddSumVar(model, shortageVars.Select(x => (LinearExpr)x), "total_shortage", 0, processableSchedules.Count * RequiredInvigilatorsPerSchedule);
+                var oralSpecialistTotal = AddSumVar(model, oralSpecialistVars.Select(x => (LinearExpr)x), "total_oral_specialist", 0, oralSpecialistVars.Count);
+                var practicalSpecialistTotal = AddSumVar(model, practicalSpecialistVars.Select(x => (LinearExpr)x), "total_practical_specialist", 0, practicalSpecialistVars.Count);
                 var exactTotal = AddSumVar(model, exactVars.Select(x => (LinearExpr)x), "total_exact", 0, exactVars.Count);
                 var sameSubjectTotal = AddSumVar(model, sameSubjectVars.Select(x => (LinearExpr)x), "total_same_subject", 0, sameSubjectVars.Count);
 
@@ -764,6 +780,22 @@ namespace ExamInvigilationManagement.Application.Services
 
                 var bestShortage = (int)solver.Value(totalShortage);
                 model.Add(totalShortage == bestShortage);
+
+                model.Maximize(oralSpecialistTotal);
+                status = solver.Solve(model);
+                if (status != CpSolverStatus.Feasible && status != CpSolverStatus.Optimal)
+                    return null;
+
+                var bestOralSpecialist = (int)solver.Value(oralSpecialistTotal);
+                model.Add(oralSpecialistTotal == bestOralSpecialist);
+
+                model.Maximize(practicalSpecialistTotal);
+                status = solver.Solve(model);
+                if (status != CpSolverStatus.Feasible && status != CpSolverStatus.Optimal)
+                    return null;
+
+                var bestPracticalSpecialist = (int)solver.Value(practicalSpecialistTotal);
+                model.Add(practicalSpecialistTotal == bestPracticalSpecialist);
 
                 model.Maximize(exactTotal);
                 status = solver.Solve(model);
@@ -818,10 +850,10 @@ namespace ExamInvigilationManagement.Application.Services
 
                     var day = DateOnly.FromDateTime(selected.Schedule.ExamDate);
                     var load = lecturerLoads.TryGetValue(selected.Lecturer.UserId, out var currentLoad) ? currentLoad : 0;
-                    var sameDayLoad = sameDayLoadMap.TryGetValue((selected.Lecturer.UserId, day), out var d) ? d : 0;
+                    var sameDayLoad = sameDayLoadMap.TryGetValue((selected.Lecturer.PersonKey, day), out var d) ? d : 0;
                     var tier = GetCandidateTier(selected.Lecturer.UserId, selected.Schedule, subjectLecturerMap, isLecturerRoleByUser);
                     var score = GetCandidateScore(tier, load, sameDayLoad);
-                    var reason = $"{GetCandidateTierReason(tier)}; tải hiện tại: {load}; số lịch trong ngày: {sameDayLoad}";
+                    var reason = GetCandidateTierReason(tier);
 
                     AssignOne(
                         plan,
@@ -871,8 +903,8 @@ namespace ExamInvigilationManagement.Application.Services
                     detail.AssignedCount = assignedCount;
                     if (string.IsNullOrWhiteSpace(detail.Message))
                         detail.Message = assignedCount >= RequiredInvigilatorsPerSchedule
-                            ? "Giữ nguyên vì lịch đã đủ giám thị hợp lệ theo state-aware filtering."
-                            : "Bỏ qua vì trạng thái lịch không cho phép tự động phân công.";
+                            ? "Không gán mới."
+                            : "Không gán mới.";
                 }
 
                 var result = new AutoAssignResultDto
@@ -910,15 +942,16 @@ namespace ExamInvigilationManagement.Application.Services
             AutoAssignScheduleDto schedule,
             HashSet<int> assignedUsers,
             HashSet<(int UserId, int SlotId, DateOnly BusyDate)> busyKeySet,
-            HashSet<(int UserId, int SlotId, DateOnly BusyDate)> occupiedKeySet)
+            HashSet<(int PersonKey, int SlotId, DateOnly BusyDate)> occupiedKeySet)
         {
             var day = DateOnly.FromDateTime(schedule.ExamDate);
-            var key = (lecturer.UserId, schedule.SlotId, day);
+            var busyKey = (lecturer.UserId, schedule.SlotId, day);
+            var occupiedKey = (lecturer.PersonKey, schedule.SlotId, day);
 
             return lecturer.IsActive
-                   && !assignedUsers.Contains(lecturer.UserId)
-                   && !busyKeySet.Contains(key)
-                   && !occupiedKeySet.Contains(key);
+                   && !assignedUsers.Contains(lecturer.PersonKey)
+                   && !busyKeySet.Contains(busyKey)
+                   && !occupiedKeySet.Contains(occupiedKey);
         }
 
         private static IntVar AddSumVar(
@@ -963,6 +996,34 @@ namespace ExamInvigilationManagement.Application.Services
                 : CandidateTier.Emergency;
         }
 
+        private static bool IsSubjectSpecialist(CandidateTier tier)
+            => tier is CandidateTier.ExactOwner or CandidateTier.SameSubject;
+
+        private static ExamFormatPriority GetExamFormatPriority(string? examFormatDisplay)
+        {
+            var code = NormalizeExamFormatCode(examFormatDisplay);
+            if (code is "VD" or "BTL-VD" or "TL-VD" or "NTL-VD") return ExamFormatPriority.Oral;
+            if (code is "PM" or "DA" or "TH") return ExamFormatPriority.Practical;
+            return ExamFormatPriority.Standard;
+        }
+
+        private static string NormalizeExamFormatCode(string? value)
+        {
+            var raw = (value ?? string.Empty).Trim();
+            var separator = raw.IndexOf(" - ", StringComparison.Ordinal);
+            var code = (separator >= 0 ? raw[..separator] : raw).Trim().ToUpperInvariant();
+            code = System.Text.RegularExpressions.Regex.Replace(code, @"\s*[-/]\s*", "-");
+            return code switch
+            {
+                "TN-TL" => "TN-TL",
+                "BTL-VD" => "BTL-VD",
+                "TL-VD" => "TL-VD",
+                "NTL-VD" => "NTL-VD",
+                "PTH" => "TH",
+                _ => code
+            };
+        }
+
         private static int GetCandidateBaseCost(CandidateTier tier)
         {
             return tier switch
@@ -991,10 +1052,10 @@ namespace ExamInvigilationManagement.Application.Services
         {
             return tier switch
             {
-                CandidateTier.ExactOwner => "đúng giảng viên phụ trách lớp học phần",
-                CandidateTier.SameSubject => "giảng viên từng dạy cùng môn",
-                CandidateTier.Emergency => "giảng viên cùng khoa phù hợp lịch",
-                _ => "nhân sự cùng khoa dùng khi thiếu giảng viên"
+                CandidateTier.ExactOwner => "Đang dạy lớp học phần",
+                CandidateTier.SameSubject => "Có chuyên môn môn thi",
+                CandidateTier.Emergency => "Phù hợp lịch",
+                _ => "Dự phòng khi thiếu giảng viên"
             };
         }
 
@@ -1028,6 +1089,13 @@ namespace ExamInvigilationManagement.Application.Services
         {
             InitialAssignment = 0,
             RepairRejected = 1
+        }
+
+        private enum ExamFormatPriority
+        {
+            Standard = 0,
+            Practical = 1,
+            Oral = 2
         }
     }
 }

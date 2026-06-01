@@ -353,10 +353,10 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 {
                     EventType = "ApprovalReview",
                     EntityName = "ExamSchedule",
-                    EntityId = string.Join(",", scheduleIds),
+                    EntityId = $"Schedules:{scheduleIds.Count}",
                     Action = "BulkReview",
                     ActorUserId = plan.Items.FirstOrDefault()?.ApproverId,
-                    NewValues = $"Processed={plan.Items.Count}",
+                    NewValues = $"Processed={plan.Items.Count};Status={plan.Items.FirstOrDefault()?.Status};ScheduleIds={string.Join(",", scheduleIds)}",
                     CreatedAt = now,
                     CorrelationId = correlationId,
                     Source = nameof(ExamScheduleApprovalRepository)

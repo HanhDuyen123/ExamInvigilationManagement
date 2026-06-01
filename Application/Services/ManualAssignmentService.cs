@@ -33,7 +33,11 @@ namespace ExamInvigilationManagement.Application.Services
 
             var currentInvigilators = await _repository.GetCurrentInvigilatorsAsync(scheduleId, cancellationToken);
             var activityLogs = await _repository.GetActivityLogsAsync(scheduleId, cancellationToken);
-            var lecturers = await _repository.GetActiveLecturersAsync(facultyId.Value, cancellationToken);
+            var lecturers = await _repository.GetActiveLecturersAsync(
+                facultyId.Value,
+                schedule.SubjectId,
+                schedule.OfferingUserId,
+                cancellationToken);
 
             var lecturerIds = lecturers.Select(x => x.UserId).ToList();
             var examDateOnly = DateOnly.FromDateTime(schedule.ExamDate);
@@ -53,24 +57,32 @@ namespace ExamInvigilationManagement.Application.Services
 
             var loads = await _repository.GetLecturerLoadsAsync(
                 schedule.SemesterId,
-                facultyId.Value,
+                lecturerIds,
                 cancellationToken);
 
             var sameDayLoads = await _repository.GetSameDayLoadsAsync(
                 schedule.SemesterId,
-                facultyId.Value,
+                lecturerIds,
                 schedule.ExamDate,
                 cancellationToken);
 
-            var currentUserIds = currentInvigilators.Select(x => x.UserId).ToHashSet();
+            var subjectLecturerIds = await _repository.GetSubjectLecturerIdsAsync(schedule.SubjectId, cancellationToken);
+
+            var replaceablePositions = currentInvigilators
+                .Where(x => !x.HasReplacement && string.Equals(x.ResponseStatus, "Từ chối", StringComparison.OrdinalIgnoreCase))
+                .Select(x => x.PositionNo)
+                .ToHashSet();
+
+            var currentPersonKeys = currentInvigilators.Select(x => x.PersonKey).ToHashSet();
 
             var options = lecturers
                 .Select(x =>
                 {
                     var isExactOwner = x.UserId == schedule.OfferingUserId;
+                    var hasTaughtSubject = subjectLecturerIds.Contains(x.UserId);
                     var isBusy = busyIds.Contains(x.UserId);
                     var isConflict = conflictIds.Contains(x.UserId);
-                    var isAlreadyAssigned = currentUserIds.Contains(x.UserId);
+                    var isAlreadyAssigned = currentPersonKeys.Contains(x.PersonKey);
 
                     var currentLoad = loads.TryGetValue(x.UserId, out var l) ? l : 0;
                     var sameDayLoad = sameDayLoads.TryGetValue(x.UserId, out var d) ? d : 0;
@@ -78,14 +90,19 @@ namespace ExamInvigilationManagement.Application.Services
                     var canSelect = !isBusy && !isConflict && !isAlreadyAssigned;
 
                     var score = 0;
-                    if (isExactOwner) score += 1000;
+                    var formatPriority = GetExamFormatPriority(schedule.ExamFormatDisplay);
+                    if (isExactOwner) score += formatPriority == ExamFormatPriority.Oral ? 1800 : formatPriority == ExamFormatPriority.Practical ? 1500 : 1000;
+                    else if (hasTaughtSubject) score += formatPriority == ExamFormatPriority.Oral ? 1600 : formatPriority == ExamFormatPriority.Practical ? 1300 : 700;
                     if (x.IsLecturerRole) score += 300;
                     score += Math.Max(0, 200 - currentLoad * 20);
                     score += Math.Max(0, 80 - sameDayLoad * 20);
 
                     var reasons = new List<string>();
-                    reasons.Add(x.IsLecturerRole ? "Vai trò giảng viên" : $"Nhân sự cùng khoa ({x.RoleName})");
-                    if (isExactOwner) reasons.Add("Đang phụ trách lớp học phần này");
+                    reasons.Add(x.IsLecturerRole ? "Giảng viên" : $"Nhân sự hỗ trợ ({x.RoleName})");
+                    if (isExactOwner) reasons.Add("Đang dạy lớp học phần này");
+                    else if (hasTaughtSubject) reasons.Add("Đã hoặc đang dạy môn này");
+                    if (formatPriority == ExamFormatPriority.Oral) reasons.Add("Hình thức vấn đáp cần ưu tiên người có chuyên môn");
+                    else if (formatPriority == ExamFormatPriority.Practical) reasons.Add("Hình thức thi/chấm tại chỗ nên ưu tiên người có chuyên môn");
                     if (currentLoad == 0) reasons.Add("Chưa có lịch coi thi nào trong học kỳ");
                     else reasons.Add($"Đã có {currentLoad} lịch coi thi trong học kỳ");
                     if (sameDayLoad == 0) reasons.Add("Chưa có lịch coi thi trong ngày này");
@@ -106,15 +123,19 @@ namespace ExamInvigilationManagement.Application.Services
                         CurrentLoad = currentLoad,
                         SameDayLoad = sameDayLoad,
                         IsExactOwner = isExactOwner,
+                        HasTaughtSubject = hasTaughtSubject,
                         CanSelect = canSelect,
+                        PriorityScore = score,
                         Reason = string.Join("; ", reasons),
-                        RecommendationLabel = BuildRecommendationLabel(isExactOwner, x.IsLecturerRole, currentLoad, sameDayLoad, canSelect),
+                        RecommendationLabel = BuildRecommendationLabel(isExactOwner, hasTaughtSubject, x.IsLecturerRole, currentLoad, sameDayLoad, canSelect, formatPriority),
                         WorkloadLabel = BuildWorkloadLabel(currentLoad, sameDayLoad),
                         AvailabilityLabel = BuildAvailabilityLabel(isBusy, isConflict, isAlreadyAssigned)
                     };
                 })
                 .OrderByDescending(x => x.CanSelect)
                 .ThenByDescending(x => x.IsExactOwner)
+                .ThenByDescending(x => x.HasTaughtSubject)
+                .ThenByDescending(x => x.PriorityScore)
                 .ThenByDescending(x => x.IsLecturerRole)
                 .ThenBy(x => x.CurrentLoad)
                 .ThenBy(x => x.SameDayLoad)
@@ -122,8 +143,8 @@ namespace ExamInvigilationManagement.Application.Services
                 .ToList();
 
             var missingPositions = new List<byte>();
-            if (!currentInvigilators.Any(x => x.PositionNo == 1)) missingPositions.Add(1);
-            if (!currentInvigilators.Any(x => x.PositionNo == 2)) missingPositions.Add(2);
+            if (!currentInvigilators.Any(x => x.PositionNo == 1) || replaceablePositions.Contains(1)) missingPositions.Add(1);
+            if (!currentInvigilators.Any(x => x.PositionNo == 2) || replaceablePositions.Contains(2)) missingPositions.Add(2);
 
             return new ManualAssignmentPageDto
             {
@@ -153,8 +174,8 @@ namespace ExamInvigilationManagement.Application.Services
                     Status = schedule.Status,
                     CurrentInvigilatorCount = currentInvigilators.Count,
                     MissingCount = Math.Max(0, RequiredInvigilatorsPerSchedule - currentInvigilators.Count),
-                    CanEdit = IsEditableStatus(schedule.Status) && currentInvigilators.Count < RequiredInvigilatorsPerSchedule,
-                    EditReason = BuildEditReason(schedule.Status, currentInvigilators.Count)
+                    CanEdit = (IsEditableStatus(schedule.Status) && currentInvigilators.Count < RequiredInvigilatorsPerSchedule) || replaceablePositions.Any(),
+                    EditReason = BuildEditReason(schedule.Status, currentInvigilators.Count, replaceablePositions.Any())
                 },
                 CurrentInvigilators = currentInvigilators,
                 LecturerOptions = options,
@@ -203,11 +224,11 @@ namespace ExamInvigilationManagement.Application.Services
             var currentInvigilators = page.CurrentInvigilators;
             var lecturerOptions = page.LecturerOptions.ToDictionary(x => x.UserId);
 
-            if (currentInvigilators.Count >= RequiredInvigilatorsPerSchedule)
-                return Fail(schedule.ExamScheduleId, "Lịch thi này đã đủ 2 giám thị.");
-
             var currentPositions = currentInvigilators.Select(x => x.PositionNo).ToHashSet();
-            var currentUserIds = currentInvigilators.Select(x => x.UserId).ToHashSet();
+            var replaceableByPosition = currentInvigilators
+                .Where(x => !x.HasReplacement && string.Equals(x.ResponseStatus, "Từ chối", StringComparison.OrdinalIgnoreCase))
+                .ToDictionary(x => x.PositionNo);
+            var currentPersonKeys = currentInvigilators.Select(x => x.PersonKey).ToHashSet();
 
             var selectedByPosition = new Dictionary<byte, int?>
             {
@@ -219,24 +240,35 @@ namespace ExamInvigilationManagement.Application.Services
                 .Where(x => !currentPositions.Contains(x.Key) && x.Value.HasValue)
                 .ToDictionary(x => x.Key, x => x.Value!.Value);
 
-            if (selectedAssignments.Count == 0)
+            var selectedReplacements = selectedByPosition
+                .Where(x => currentPositions.Contains(x.Key) && replaceableByPosition.ContainsKey(x.Key) && x.Value.HasValue)
+                .ToDictionary(x => x.Key, x => x.Value!.Value);
+
+            if (selectedAssignments.Count == 0 && selectedReplacements.Count == 0)
             {
-                return Fail(schedule.ExamScheduleId, "Vui lòng chọn ít nhất 1 giảng viên để phân công.");
+                return Fail(schedule.ExamScheduleId, "Vui lòng chọn ít nhất 1 giảng viên để phân công hoặc thay thế vị trí đã từ chối.");
             }
 
             // Không cho sửa vị trí đã tồn tại
             foreach (var position in currentPositions)
             {
-                if (selectedByPosition.TryGetValue(position, out var selectedId) && selectedId.HasValue)
+                if (!replaceableByPosition.ContainsKey(position) && selectedByPosition.TryGetValue(position, out var selectedId) && selectedId.HasValue)
                     errors.Add($"Vị trí {position} đã có giám thị, không được thay đổi tại màn hình này.");
             }
 
             // Không được chọn cùng 1 giảng viên cho 2 vị trí
-            var selectedUserIds = selectedAssignments.Values.ToList();
+            var selectedUserIds = selectedAssignments.Values.Concat(selectedReplacements.Values).ToList();
             if (selectedUserIds.Distinct().Count() != selectedUserIds.Count)
                 errors.Add("Không được chọn cùng một giảng viên cho 2 vị trí khác nhau.");
 
-            foreach (var kvp in selectedAssignments)
+            var selectedPersonKeys = selectedUserIds
+                .Where(lecturerOptions.ContainsKey)
+                .Select(x => lecturerOptions[x].PersonKey)
+                .ToList();
+            if (selectedPersonKeys.Distinct().Count() != selectedPersonKeys.Count)
+                errors.Add("Không được chọn cùng một người cho 2 vị trí khác nhau, kể cả khi người đó có nhiều tài khoản/role.");
+
+            foreach (var kvp in selectedAssignments.Concat(selectedReplacements))
             {
                 var position = kvp.Key;
                 var lecturerId = kvp.Value;
@@ -251,8 +283,8 @@ namespace ExamInvigilationManagement.Application.Services
                 if (!lecturer.CanSelect)
                     errors.Add($"Giảng viên '{lecturer.FullName}' không thể phân công: {lecturer.Reason}");
 
-                if (currentUserIds.Contains(lecturerId))
-                    errors.Add($"Giảng viên '{lecturer.FullName}' đã được phân công cho lịch này.");
+                if (currentPersonKeys.Contains(lecturer.PersonKey))
+                    errors.Add($"'{lecturer.FullName}' đã được phân công cho lịch này bằng một tài khoản/role khác.");
             }
 
             if (errors.Count > 0)
@@ -286,6 +318,17 @@ namespace ExamInvigilationManagement.Application.Services
                     PositionNo = kvp.Key,
                     Status = "Chưa gửi xác nhận",
                     CreateAt = DateTime.Now,
+                    UpdateAt = DateTime.Now
+                });
+            }
+
+            foreach (var kvp in selectedReplacements)
+            {
+                plan.ReplaceInvigilators.Add(new ManualAssignmentInvigilatorReplaceDto
+                {
+                    ExamInvigilatorId = replaceableByPosition[kvp.Key].ExamInvigilatorId,
+                    NewAssigneeId = kvp.Value,
+                    AssignerId = request.AssignerId,
                     UpdateAt = DateTime.Now
                 });
             }
@@ -324,8 +367,11 @@ namespace ExamInvigilationManagement.Application.Services
                    || status.Equals("Thiếu giám thị", StringComparison.OrdinalIgnoreCase);
         }
 
-        private static string BuildEditReason(string status, int currentCount)
+        private static string BuildEditReason(string status, int currentCount, bool hasRejectedPosition)
         {
+            if (hasRejectedPosition)
+                return "Có giám thị đã từ chối. Thư ký có thể chọn người thay thế cho vị trí đó.";
+
             if (!IsEditableStatus(status))
                 return $"Lịch đang ở trạng thái '{status}' nên không cho phép chỉnh sửa.";
 
@@ -335,14 +381,43 @@ namespace ExamInvigilationManagement.Application.Services
             return string.Empty;
         }
 
-        private static string BuildRecommendationLabel(bool isExactOwner, bool isLecturerRole, int currentLoad, int sameDayLoad, bool canSelect)
+        private static string BuildRecommendationLabel(bool isExactOwner, bool hasTaughtSubject, bool isLecturerRole, int currentLoad, int sameDayLoad, bool canSelect, ExamFormatPriority formatPriority)
         {
             if (!canSelect) return "Không phù hợp để chọn";
-            if (isExactOwner) return "Rất phù hợp: đang phụ trách lớp";
-            if (!isLecturerRole) return "Dự phòng: nhân sự cùng khoa";
+            if (isExactOwner) return formatPriority == ExamFormatPriority.Oral ? "Ưu tiên cao nhất: đang dạy lớp" : "Rất phù hợp: đang dạy lớp";
+            if (hasTaughtSubject) return formatPriority == ExamFormatPriority.Standard ? "Phù hợp: có chuyên môn môn thi" : "Ưu tiên cao: có chuyên môn";
+            if (!isLecturerRole) return "Dự phòng khi thiếu người";
             if (currentLoad == 0 && sameDayLoad == 0) return "Nên chọn: lịch đang nhẹ";
             if (sameDayLoad == 0) return "Phù hợp: chưa coi thi trong ngày";
             return "Có thể chọn nếu cần cân đối nhân sự";
+        }
+
+        private static ExamFormatPriority GetExamFormatPriority(string? examFormatDisplay)
+        {
+            var code = NormalizeExamFormatCode(examFormatDisplay);
+            if (code is "VD" or "BTL-VD" or "TL-VD" or "NTL-VD") return ExamFormatPriority.Oral;
+            if (code is "PM" or "DA" or "TH") return ExamFormatPriority.Practical;
+            return ExamFormatPriority.Standard;
+        }
+
+        private static string NormalizeExamFormatCode(string? value)
+        {
+            var raw = (value ?? string.Empty).Trim();
+            var separator = raw.IndexOf(" - ", StringComparison.Ordinal);
+            var code = (separator >= 0 ? raw[..separator] : raw).Trim().ToUpperInvariant();
+            code = System.Text.RegularExpressions.Regex.Replace(code, @"\s*[-/]\s*", "-");
+            return code switch
+            {
+                "PTH" => "TH",
+                _ => code
+            };
+        }
+
+        private enum ExamFormatPriority
+        {
+            Standard = 0,
+            Practical = 1,
+            Oral = 2
         }
 
         private static string BuildWorkloadLabel(int currentLoad, int sameDayLoad)

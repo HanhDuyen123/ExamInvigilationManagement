@@ -261,12 +261,6 @@ namespace ExamInvigilationManagement.Application.Services
             if (!semesterExists)
                 throw new InvalidOperationException("Học kỳ đã chọn không tồn tại.");
 
-            var subjectFacultyId = await _repo.GetSubjectFacultyIdAsync(dto.SubjectId);
-            var userFacultyId = await _repo.GetUserFacultyIdAsync(dto.UserId.Value);
-
-            if (subjectFacultyId.HasValue && userFacultyId.HasValue && subjectFacultyId.Value != userFacultyId.Value)
-                throw new InvalidOperationException("Giảng viên và môn học phải thuộc cùng khoa.");
-
             if (dto.AcademyYearId.HasValue)
             {
                 var semesterAcademyYearId = await _repo.GetSemesterAcademyYearIdAsync(dto.SemesterId.Value);

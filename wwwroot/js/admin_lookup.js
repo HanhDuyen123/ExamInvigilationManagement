@@ -122,7 +122,8 @@
                     html += `
                         <button type="button"
                                 class="dropdown-item lookup-item ${active}"
-                                data-index="${idx}">
+                                data-index="${idx}"
+                                title="${escapeHtml(text)}">
                             ${escapeHtml(text)}
                         </button>
                     `;
@@ -214,12 +215,14 @@
         function setValue(value, text) {
             $hidden.val(value ?? '');
             $input.val(text ?? '');
+            $hidden.trigger('change');
             clearBlockedMessage();
         }
 
         function clear() {
             $hidden.val('');
             $input.val('');
+            $hidden.trigger('change');
             currentIndex = -1;
             api._currentItems = [];
             $menu.find('.lookup-item').removeClass('active');

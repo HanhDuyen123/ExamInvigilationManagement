@@ -7,7 +7,8 @@
     var isSubstitutionReview = Model.SubstitutionReview != null;
     var review = Model.SubstitutionReview;
     var selectableLecturers = Model.LecturerOptions.Count(x => x.CanSelect);
-    var canShowLecturerChoices = isSubstitutionReview || (canEdit && Model.MissingPositions.Any());
+    var canShowLecturerChoices = (isSubstitutionReview && string.Equals(review?.Status, "Đã đề xuất", StringComparison.OrdinalIgnoreCase)) || (canEdit && Model.MissingPositions.Any());
+    var focusRejected = string.Equals(Context.Request.Query["focus"], "rejected", StringComparison.OrdinalIgnoreCase);
 }
 
 <style>
@@ -69,7 +70,7 @@
     <section class="assignment-hero">
         <div class="assignment-hero-top">
             <div>
-                <h3 class="assignment-title">@(isSubstitutionReview ? "Chọn giám thị thay thế" : "Phân công giám thị")</h3>
+                <h3 class="assignment-title">@(isSubstitutionReview || focusRejected ? "Chọn giám thị thay thế" : "Phân công giám thị")</h3>
                 <div class="assignment-subtitle">Kiểm tra lịch thi, người đang coi thi và chọn giảng viên phù hợp.</div>
             </div>
             <a href="@Url.Action("Index", "ExamSchedule", new { area = "" })" class="btn-back">
@@ -230,7 +231,7 @@
                             @if (Model.MissingPositions.Contains(1))
                             {
                                 <div>
-                                    <label class="form-label">Vị trí giám thị 1</label>
+                                    <label class="form-label">@(Model.CurrentInvigilators.Any(x => x.PositionNo == 1) ? "Thay thế giám thị 1 đã từ chối" : "Vị trí giám thị 1")</label>
                                     <select class="select-modern" name="Position1AssigneeId" @(canEdit ? "" : "disabled")>
                                         <option value="">-- Chọn giảng viên --</option>
                                         @foreach (var lecturer in Model.LecturerOptions)
@@ -244,7 +245,7 @@
                             @if (Model.MissingPositions.Contains(2))
                             {
                                 <div>
-                                    <label class="form-label">Vị trí giám thị 2</label>
+                                    <label class="form-label">@(Model.CurrentInvigilators.Any(x => x.PositionNo == 2) ? "Thay thế giám thị 2 đã từ chối" : "Vị trí giám thị 2")</label>
                                     <select class="select-modern" name="Position2AssigneeId" @(canEdit ? "" : "disabled")>
                                         <option value="">-- Chọn giảng viên --</option>
                                         @foreach (var lecturer in Model.LecturerOptions)
@@ -258,7 +259,7 @@
                         }
                         else
                         {
-                            <div class="alert alert-success mb-0">Lịch thi đã đủ giám thị.</div>
+                            <div class="alert alert-success mb-0">Lịch thi đã đủ giám thị và không có vị trí từ chối cần thay thế.</div>
                         }
 
                         @if (canEdit && Model.MissingPositions.Any())

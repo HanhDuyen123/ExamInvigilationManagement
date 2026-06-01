@@ -525,3 +525,22 @@
         }
     }
 </style>
+
+<script>
+    (function () {
+        const key = 'academy-year-edit-scroll-' + @Model.Id;
+        const saved = sessionStorage.getItem(key);
+        if (saved) {
+            sessionStorage.removeItem(key);
+            requestAnimationFrame(function () {
+                window.scrollTo(0, Math.max(Number(saved) || 0, 0));
+            });
+        }
+
+        document.querySelectorAll('.academy-edit-page form').forEach(function (form) {
+            form.addEventListener('submit', function () {
+                sessionStorage.setItem(key, String(window.scrollY));
+            });
+        });
+    })();
+</script>

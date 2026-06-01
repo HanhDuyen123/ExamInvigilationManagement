@@ -16,16 +16,17 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
 
         Task<List<AutoAssignLecturerDto>> GetActiveLecturersAsync(
             int facultyId,
+            IEnumerable<string> subjectIds,
+            IEnumerable<int> ownerUserIds,
             CancellationToken cancellationToken = default);
 
         Task<Dictionary<int, int>> GetLecturerLoadsAsync(
             int semesterId,
-            int facultyId,
+            IEnumerable<int> userIds,
             CancellationToken cancellationToken = default);
 
         Task<Dictionary<string, HashSet<int>>> GetSubjectLecturerMapAsync(
             IEnumerable<string> subjectIds,
-            int facultyId,
             CancellationToken cancellationToken = default);
 
         Task<List<AutoAssignBusySlotDto>> GetBusySlotsAsync(

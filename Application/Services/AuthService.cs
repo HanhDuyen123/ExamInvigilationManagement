@@ -33,7 +33,6 @@ public class AuthService : IAuthService
         _httpContext = httpContext;
     }
 
-    // ================= LOGIN =================
     public async Task<User?> LoginAsync(string username, string password)
     {
         username = username?.Trim() ?? string.Empty;

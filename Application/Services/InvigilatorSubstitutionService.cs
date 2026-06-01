@@ -204,7 +204,9 @@ namespace ExamInvigilationManagement.Application.Services
 
         private async Task NotifySecretariesAsync(InvigilatorSubstitutionScheduleDto schedule, int lecturerId, ManualAssignmentLecturerOptionDto substitute, int substitutionId, CancellationToken cancellationToken)
         {
-            var secretaries = await _repository.GetActiveSecretariesAsync(schedule.FacultyId, cancellationToken);
+            var secretaries = (await _repository.GetActiveSecretariesAsync(schedule.FacultyId, cancellationToken))
+                .Where(x => x.UserId != lecturerId)
+                .ToList();
             var title = "Giảng viên đề xuất người thay thế";
             var content = $"Giảng viên đã từ chối lịch {schedule.SubjectId} - {schedule.ClassName} - Nhóm {schedule.GroupNumber} ngày {schedule.ExamDate:dd/MM/yyyy}, ca {schedule.SlotName}. " +
                           $"Người được đề xuất thay thế: {substitute.FullName} ({substitute.UserName}).";

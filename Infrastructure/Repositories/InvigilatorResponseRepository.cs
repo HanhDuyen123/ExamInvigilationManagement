@@ -26,20 +26,22 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             page = page < 1 ? 1 : page;
             pageSize = pageSize < 1 ? 10 : pageSize;
 
+            var userInformationId = await GetUserInformationIdAsync(userId, cancellationToken);
+
             var query = _db.ExamInvigilators
                 .AsNoTracking()
-                .Where(x => x.AssigneeId == userId)
+                .Where(x => x.AssigneeId == userId || (userInformationId.HasValue && x.Assignee.InformationId == userInformationId.Value))
                 .Where(x => x.ExamSchedule.Status == "Đã duyệt" && x.ConfirmationSentAt.HasValue)
                 .Select(x => new
                 {
                     Invigilator = x,
                     Schedule = x.ExamSchedule,
                     LatestResponse = x.InvigilatorResponses
-                        .Where(r => r.UserId == userId)
+                        .Where(r => r.UserId == userId || (userInformationId.HasValue && r.User.InformationId == userInformationId.Value))
                         .OrderByDescending(r => r.ResponseAt)
                         .FirstOrDefault(),
                     LatestSubstitution = x.InvigilatorSubstitutions
-                        .Where(s => s.UserId == userId)
+                        .Where(s => s.UserId == userId || (userInformationId.HasValue && s.User.InformationId == userInformationId.Value))
                         .OrderByDescending(s => s.CreateAt)
                         .FirstOrDefault()
                 });
@@ -189,12 +191,22 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     ExamInvigilatorId = x.ExamInvigilatorId,
                     ExamScheduleId = x.ExamScheduleId,
                     AssigneeId = x.AssigneeId,
+                    AssigneeInformationId = x.Assignee.InformationId,
                     FacultyId = x.ExamSchedule.Offering.Subject.FacultyId,
                     ScheduleStatus = x.ExamSchedule.Status,
                     ConfirmationSentAt = x.ConfirmationSentAt,
                     SubjectId = x.ExamSchedule.Offering.SubjectId
                 })
                 .ToListAsync(cancellationToken);
+        }
+
+        public async Task<int?> GetUserInformationIdAsync(int userId, CancellationToken cancellationToken = default)
+        {
+            return await _db.Users
+                .AsNoTracking()
+                .Where(x => x.UserId == userId)
+                .Select(x => (int?)x.InformationId)
+                .FirstOrDefaultAsync(cancellationToken);
         }
 
         public async Task UpsertResponsesAsync(
@@ -205,8 +217,9 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             var ids = examInvigilatorIds.Distinct().ToList();
+            var userInformationId = await GetUserInformationIdAsync(userId, cancellationToken);
             var existing = await _db.InvigilatorResponses
-                .Where(x => ids.Contains(x.ExamInvigilatorId) && x.UserId == userId)
+                .Where(x => ids.Contains(x.ExamInvigilatorId) && (x.UserId == userId || (userInformationId.HasValue && x.User.InformationId == userInformationId.Value)))
                 .ToListAsync(cancellationToken);
 
             foreach (var id in ids)
@@ -234,7 +247,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             }
 
             var invigilators = await _db.ExamInvigilators
-                .Where(x => ids.Contains(x.ExamInvigilatorId) && x.AssigneeId == userId)
+                .Where(x => ids.Contains(x.ExamInvigilatorId) && (x.AssigneeId == userId || (userInformationId.HasValue && x.Assignee.InformationId == userInformationId.Value)))
                 .ToListAsync(cancellationToken);
 
             foreach (var invigilator in invigilators)

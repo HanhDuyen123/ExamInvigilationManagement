@@ -33,18 +33,16 @@ namespace ExamInvigilationManagement.Application.Services
         }
         public async Task AddAsync(int semesterId, string name)
         {
-            name = (name ?? string.Empty).Trim();
+            name = AcademicNameHelper.NormalizePeriodName(name);
             var semester = await _semesterRepo.GetByIdAsync(semesterId);
             var semesterType = SemesterHelper.ToType(semester?.Name ?? string.Empty);
 
             if (semester == null || semesterType == null)
                 throw new InvalidOperationException("Học kỳ không hợp lệ.");
 
-            var expected = DefaultDataBuilder.Build().Semesters
-                .First(x => x.Type == semesterType)
-                .Periods;
+            var expected = GetValidPeriodNames(semesterType.Value);
 
-            if (!expected.Any(x => SameName(x.Name, name)))
+            if (!expected.Any(x => SameName(x, name)))
                 throw new InvalidOperationException("Đợt thi không đúng cấu trúc chuẩn.");
 
             var current = await _repo.GetAllBySemesterAsync(semesterId);
@@ -61,7 +59,7 @@ namespace ExamInvigilationManagement.Application.Services
 
         public async Task UpdateAsync(PeriodDto dto)
         {
-            dto.Name = (dto.Name ?? string.Empty).Trim();
+            dto.Name = AcademicNameHelper.NormalizePeriodName(dto.Name);
             if (string.IsNullOrWhiteSpace(dto.Name))
                 throw new InvalidOperationException("Vui lòng nhập tên đợt thi.");
 
@@ -69,10 +67,10 @@ namespace ExamInvigilationManagement.Application.Services
             var semester = period == null ? null : await _semesterRepo.GetByIdAsync(period.SemesterId);
             var semesterType = SemesterHelper.ToType(semester?.Name ?? string.Empty);
             var validNames = semesterType == null
-                ? Enumerable.Empty<ExamPeriodOptionDto>()
-                : DefaultDataBuilder.Build().Semesters.First(x => x.Type == semesterType).Periods;
+                ? Enumerable.Empty<string>()
+                : GetValidPeriodNames(semesterType.Value);
 
-            if (!validNames.Any(x => SameName(x.Name, dto.Name)))
+            if (!validNames.Any(x => SameName(x, dto.Name)))
                 throw new InvalidOperationException("Đợt thi không đúng cấu trúc chuẩn.");
 
             if (period != null)
@@ -93,6 +91,19 @@ namespace ExamInvigilationManagement.Application.Services
         private static bool SameName(string? current, string? expected)
         {
             return string.Equals(current?.Trim(), expected?.Trim(), StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static IReadOnlyList<string> GetValidPeriodNames(ExamInvigilationManagement.Domain.Enums.SemesterType semesterType)
+        {
+            var names = DefaultDataBuilder.Build().Semesters
+                .First(x => x.Type == semesterType)
+                .Periods
+                .Select(x => x.Name)
+                .ToList();
+
+            names.Add("Đợt 1");
+            names.Add("Đợt 2");
+            return names.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
     }
 }

@@ -1,8 +1,11 @@
 ﻿@model ExamInvigilationManagement.Common.PagedResult<ExamInvigilationManagement.Application.DTOs.Notification.NotificationListItemDto>
 @using ExamInvigilationManagement.Common.Helpers
+@using System.Security.Claims
 
 @{
     var isAdmin = User.IsInRole("Admin");
+    var rawUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("UserId");
+    var currentUserId = int.TryParse(rawUserId, out var parsedUserId) ? parsedUserId : 0;
     var colSpan = isAdmin ? 9 : 8;
 }
 
@@ -55,7 +58,7 @@
                             <a href="@Url.Action("Open", "Notification", new { id = item.Id })" class="btn-icon edit" title="Mở thông báo">
                                 <i class="bi bi-box-arrow-up-right"></i>
                             </a>
-                            @if (!item.IsRead)
+                            @if (!item.IsRead && item.UserId == currentUserId)
                             {
                                 <button type="button" class="btn-icon read-btn" data-id="@item.Id" title="Đánh dấu đã đọc">
                                     <i class="bi bi-envelope-open"></i>

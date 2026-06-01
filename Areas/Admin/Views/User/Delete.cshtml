@@ -3,17 +3,17 @@
 <div class="card shadow-sm p-4">
 
     <h4 class="text-danger mb-3">
-        Delete User
+        Xóa tài khoản
     </h4>
 
-    <p>Bạn có chắc muốn xoá user này không?</p>
+    <p>Bạn có chắc muốn xóa tài khoản này không?</p>
 
     <div class="mb-3">
-        <b>Username:</b> @Model.UserName
+        <b>Tên đăng nhập:</b> @Model.UserName
     </div>
 
     <div class="mb-3">
-        <b>Fullname:</b> @Model.FullName
+        <b>Họ tên:</b> @Model.FullName
     </div>
 
     <div class="mb-3">
@@ -25,11 +25,11 @@
         <input type="hidden" name="id" value="@Model.Id" />
 
         <button type="submit" class="btn btn-danger">
-            Delete
+            Xóa
         </button>
 
         <a href="/admin/users" class="btn btn-secondary">
-            Cancel
+            Hủy
         </a>
     </form>
 

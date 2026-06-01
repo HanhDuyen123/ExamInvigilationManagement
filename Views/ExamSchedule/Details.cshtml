@@ -10,7 +10,7 @@
             <h3 class="title-gradient">Chi tiết lịch thi</h3>
             <div class="subtitle">Thông tin lịch thi, phòng thi và giám thị liên quan</div>
         </div>
-        <a asp-action="Index" class="btn-back"><i class="bi bi-arrow-left"></i> Back</a>
+        <a asp-action="Index" class="btn-back"><i class="bi bi-arrow-left"></i> Quay lại</a>
     </div>
 
     <div class="form-card exam-detail-card">
@@ -59,9 +59,13 @@
 
         <div class="form-actions d-flex justify-content-end gap-2">
             <a asp-action="Index" class="btn btn-outline-secondary rounded-3 px-4">Quay lại</a>
-            @if (User.IsInRole("Admin"))
+            @if (User.IsInRole("Admin") && !Model.IsLockedForScheduleEdit)
             {
                 <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-submit text-decoration-none"><i class="bi bi-pencil-square"></i> Cập nhật</a>
+            }
+            else if (User.IsInRole("Admin"))
+            {
+                <span class="btn btn-outline-secondary rounded-3 px-4 disabled"><i class="bi bi-lock"></i> Đã khóa chỉnh sửa</span>
             }
         </div>
     </div>

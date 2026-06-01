@@ -48,7 +48,7 @@
                 <img src="~/img/ntu-logo.svg" asp-append-version="true" alt="Logo Đại học Nha Trang" />
             </a>
             <div class="brand-text">
-                <div class="title">TRƯỜNG ĐẠI HỌC NHA TRANG</div>
+                <div class="title">Trường Đại học Nha Trang</div>
                 <div class="subtitle">Hệ thống phân công giám thị coi thi</div>
             </div>
         </div>
@@ -141,6 +141,7 @@
                     </button>
                     <div class="collapse show sidebar-subnav" id="navExam">
                         <a asp-area="" asp-controller="ExamSchedule" asp-action="Index" aria-label="Lịch thi" class="sidebar-link @(IsActive("ExamSchedule") ? "active" : "")"><i class="bi bi-table"></i><span class="sidebar-text">Lịch thi</span></a>
+                        <a asp-area="Admin" asp-controller="ExamFormat" asp-action="Index" aria-label="Hình thức thi" class="sidebar-link @(IsActive("ExamFormat", "Admin") ? "active" : "")"><i class="bi bi-ui-checks"></i><span class="sidebar-text">Hình thức thi</span></a>
                         <a asp-area="Admin" asp-controller="Building" asp-action="Index" aria-label="Giảng đường" class="sidebar-link @(IsActive("Building", "Admin") ? "active" : "")"><i class="bi bi-building"></i><span class="sidebar-text">Giảng đường</span></a>
                         <a asp-area="Admin" asp-controller="Room" asp-action="Index" aria-label="Phòng thi" class="sidebar-link @(IsActive("Room", "Admin") ? "active" : "")"><i class="bi bi-door-open"></i><span class="sidebar-text">Phòng thi</span></a>
                         <a asp-area="" asp-controller="BusySlot" asp-action="Index" aria-label="Lịch bận" class="sidebar-link @(IsActive("BusySlot") ? "active" : "")"><i class="bi bi-calendar-x"></i><span class="sidebar-text">Lịch bận</span></a>
@@ -162,7 +163,7 @@
             <div class="d-flex align-items-center gap-2">
                 <span class="brand-mark mobile-offcanvas-logo"><img src="~/img/ntu-logo.svg" asp-append-version="true" alt="Logo Đại học Nha Trang" /></span>
                 <div>
-                    <h5 class="mb-1" id="adminMobileMenuLabel">TRƯỜNG ĐẠI HỌC NHA TRANG</h5>
+                    <h5 class="mb-1" id="adminMobileMenuLabel">Trường Đại học Nha Trang</h5>
                     <div class="small text-muted">Hệ thống phân công giám thị coi thi</div>
                 </div>
             </div>
@@ -244,6 +245,9 @@
                         <a asp-area="" asp-controller="ExamSchedule" asp-action="Index" class="sidebar-link @(IsActive("ExamSchedule") ? "active" : "")">
                             <i class="bi bi-table"></i><span class="sidebar-text">Lịch thi</span>
                         </a>
+                        <a asp-area="Admin" asp-controller="ExamFormat" asp-action="Index" class="sidebar-link @(IsActive("ExamFormat", "Admin") ? "active" : "")">
+                            <i class="bi bi-ui-checks"></i><span class="sidebar-text">Hình thức thi</span>
+                        </a>
                         <a asp-area="Admin" asp-controller="Building" asp-action="Index" class="sidebar-link @(IsActive("Building", "Admin") ? "active" : "")">
                             <i class="bi bi-building"></i><span class="sidebar-text">Giảng đường</span>
                         </a>
@@ -261,6 +265,40 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     @await Html.PartialAsync("_ValidationScriptsPartial")
+    <script>
+        if (window.jQuery && $.validator) {
+            $.validator.setDefaults({ ignore: [] });
+        }
+        (function () {
+            function markRequiredLabels(root) {
+                const scope = root || document;
+                const escapeSelector = window.CSS && CSS.escape ? CSS.escape : function (value) {
+                    return String(value).replace(/"/g, '\\"');
+                };
+                scope.querySelectorAll('input, select, textarea').forEach(function (field) {
+                    if (!field.name && field.type === 'hidden') return;
+                    const isRequired = field.required || field.getAttribute('data-val-required');
+                    if (!isRequired) return;
+
+                    let label = null;
+                    if (field.id) {
+                        label = scope.querySelector('label[for="' + escapeSelector(field.id) + '"]') || document.querySelector('label[for="' + escapeSelector(field.id) + '"]');
+                    }
+                    if (!label) {
+                        const wrap = field.closest('.form-group, .lookup-modern, .mb-3, .col-md-4, .col-md-8, .col-md-12');
+                        label = wrap ? wrap.querySelector('label') : null;
+                    }
+                    if (label && !label.classList.contains('required-label')) {
+                        label.classList.add('required-label');
+                    }
+                });
+            }
+
+            document.addEventListener('DOMContentLoaded', function () { markRequiredLabels(document); });
+            window.AppForms = window.AppForms || {};
+            window.AppForms.markRequiredLabels = markRequiredLabels;
+        })();
+    </script>
     <script src="~/js/notification.js" asp-append-version="true"></script>
     <script src="~/lib/microsoft/signalr/signalr.min.js"></script>
     <script src="~/js/notification-center.js" asp-append-version="true"></script>

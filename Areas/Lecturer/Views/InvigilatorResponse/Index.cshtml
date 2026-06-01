@@ -45,24 +45,26 @@
     </div>
 </div>
 
-<div class="modal fade" id="responseRejectModal" tabindex="-1" aria-labelledby="responseRejectModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content rounded-4">
-            <div class="modal-header">
-                <h5 class="modal-title" id="responseRejectModalLabel">Lý do từ chối coi thi</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
-            </div>
-            <div class="modal-body">
-                <label class="form-label" for="responseRejectNote">Ghi chú phản hồi</label>
-                <textarea id="responseRejectNote" class="input-modern w-100" rows="4" maxlength="500" placeholder="Nhập lý do bạn không thể tham gia lịch coi thi đã chọn."></textarea>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                <button type="button" class="btn btn-outline-danger" id="confirmResponseRejectBtn">Gửi từ chối</button>
+@section PageModals {
+    <div class="modal fade" id="responseRejectModal" tabindex="-1" aria-labelledby="responseRejectModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="responseRejectModalLabel">Lý do từ chối coi thi</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    <label class="form-label" for="responseRejectNote">Ghi chú phản hồi</label>
+                    <textarea id="responseRejectNote" class="input-modern w-100" rows="4" maxlength="500" placeholder="Nhập lý do bạn không thể tham gia lịch coi thi đã chọn."></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-outline-danger" id="confirmResponseRejectBtn">Gửi từ chối</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
+}
 
 <style>
     .calendar-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; }

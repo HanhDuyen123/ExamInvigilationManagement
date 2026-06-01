@@ -4,6 +4,8 @@
     {
         public int ExamInvigilatorId { get; set; }
         public int UserId { get; set; }
+        public int InformationId { get; set; }
+        public int PersonKey => InformationId > 0 ? InformationId : UserId;
         public string UserName { get; set; } = string.Empty;
         public string FullName { get; set; } = string.Empty;
         public int? NewUserId { get; set; }

@@ -22,8 +22,10 @@
                MenuId = "subjectDropdown",
                Placeholder = "Chọn môn học...",
                InputClass = "input-modern",
-               ShowButton = false
-           })
+               ShowButton = false,
+               InitialValue = Model.SubjectId,
+               InitialText = Model.SubjectName
+            })
                 <span asp-validation-for="SubjectId" class="text-danger"></span>
             </div>
 
@@ -37,8 +39,10 @@
                MenuId = "userDropdown",
                Placeholder = "Chọn giảng viên...",
                InputClass = "input-modern",
-               ShowButton = false
-           })
+               ShowButton = false,
+               InitialValue = Model.UserId?.ToString(),
+               InitialText = Model.UserName
+            })
                 <span asp-validation-for="UserId" class="text-danger"></span>
             </div>
 
@@ -52,8 +56,10 @@
                MenuId = "yearDropdown",
                Placeholder = "Chọn năm học...",
                InputClass = "input-modern",
-               ShowButton = false
-           })
+               ShowButton = false,
+               InitialValue = Model.AcademyYearId?.ToString(),
+               InitialText = Model.AcademicYearName
+            })
                 <span asp-validation-for="AcademyYearId" class="text-danger"></span>
             </div>
 
@@ -67,8 +73,10 @@
                MenuId = "semesterDropdown",
                Placeholder = "Chọn học kỳ...",
                InputClass = "input-modern",
-               ShowButton = false
-           })
+               ShowButton = false,
+               InitialValue = Model.SemesterId?.ToString(),
+               InitialText = Model.SemesterName
+            })
                 <span asp-validation-for="SemesterId" class="text-danger"></span>
             </div>
 
@@ -101,6 +109,8 @@
                 url: '@Url.Action("Search", "Subject", new { area = "Admin" })',
                 valueField: 'id',
                 textField: 'name'
+                ,initialValue: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SubjectId ?? ""))
+                ,initialText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SubjectName ?? ""))
             });
 
             AdminLookup.create({
@@ -110,7 +120,9 @@
                 menu: '#userDropdown',
                 url: '@Url.Action("SearchLecturer", "User", new { area = "Admin" })',
                 valueField: 'id',
-                textField: 'fullName'
+                textField: 'fullName',
+                initialValue: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserId?.ToString() ?? "")),
+                initialText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.UserName ?? ""))
             });
 
             AdminLookup.create({
@@ -121,6 +133,8 @@
                 url: '@Url.Action("Search", "AcademyYear", new { area = "Admin" })',
                 valueField: 'id',
                 textField: 'name',
+                initialValue: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AcademyYearId?.ToString() ?? "")),
+                initialText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AcademicYearName ?? "")),
                 onSelect: function () {
                     $('#semesterId').val('');
                     $('#semesterInput').val('');
@@ -141,6 +155,8 @@
                 },
                 valueField: 'id',
                 textField: 'name',
+                initialValue: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SemesterId?.ToString() ?? "")),
+                initialText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.SemesterName ?? "")),
                 beforeSearch: function () {
                     if (!$('#yearId').val()) {
                         AppNotify.show('warning', 'Vui lòng chọn năm học trước.');

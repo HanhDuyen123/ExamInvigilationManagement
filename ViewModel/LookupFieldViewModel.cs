@@ -13,5 +13,6 @@
         public bool ShowButton { get; set; } = false;
         public string? InitialText { get; set; }
         public string? InitialValue { get; set; }
+        public string? RequiredMessage { get; set; }
     }
 }

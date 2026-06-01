@@ -433,13 +433,34 @@ public partial class ApplicationDbContext : DbContext
     public override Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
         AddAutomaticAuditLogs();
+        NormalizeAuditLogs();
         return base.SaveChangesAsync(cancellationToken);
     }
 
     public override int SaveChanges()
     {
         AddAutomaticAuditLogs();
+        NormalizeAuditLogs();
         return base.SaveChanges();
+    }
+
+    private void NormalizeAuditLogs()
+    {
+        foreach (var entry in ChangeTracker.Entries<AuditLog>().Where(e => e.State is EntityState.Added or EntityState.Modified))
+        {
+            var audit = entry.Entity;
+            audit.EventType = Truncate(audit.EventType, 100) ?? string.Empty;
+            audit.EntityName = Truncate(audit.EntityName, 100) ?? string.Empty;
+            audit.EntityId = Truncate(audit.EntityId, 100);
+            audit.Action = Truncate(audit.Action, 50) ?? string.Empty;
+            audit.Source = Truncate(audit.Source, 100);
+        }
+    }
+
+    private static string? Truncate(string? value, int maxLength)
+    {
+        if (string.IsNullOrEmpty(value) || value.Length <= maxLength) return value;
+        return value[..maxLength];
     }
 
     private void AddAutomaticAuditLogs()

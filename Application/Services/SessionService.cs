@@ -33,7 +33,7 @@ namespace ExamInvigilationManagement.Application.Services
         }
         public async Task AddAsync(int periodId, string name)
         {
-            name = (name ?? string.Empty).Trim();
+            name = AcademicNameHelper.NormalizeSessionName(name);
             var period = await _periodRepo.GetByIdAsync(periodId);
             if (period == null)
                 throw new InvalidOperationException("Đợt thi không hợp lệ.");
@@ -60,7 +60,7 @@ namespace ExamInvigilationManagement.Application.Services
 
         public async Task UpdateAsync(SessionDto dto)
         {
-            dto.Name = (dto.Name ?? string.Empty).Trim();
+            dto.Name = AcademicNameHelper.NormalizeSessionName(dto.Name);
             if (string.IsNullOrWhiteSpace(dto.Name))
                 throw new InvalidOperationException("Vui lòng nhập tên buổi thi.");
 

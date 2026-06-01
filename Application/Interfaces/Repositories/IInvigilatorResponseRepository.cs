@@ -16,6 +16,10 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
             IEnumerable<int> examInvigilatorIds,
             CancellationToken cancellationToken = default);
 
+        Task<int?> GetUserInformationIdAsync(
+            int userId,
+            CancellationToken cancellationToken = default);
+
         Task UpsertResponsesAsync(
             int userId,
             IEnumerable<int> examInvigilatorIds,

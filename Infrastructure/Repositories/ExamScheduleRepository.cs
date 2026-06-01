@@ -158,6 +158,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     ExamDate = x.ExamDate,
                     Status = x.Status,
                     ApprovalCount = x.ExamScheduleApprovals.Count,
+                    InvigilatorCount = x.ExamInvigilators.Count,
+                    IsLockedForScheduleEdit = x.ExamInvigilators.Any(),
 
                     SubjectId = x.Offering.SubjectId,
                     SubjectName = x.Offering.Subject.SubjectName,
@@ -293,6 +295,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 ExamDate = x.ExamDate,
                 Status = x.Status,
                 ApprovalCount = x.ExamScheduleApprovals.Count,
+                InvigilatorCount = x.ExamInvigilators.Count,
+                IsLockedForScheduleEdit = x.ExamInvigilators.Any(),
 
                 SubjectId = x.Offering?.SubjectId,
                 SubjectName = x.Offering?.Subject?.SubjectName,
@@ -435,6 +439,11 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             return await _context.ExamFormats.AnyAsync(x => x.ExamFormatId == examFormatId && x.IsActive);
         }
 
+        public async Task<bool> HasInvigilatorsAsync(int id)
+        {
+            return await _context.ExamInvigilators.AnyAsync(x => x.ExamScheduleId == id);
+        }
+
         public async Task<List<ExamFormatDto>> GetExamFormatsAsync(CancellationToken cancellationToken = default)
         {
             return await _context.ExamFormats
@@ -445,7 +454,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 {
                     Id = x.ExamFormatId,
                     Code = x.Code,
-                    Name = x.Name
+                    Name = x.Name,
+                    IsActive = x.IsActive
                 })
                 .ToListAsync(cancellationToken);
         }
@@ -568,10 +578,10 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 {
                     EventType = "ApprovalRequest",
                     EntityName = "ExamSchedule",
-                    EntityId = string.Join(",", ids),
+                    EntityId = $"Schedules:{ids.Count}",
                     Action = "RequestApproval",
                     ActorUserId = requestedById,
-                    NewValues = $"Schedules={ids.Count};Approvers={deans.Count}",
+                    NewValues = $"Schedules={ids.Count};Approvers={deans.Count};ScheduleIds={string.Join(",", ids)}",
                     Note = note,
                     CreatedAt = now,
                     CorrelationId = correlationId,
