@@ -178,6 +178,10 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     UserName = x.Offering.User.Information != null
                         ? $"{x.Offering.User.Information.LastName} {x.Offering.User.Information.FirstName}"
                         : x.Offering.User.UserName,
+                    OfferingUserCode = x.Offering.User.UserName,
+                    OfferingUserFullName = x.Offering.User.Information != null
+                        ? $"{x.Offering.User.Information.LastName} {x.Offering.User.Information.FirstName}"
+                        : x.Offering.User.UserName,
 
                     ClassName = x.Offering.ClassName,
                     GroupNumber = x.Offering.GroupNumber,
@@ -373,6 +377,10 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 ExamFormatCode = x.ExamFormat?.Code,
                 ExamFormatName = x.ExamFormat?.Name,
                 UserName = x.Offering?.User?.Information != null
+                    ? $"{x.Offering.User.Information.LastName} {x.Offering.User.Information.FirstName}"
+                    : x.Offering?.User?.UserName,
+                OfferingUserCode = x.Offering?.User?.UserName,
+                OfferingUserFullName = x.Offering?.User?.Information != null
                     ? $"{x.Offering.User.Information.LastName} {x.Offering.User.Information.FirstName}"
                     : x.Offering?.User?.UserName,
 

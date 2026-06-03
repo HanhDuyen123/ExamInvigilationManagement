@@ -23,6 +23,8 @@ namespace ExamInvigilationManagement.Application.DTOs.ExamSchedule
         public string? FacultyName { get; set; }
         public int? FacultyId { get; set; }
         public string? UserName { get; set; }
+        public string? OfferingUserCode { get; set; }
+        public string? OfferingUserFullName { get; set; }
         public string? SubjectId { get; set; }
         public string? SubjectName { get; set; }
         public int? Credit { get; set; }

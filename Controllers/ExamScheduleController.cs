@@ -1,4 +1,5 @@
-﻿using System.Security.Claims;
+﻿using System.Globalization;
+using System.Security.Claims;
 using System.Text;
 using System.Net;
 using DocumentFormat.OpenXml;
@@ -994,41 +995,41 @@ namespace ExamInvigilationManagement.Controllers
                 var worksheetPart = workbookPart.WorksheetParts.First();
                 var sheetData = worksheetPart.Worksheet.GetFirstChild<SheetData>() ?? worksheetPart.Worksheet.AppendChild(new SheetData());
 
-                SetCellValue(worksheetPart, workbookPart, "A3", BuildExamScheduleExportTitle(schedules));
+                var headerRowIndex = FindHeaderRowIndex(sheetData, workbookPart);
+                var dataStartIndex = headerRowIndex + 1;
+                var headerColumns = GetHeaderColumns(sheetData, workbookPart, headerRowIndex);
+                var templateRow = sheetData.Elements<Row>().FirstOrDefault(r => r.RowIndex?.Value == dataStartIndex)
+                    ?? new Row { RowIndex = dataStartIndex };
+                var borderedStyleIndexes = new Dictionary<uint, uint>();
 
-                foreach (var row in sheetData.Elements<Row>().Where(r => r.RowIndex?.Value >= 5).ToList())
+                foreach (var row in sheetData.Elements<Row>().Where(r => r.RowIndex?.Value >= dataStartIndex).ToList())
                     row.Remove();
-
-                AppendExportRow(sheetData, 5,
-                [
-                    "STT", "Mã môn", "Tên môn", "Số TC", "Lớp", "Nhóm", "Hình thức thi", "Ngày thi", "Buổi", "Ca",
-                    "Giờ", "Phòng", "Giảng đường", "Sĩ số", "Giảng viên dạy", "CBCT 1", "CBCT 2", "Trạng thái"
-                ]);
 
                 for (var i = 0; i < schedules.Count; i++)
                 {
                     var item = schedules[i];
-                    AppendExportRow(sheetData, (uint)(6 + i),
-                    [
-                        (i + 1).ToString(),
-                        item.SubjectId,
-                        item.SubjectName,
-                        item.Credit?.ToString(),
-                        item.ClassName,
-                        item.GroupNumber,
-                        FormatExamFormat(item),
-                        item.ExamDate?.ToString("dd/MM/yyyy"),
-                        item.SessionName,
-                        GetSlotNumber(item),
-                        FormatTime(item.SlotTimeStart),
-                        item.RoomName,
-                        item.BuildingName ?? item.BuildingId,
-                        item.RoomCapacity?.ToString(),
-                        item.UserName,
-                        FormatLecturer(item.Lecturer1Code, item.Lecturer1Name),
-                        FormatLecturer(item.Lecturer2Code, item.Lecturer2Name),
-                        item.Status
-                    ]);
+                    var rowIndex = dataStartIndex + (uint)i;
+                    var row = (Row)templateRow.CloneNode(true);
+                    row.RowIndex = rowIndex;
+                    foreach (var cell in row.Elements<Cell>())
+                    {
+                        var column = GetColumnName(cell.CellReference?.Value ?? "A");
+                        cell.CellReference = column + rowIndex;
+                        cell.CellValue = null;
+                        cell.InlineString = null;
+                        cell.DataType = null;
+                    }
+
+                    foreach (var header in headerColumns)
+                    {
+                        var value = GetExamScheduleExportValue(item, i + 1, header.HeaderText);
+                        if (value != null)
+                            SetRowCell(row, header.ColumnName, rowIndex, value);
+                    }
+
+                    ApplyDataBorder(row, headerColumns, rowIndex, workbookPart, borderedStyleIndexes);
+
+                    sheetData.Append(row);
                 }
 
                 worksheetPart.Worksheet.Save();
@@ -1101,6 +1102,76 @@ namespace ExamInvigilationManagement.Controllers
             if (string.IsNullOrWhiteSpace(item.ExamFormatCode)) return item.ExamFormatName ?? string.Empty;
             if (string.IsNullOrWhiteSpace(item.ExamFormatName)) return item.ExamFormatCode;
             return $"{item.ExamFormatCode} - {item.ExamFormatName}";
+        }
+
+        private static string? GetExamScheduleExportValue(ExamScheduleDto item, int ordinal, string headerText)
+        {
+            var key = NormalizeExportHeader(headerText);
+            return key switch
+            {
+                "stt" or "sothutu" => ordinal.ToString(),
+                "mahp" or "mahocphan" or "mamon" or "mamonhoc" => item.SubjectId,
+                "tenhp" or "tenhocphan" or "tenmon" or "tenmonhoc" => item.SubjectName,
+                "tenhinhthucthi" or "hinhthucthi" => FormatExamFormat(item),
+                "sotinchi" or "tinchi" or "sotc" or "tc" => item.Credit?.ToString(),
+                "lop" or "lophp" or "lophocphan" => item.ClassName,
+                "nhom" or "nhomhp" or "nhomthi" => item.GroupNumber,
+                "ngaythi" => item.ExamDate?.ToString("dd/MM/yyyy"),
+                "buoithi" => item.SessionName,
+                "cathi" => GetSlotNumber(item),
+                "giothi" or "giobatdau" or "thoigianthi" or "thoigian" => FormatTime(item.SlotTimeStart),
+                "tenphongthi" or "phongthi" or "phong" or "tenphong" => FormatRoomDisplay(item),
+                "dayphong" or "magiangduong" or "giangduong" or "toa" or "khu" => FormatBuildingDisplay(item),
+                "siso" or "succhua" or "succhuaphong" => item.RoomCapacity?.ToString(),
+                "canbogiangday" or "giangvienday" or "giangvienphutrach" or "cbgd" => FormatLecturer(item.OfferingUserCode, item.OfferingUserFullName ?? item.UserName),
+                "donviquanlyhocphan" or "donviquanly" or "khoaquanly" or "khoa" => item.FacultyName,
+                "cbct1" or "canbocoithi1" or "canboct1" or "giamthi1" => FormatLecturer(item.Lecturer1Code, item.Lecturer1Name),
+                "macbct1" or "macanbocoithi1" or "magiamthi1" => item.Lecturer1Code,
+                "hotencbct1" or "hotencanbocoithi1" or "tencbct1" or "tengiamthi1" => item.Lecturer1Name,
+                "donvicbct1" or "khoacbct1" or "donvigiamthi1" => item.Lecturer1FacultyName,
+                "cbct2" or "canbocoithi2" or "canboct2" or "giamthi2" => FormatLecturer(item.Lecturer2Code, item.Lecturer2Name),
+                "macbct2" or "macanbocoithi2" or "magiamthi2" => item.Lecturer2Code,
+                "hotencbct2" or "hotencanbocoithi2" or "tencbct2" or "tengiamthi2" => item.Lecturer2Name,
+                "donvicbct2" or "khoacbct2" or "donvigiamthi2" => item.Lecturer2FacultyName,
+                "trangthai" => item.Status,
+                _ => null
+            };
+        }
+
+        private static string FormatRoomDisplay(ExamScheduleDto item)
+        {
+            if (string.Equals(item.BuildingId, "KHAC", StringComparison.OrdinalIgnoreCase))
+                return item.RoomName ?? string.Empty;
+
+            if (string.IsNullOrWhiteSpace(item.BuildingId))
+                return item.RoomName ?? string.Empty;
+
+            return string.IsNullOrWhiteSpace(item.RoomName)
+                ? item.BuildingId
+                : $"{item.BuildingId}.{item.RoomName}";
+        }
+
+        private static string FormatBuildingDisplay(ExamScheduleDto item)
+        {
+            return string.Equals(item.BuildingId, "KHAC", StringComparison.OrdinalIgnoreCase)
+                ? string.Empty
+                : item.BuildingName ?? item.BuildingId ?? string.Empty;
+        }
+
+        private static string NormalizeExportHeader(string? value)
+        {
+            var normalized = (value ?? string.Empty).Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD);
+            var builder = new StringBuilder(normalized.Length);
+            foreach (var ch in normalized)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(ch) == UnicodeCategory.NonSpacingMark)
+                    continue;
+
+                if (char.IsLetterOrDigit(ch))
+                    builder.Append(ch == 'đ' ? 'd' : ch);
+            }
+
+            return builder.ToString().Normalize(NormalizationForm.FormC);
         }
 
         private static string BuildSupportRequestEmailBody(SupportRequestBuildResult result, string? senderName, string? replyTo)
@@ -1208,13 +1279,120 @@ namespace ExamInvigilationManagement.Controllers
         {
             foreach (var row in sheetData.Elements<Row>())
             {
-                var firstCellText = GetCellText(row.Elements<Cell>().FirstOrDefault(), workbookPart).Trim();
-                if (string.Equals(firstCellText, "Stt", StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(firstCellText, "STT", StringComparison.OrdinalIgnoreCase))
+                var headerTexts = row.Elements<Cell>().Select(x => NormalizeExportHeader(GetCellText(x, workbookPart))).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                if (headerTexts.Contains("stt") &&
+                    (headerTexts.Contains("mahp") || headerTexts.Contains("mahocphan") || headerTexts.Contains("mamon")))
                     return row.RowIndex?.Value ?? 7;
             }
 
             return 7;
+        }
+
+        private static List<ExportHeaderColumn> GetHeaderColumns(SheetData sheetData, WorkbookPart workbookPart, uint headerRowIndex)
+        {
+            var headerRow = sheetData.Elements<Row>().FirstOrDefault(x => x.RowIndex?.Value == headerRowIndex);
+            if (headerRow == null) return [];
+
+            var headerTextByColumn = headerRow.Elements<Cell>()
+                .Select(cell => new
+                {
+                    ColumnName = GetColumnName(cell.CellReference?.Value ?? string.Empty),
+                    HeaderText = GetCellText(cell, workbookPart).Trim()
+                })
+                .Where(x => !string.IsNullOrWhiteSpace(x.ColumnName))
+                .ToDictionary(x => x.ColumnName, x => x.HeaderText, StringComparer.OrdinalIgnoreCase);
+
+            if (headerTextByColumn.Count == 0) return [];
+
+            var lastColumnIndex = headerTextByColumn.Keys.Max(GetExcelColumnIndex);
+            var columns = new List<ExportHeaderColumn>();
+            for (var i = 1; i <= lastColumnIndex; i++)
+            {
+                var columnName = GetExcelColumnName(i);
+                headerTextByColumn.TryGetValue(columnName, out var headerText);
+                columns.Add(new ExportHeaderColumn(columnName, headerText ?? string.Empty));
+            }
+
+            return columns;
+        }
+
+        private static int GetExcelColumnIndex(string columnName)
+        {
+            var index = 0;
+            foreach (var ch in (columnName ?? string.Empty).ToUpperInvariant())
+            {
+                if (ch < 'A' || ch > 'Z') continue;
+                index = index * 26 + (ch - 'A' + 1);
+            }
+
+            return index;
+        }
+
+        private static void ApplyDataBorder(Row row, IReadOnlyList<ExportHeaderColumn> headerColumns, uint rowIndex, WorkbookPart workbookPart, Dictionary<uint, uint> borderedStyleIndexes)
+        {
+            foreach (var header in headerColumns)
+            {
+                var cell = GetOrCreateCell(row, header.ColumnName, rowIndex);
+                var baseStyleIndex = cell.StyleIndex?.Value ?? 0;
+                cell.StyleIndex = GetOrCreateBorderedStyleIndex(workbookPart, baseStyleIndex, borderedStyleIndexes);
+            }
+        }
+
+        private static Cell GetOrCreateCell(Row row, string columnName, uint rowIndex)
+        {
+            var cellReference = columnName + rowIndex;
+            var cell = row.Elements<Cell>().FirstOrDefault(c => string.Equals(c.CellReference?.Value, cellReference, StringComparison.OrdinalIgnoreCase));
+            if (cell != null) return cell;
+
+            cell = new Cell { CellReference = cellReference };
+            var nextCell = row.Elements<Cell>()
+                .FirstOrDefault(c => string.Compare(GetColumnName(c.CellReference?.Value ?? string.Empty), columnName, StringComparison.OrdinalIgnoreCase) > 0);
+            if (nextCell == null)
+                row.Append(cell);
+            else
+                row.InsertBefore(cell, nextCell);
+
+            return cell;
+        }
+
+        private static uint GetOrCreateBorderedStyleIndex(WorkbookPart workbookPart, uint baseStyleIndex, Dictionary<uint, uint> borderedStyleIndexes)
+        {
+            if (borderedStyleIndexes.TryGetValue(baseStyleIndex, out var styleIndex))
+                return styleIndex;
+
+            var stylesPart = workbookPart.WorkbookStylesPart ?? workbookPart.AddNewPart<WorkbookStylesPart>();
+            stylesPart.Stylesheet ??= new Stylesheet();
+            var stylesheet = stylesPart.Stylesheet;
+
+            stylesheet.Fonts ??= new Fonts(new Font()) { Count = 1 };
+            stylesheet.Fills ??= new Fills(new Fill()) { Count = 1 };
+            stylesheet.Borders ??= new Borders(new Border()) { Count = 1 };
+            stylesheet.CellFormats ??= new CellFormats(new CellFormat()) { Count = 1 };
+
+            var border = new Border(
+                new LeftBorder { Style = BorderStyleValues.Thin, Color = new Color { Rgb = "FF000000" } },
+                new RightBorder { Style = BorderStyleValues.Thin, Color = new Color { Rgb = "FF000000" } },
+                new TopBorder { Style = BorderStyleValues.Thin, Color = new Color { Rgb = "FF000000" } },
+                new BottomBorder { Style = BorderStyleValues.Thin, Color = new Color { Rgb = "FF000000" } },
+                new DiagonalBorder());
+            stylesheet.Borders.Append(border);
+            stylesheet.Borders.Count = (uint)stylesheet.Borders.Count();
+            var borderId = stylesheet.Borders.Count!.Value - 1;
+
+            var baseCellFormat = stylesheet.CellFormats.Elements<CellFormat>().ElementAtOrDefault((int)baseStyleIndex);
+            var borderedCellFormat = baseCellFormat != null
+                ? (CellFormat)baseCellFormat.CloneNode(true)
+                : new CellFormat();
+            borderedCellFormat.BorderId = borderId;
+            borderedCellFormat.ApplyBorder = true;
+
+            stylesheet.CellFormats.Append(borderedCellFormat);
+            stylesheet.CellFormats.Count = (uint)stylesheet.CellFormats.Count();
+            styleIndex = stylesheet.CellFormats.Count!.Value - 1;
+            borderedStyleIndexes[baseStyleIndex] = styleIndex;
+            stylesheet.Save();
+
+            return styleIndex;
         }
 
         private static string GetCellText(Cell? cell, WorkbookPart workbookPart)
@@ -1313,5 +1491,7 @@ namespace ExamInvigilationManagement.Controllers
                 };
             }
         }
+
+        private sealed record ExportHeaderColumn(string ColumnName, string HeaderText);
     }
 }
