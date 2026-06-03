@@ -1,0 +1,61 @@
+@model ExamInvigilationManagement.Common.PagedResult<ExamInvigilationManagement.Application.DTOs.Admin.User.LecturerManagementDto>
+
+@{
+    int stt = (Model.Page - 1) * Model.PageSize + 1;
+}
+
+<table class="table modern-table wide-table">
+    <thead>
+        <tr>
+            <th>STT</th>
+            <th>Mã GV</th>
+            <th>Họ tên</th>
+            <th>Khoa/Viện</th>
+            <th>Email</th>
+            <th>Số điện thoại</th>
+            <th>Ngày sinh</th>
+            <th>Trạng thái</th>
+            <th>Thao tác</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                <td>@stt</td>
+                <td>@item.UserName</td>
+                <td>@item.LastName @item.FirstName</td>
+                <td>@item.FacultyName</td>
+                <td>@item.Email</td>
+                <td>@(string.IsNullOrWhiteSpace(item.Phone) ? "-" : item.Phone)</td>
+                <td>@(item.Dob.HasValue ? item.Dob.Value.ToString("dd/MM/yyyy") : "-")</td>
+                <td>
+                    @if (item.IsActive)
+                    {
+                        <span class="badge bg-success">Đang hoạt động</span>
+                    }
+                    else
+                    {
+                        <span class="badge bg-danger">Đã vô hiệu hóa</span>
+                    }
+                </td>
+                <td class="col-action">
+                    <div class="action-group">
+                        <a href="@Url.Action("Edit", "LecturerManagement", new { id = item.Id })" class="btn-icon edit" title="Cập nhật">
+                            <i class="bi bi-pencil"></i>
+                        </a>
+                        @if (item.IsActive)
+                        {
+                            <a href="#" class="btn-icon delete btn-delete" data-id="@item.Id" data-name="@item.UserName" title="Vô hiệu hóa" data-modal-title="Xác nhận vô hiệu hóa" data-modal-message="Bạn có chắc muốn vô hiệu hóa giảng viên" data-modal-confirm="Vô hiệu hóa">
+                                <i class="bi bi-slash-circle"></i>
+                            </a>
+                        }
+                    </div>
+                </td>
+            </tr>
+            stt++;
+        }
+    </tbody>
+</table>
+
+@await Html.PartialAsync("_Pagination", Model)

@@ -1,4 +1,5 @@
 ﻿using ExamInvigilationManagement.Application.DTOs.Admin.User;
+using ExamInvigilationManagement.Application.DTOs.Admin.Information;
 using ExamInvigilationManagement.Application.Interfaces.Common;
 using ExamInvigilationManagement.Application.Interfaces.Repositories;
 using ExamInvigilationManagement.Application.Interfaces.Service;
@@ -11,14 +12,20 @@ namespace ExamInvigilationManagement.Application.Services
     public class AdminUserService : IAdminUserService
     {
         private const string RoleAdmin = "Admin";
+        private const string RoleLecturer = "Giảng viên";
 
         private readonly IAdminUserRepository _repo;
         private readonly IPasswordService _passwordService;
+        private readonly IInformationService _informationService;
 
-        public AdminUserService(IAdminUserRepository repo, IPasswordService passwordService)
+        public AdminUserService(
+            IAdminUserRepository repo,
+            IPasswordService passwordService,
+            IInformationService informationService)
         {
             _repo = repo;
             _passwordService = passwordService;
+            _informationService = informationService;
         }
 
         public async Task<PagedResult<UserDto>> GetPagedAsync(string? keyword, int page, int pageSize)
@@ -191,12 +198,98 @@ namespace ExamInvigilationManagement.Application.Services
         {
             var existing = await _repo.GetByIdAsync(id);
             if (existing == null)
-                throw new InvalidOperationException("Không tìm thấy tài khoản cần xóa.");
+                throw new InvalidOperationException("Không tìm thấy tài khoản cần vô hiệu hóa.");
 
-            if (await _repo.HasDependenciesAsync(id))
-                throw new InvalidOperationException("Không thể xóa tài khoản vì đã phát sinh dữ liệu nghiệp vụ liên quan. Hãy vô hiệu hóa tài khoản thay thế.");
+            await _repo.SetActiveAsync(id, false);
+        }
 
-            await _repo.DeleteAsync(id);
+        public async Task SetActiveAsync(int id, bool isActive)
+        {
+            var existing = await _repo.GetByIdAsync(id);
+            if (existing == null)
+                throw new InvalidOperationException("Không tìm thấy tài khoản cần cập nhật trạng thái.");
+
+            await _repo.SetActiveAsync(id, isActive);
+        }
+
+        public async Task<PagedResult<LecturerManagementDto>> GetLecturersPagedAsync(
+            string? keyword,
+            int? facultyId,
+            bool? isActive,
+            int page,
+            int pageSize)
+        {
+            var roleId = await GetLecturerRoleIdAsync();
+            var paged = await _repo.GetPagedAsync(keyword, roleId, null, facultyId, isActive, page, pageSize);
+
+            return new PagedResult<LecturerManagementDto>
+            {
+                Items = paged.Items.Select(ToLecturerDto).ToList(),
+                TotalCount = paged.TotalCount,
+                Page = paged.Page,
+                PageSize = paged.PageSize
+            };
+        }
+
+        public async Task<LecturerManagementDto?> GetLecturerByIdAsync(int id, int? facultyScopeId = null)
+        {
+            var user = await _repo.GetByIdAsync(id);
+            if (user == null || !string.Equals(user.Role?.Name, RoleLecturer, StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            if (facultyScopeId.HasValue && user.FacultyId != facultyScopeId.Value)
+                return null;
+
+            return ToLecturerDto(user);
+        }
+
+        public async Task CreateLecturerAsync(LecturerManagementDto dto, int? facultyScopeId = null)
+        {
+            NormalizeLecturer(dto);
+            if (facultyScopeId.HasValue) dto.FacultyId = facultyScopeId.Value;
+
+            if (string.IsNullOrWhiteSpace(dto.Password))
+                throw new InvalidOperationException("Vui lòng nhập mật khẩu.");
+
+            if (await _repo.ExistsByUserNameAsync(dto.UserName))
+                throw new InvalidOperationException("Mã giảng viên đã tồn tại.");
+
+            var roleId = await GetLecturerRoleIdAsync();
+            var informationId = await _informationService.CreateAndReturnIdAsync(ToInformationDto(dto));
+
+            await CreateAsync(new UserDto
+            {
+                UserName = dto.UserName,
+                Password = dto.Password,
+                RoleId = roleId,
+                InformationId = informationId,
+                FacultyId = dto.FacultyId,
+                IsActive = dto.IsActive
+            });
+        }
+
+        public async Task UpdateLecturerAsync(LecturerManagementDto dto, int? facultyScopeId = null)
+        {
+            var existing = await GetLecturerByIdAsync(dto.Id, facultyScopeId);
+            if (existing == null)
+                throw new InvalidOperationException("Không tìm thấy giảng viên cần cập nhật.");
+
+            NormalizeLecturer(dto);
+            if (facultyScopeId.HasValue) dto.FacultyId = facultyScopeId.Value;
+
+            var roleId = await GetLecturerRoleIdAsync();
+            dto.InformationId = existing.InformationId;
+
+            await _informationService.UpdateAsync(ToInformationDto(dto));
+            await UpdateAsync(new UserDto
+            {
+                Id = dto.Id,
+                UserName = dto.UserName,
+                RoleId = roleId,
+                InformationId = dto.InformationId,
+                FacultyId = dto.FacultyId,
+                IsActive = dto.IsActive
+            });
         }
 
         private async Task ValidateAsync(UserDto dto, bool isUpdate)
@@ -246,6 +339,59 @@ namespace ExamInvigilationManagement.Application.Services
             dto.UserName = (dto.UserName ?? string.Empty).Trim();
             dto.Password = string.IsNullOrWhiteSpace(dto.Password) ? null : dto.Password.Trim();
             return dto;
+        }
+
+        private async Task<byte> GetLecturerRoleIdAsync()
+        {
+            var roleId = await _repo.GetRoleIdByNameAsync(RoleLecturer);
+            if (!roleId.HasValue)
+                throw new InvalidOperationException("Chưa cấu hình vai trò Giảng viên.");
+
+            return roleId.Value;
+        }
+
+        private static LecturerManagementDto ToLecturerDto(User x)
+        {
+            return new LecturerManagementDto
+            {
+                Id = x.Id,
+                InformationId = x.InformationId,
+                UserName = x.UserName,
+                LastName = x.Information?.LastName ?? string.Empty,
+                FirstName = x.Information?.FirstName ?? string.Empty,
+                FacultyId = x.FacultyId,
+                FacultyName = x.Faculty?.Name,
+                Email = x.Information?.Email ?? string.Empty,
+                Phone = x.Information?.Phone,
+                Dob = x.Information?.Dob,
+                PositionId = x.Information?.PositionId ?? 0,
+                PositionName = x.Information?.Position?.Name,
+                IsActive = x.IsActive
+            };
+        }
+
+        private static InformationDto ToInformationDto(LecturerManagementDto dto)
+        {
+            return new InformationDto
+            {
+                Id = dto.InformationId,
+                LastName = dto.LastName,
+                FirstName = dto.FirstName,
+                Email = dto.Email,
+                Phone = dto.Phone,
+                Dob = dto.Dob,
+                PositionId = dto.PositionId
+            };
+        }
+
+        private static void NormalizeLecturer(LecturerManagementDto dto)
+        {
+            dto.UserName = (dto.UserName ?? string.Empty).Trim();
+            dto.Password = string.IsNullOrWhiteSpace(dto.Password) ? null : dto.Password.Trim();
+            dto.LastName = (dto.LastName ?? string.Empty).Trim();
+            dto.FirstName = (dto.FirstName ?? string.Empty).Trim();
+            dto.Email = (dto.Email ?? string.Empty).Trim();
+            dto.Phone = string.IsNullOrWhiteSpace(dto.Phone) ? null : dto.Phone.Trim();
         }
     }
 }

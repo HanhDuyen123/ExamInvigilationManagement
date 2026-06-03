@@ -54,6 +54,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
                     OfferingId = x.OfferingId,
                     OfferingUserId = x.Offering.UserId,
+                    OfferingUserInformationId = x.Offering.User.InformationId,
                     OfferingFacultyId = x.Offering.Subject.FacultyId,
 
                     SubjectId = x.Offering.SubjectId,
@@ -78,6 +79,13 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
         {
             var subjectIdList = subjectIds.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().ToList();
             var ownerIdList = ownerUserIds.Distinct().ToList();
+            var ownerPersonKeys = await _db.Users
+                .AsNoTracking()
+                .Where(x => ownerIdList.Contains(x.UserId))
+                .Select(x => x.InformationId > 0 ? x.InformationId : x.UserId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
             var subjectLecturerIds = await _db.CourseOfferings
                 .AsNoTracking()
                 .Where(x => subjectIdList.Contains(x.SubjectId) && x.User.IsActive && x.User.Role.RoleName == "Giảng viên")
@@ -85,11 +93,22 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .Distinct()
                 .ToListAsync(cancellationToken);
 
-            return await _db.Users
+            var subjectLecturerPersonKeys = await _db.CourseOfferings
+                .AsNoTracking()
+                .Where(x => subjectIdList.Contains(x.SubjectId) && x.User.IsActive && x.User.Role.RoleName == "Giảng viên")
+                .Select(x => x.User.InformationId > 0 ? x.User.InformationId : x.UserId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            var rows = await _db.Users
                 .AsNoTracking()
                 .Where(x =>
                     x.IsActive &&
-                    (x.FacultyId == facultyId || ownerIdList.Contains(x.UserId) || subjectLecturerIds.Contains(x.UserId)) &&
+                    (x.FacultyId == facultyId ||
+                     ownerIdList.Contains(x.UserId) ||
+                     ownerPersonKeys.Contains(x.InformationId > 0 ? x.InformationId : x.UserId) ||
+                     subjectLecturerIds.Contains(x.UserId) ||
+                     subjectLecturerPersonKeys.Contains(x.InformationId > 0 ? x.InformationId : x.UserId)) &&
                     x.Role.RoleName != "Admin")
                 .Select(x => new AutoAssignLecturerDto
                 {
@@ -103,6 +122,15 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     IsActive = x.IsActive
                 })
                 .ToListAsync(cancellationToken);
+
+            return rows
+                .GroupBy(x => x.PersonKey)
+                .Select(g => g
+                    .OrderBy(x => GetRolePriority(x.RoleName))
+                    .ThenByDescending(x => ownerIdList.Contains(x.UserId))
+                    .ThenBy(x => x.UserName)
+                    .First())
+                .ToList();
         }
 
         public async Task<Dictionary<int, int>> GetLecturerLoadsAsync(
@@ -111,25 +139,37 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             var userIdList = userIds.Distinct().ToList();
-            return await _db.ExamInvigilators
+            var candidatePersonKeys = await GetPersonKeysByUserIdAsync(userIdList, cancellationToken);
+            var personKeySet = candidatePersonKeys.Values.ToHashSet();
+
+            var rows = await _db.ExamInvigilators
                 .AsNoTracking()
                 .Where(x =>
                     x.ExamSchedule.SemesterId == semesterId &&
-                    userIdList.Contains(x.AssigneeId) &&
+                    personKeySet.Contains((x.NewAssignee != null && x.NewAssignee.InformationId > 0) ? x.NewAssignee.InformationId : (x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId)) &&
                     x.Assignee.IsActive &&
                     x.Status != "Từ chối" &&
                     (x.InvigilatorResponses
-                        .Where(r => r.UserId == x.AssigneeId)
+                        .Where(r => r.UserId == (x.NewAssigneeId ?? x.AssigneeId))
                         .OrderByDescending(r => r.ResponseAt)
                         .Select(r => r.Status)
                         .FirstOrDefault() ?? string.Empty) != "Từ chối")
-                .GroupBy(x => x.AssigneeId)
+                .Select(x => new
+                {
+                    PersonKey = (x.NewAssignee != null && x.NewAssignee.InformationId > 0) ? x.NewAssignee.InformationId : (x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId)
+                })
+                .GroupBy(x => x.PersonKey)
                 .Select(g => new
                 {
-                    UserId = g.Key,
+                    PersonKey = g.Key,
                     Count = g.Count()
                 })
-                .ToDictionaryAsync(x => x.UserId, x => x.Count, cancellationToken);
+                .ToListAsync(cancellationToken);
+
+            var countByPersonKey = rows.ToDictionary(x => x.PersonKey, x => x.Count);
+            return candidatePersonKeys.ToDictionary(
+                x => x.Key,
+                x => countByPersonKey.TryGetValue(x.Value, out var count) ? count : 0);
         }
 
         public async Task<Dictionary<string, HashSet<int>>> GetSubjectLecturerMapAsync(
@@ -153,15 +193,28 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .Select(x => new
                 {
                     x.SubjectId,
-                    x.UserId
+                    PersonKey = x.User.InformationId > 0 ? x.User.InformationId : x.UserId
                 })
                 .ToListAsync(cancellationToken);
+
+            var selectedUsers = await _db.Users
+                .AsNoTracking()
+                .Where(x => x.IsActive && x.Role.RoleName != "Admin")
+                .Select(x => new
+                {
+                    x.UserId,
+                    PersonKey = x.InformationId > 0 ? x.InformationId : x.UserId
+                })
+                .ToListAsync(cancellationToken);
+            var selectedUserByPersonKey = selectedUsers
+                .GroupBy(x => x.PersonKey)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.UserId).ToHashSet());
 
             return rows
                 .GroupBy(x => x.SubjectId)
                 .ToDictionary(
                     g => g.Key,
-                    g => g.Select(x => x.UserId).ToHashSet());
+                    g => g.SelectMany(x => selectedUserByPersonKey.TryGetValue(x.PersonKey, out var ids) ? ids : new HashSet<int>()).ToHashSet());
         }
 
         public async Task<List<AutoAssignBusySlotDto>> GetBusySlotsAsync(
@@ -173,20 +226,31 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             var userIdList = userIds.Distinct().ToList();
             var slotIdList = slotIds.Distinct().ToList();
             var dateList = busyDates.Distinct().ToList();
+            var candidatePersonKeys = await GetPersonKeysByUserIdAsync(userIdList, cancellationToken);
+            var userIdByPersonKey = candidatePersonKeys
+                .GroupBy(x => x.Value)
+                .ToDictionary(g => g.Key, g => g.Select(x => x.Key).ToList());
+            var personKeySet = candidatePersonKeys.Values.ToHashSet();
 
-            return await _db.LecturerBusySlots
+            var rows = await _db.LecturerBusySlots
                 .AsNoTracking()
                 .Where(x =>
-                    userIdList.Contains(x.UserId) &&
+                    personKeySet.Contains(x.User.InformationId > 0 ? x.User.InformationId : x.UserId) &&
                     slotIdList.Contains(x.SlotId) &&
                     dateList.Contains(x.BusyDate))
                 .Select(x => new AutoAssignBusySlotDto
                 {
-                    UserId = x.UserId,
+                    UserId = x.User.InformationId > 0 ? x.User.InformationId : x.UserId,
                     SlotId = x.SlotId,
                     BusyDate = x.BusyDate
                 })
                 .ToListAsync(cancellationToken);
+
+            return rows
+                .SelectMany(x => userIdByPersonKey.TryGetValue(x.UserId, out var ids)
+                    ? ids.Select(id => new AutoAssignBusySlotDto { UserId = id, SlotId = x.SlotId, BusyDate = x.BusyDate })
+                    : Enumerable.Empty<AutoAssignBusySlotDto>())
+                .ToList();
         }
 
         public async Task<List<AutoAssignExistingAssignmentDto>> GetExistingAssignmentsAsync(
@@ -202,14 +266,14 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 {
                     ExamInvigilatorId = x.ExamInvigilatorId,
                     ExamScheduleId = x.ExamScheduleId,
-                    UserId = x.AssigneeId,
-                    InformationId = x.Assignee.InformationId,
+                    UserId = x.NewAssigneeId ?? x.AssigneeId,
+                    InformationId = x.NewAssignee != null ? x.NewAssignee.InformationId : x.Assignee.InformationId,
                     PositionNo = x.PositionNo,
                     SlotId = x.ExamSchedule.SlotId,
                     ExamDate = x.ExamSchedule.ExamDate,
                     InvigilatorStatus = x.Status,
                     ResponseStatus = x.InvigilatorResponses
-                        .Where(r => r.UserId == x.AssigneeId)
+                        .Where(r => r.UserId == (x.NewAssigneeId ?? x.AssigneeId))
                         .OrderByDescending(r => r.ResponseAt)
                         .Select(r => r.Status)
                         .FirstOrDefault() ?? string.Empty
@@ -315,6 +379,36 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 await transaction.RollbackAsync(cancellationToken);
                 throw;
             }
+        }
+
+        private async Task<Dictionary<int, int>> GetPersonKeysByUserIdAsync(
+            IEnumerable<int> userIds,
+            CancellationToken cancellationToken)
+        {
+            var ids = userIds.Distinct().ToList();
+            if (ids.Count == 0)
+                return new Dictionary<int, int>();
+
+            return await _db.Users
+                .AsNoTracking()
+                .Where(x => ids.Contains(x.UserId))
+                .Select(x => new
+                {
+                    x.UserId,
+                    PersonKey = x.InformationId > 0 ? x.InformationId : x.UserId
+                })
+                .ToDictionaryAsync(x => x.UserId, x => x.PersonKey, cancellationToken);
+        }
+
+        private static int GetRolePriority(string? roleName)
+        {
+            return roleName switch
+            {
+                "Giảng viên" => 0,
+                "Trưởng khoa" => 1,
+                "Thư ký khoa" => 2,
+                _ => 3
+            };
         }
     }
 }

@@ -87,7 +87,7 @@
             <div class="info-tile">
                 <div class="info-label">Ngày thi</div>
                 <div class="info-value">@schedule?.ExamDate.ToString("dd/MM/yyyy")</div>
-                <div class="info-note">@schedule?.SessionId</div>
+                <div class="info-note">@schedule?.SessionName</div>
             </div>
             <div class="info-tile">
                 <div class="info-label">Ca thi</div>
@@ -97,7 +97,7 @@
             <div class="info-tile">
                 <div class="info-label">Phòng thi</div>
                 <div class="info-value">@schedule?.RoomDisplay</div>
-                <div class="info-note">Năm học @schedule?.AcademyYearId, học kỳ @schedule?.SemesterId</div>
+                <div class="info-note">@schedule?.AcademyYearName · @schedule?.SemesterName · @schedule?.PeriodName</div>
             </div>
             <div class="info-tile">
                 <div class="info-label">Trạng thái lịch</div>

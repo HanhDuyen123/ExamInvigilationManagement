@@ -9,6 +9,8 @@ namespace ExamInvigilationManagement.Application.DTOs.InvigilatorSubstitution
         public int ExamScheduleId { get; set; }
         public byte PositionNo { get; set; }
         public int CurrentAssigneeId { get; set; }
+        public int CurrentAssigneeInformationId { get; set; }
+        public int CurrentAssigneePersonKey => CurrentAssigneeInformationId > 0 ? CurrentAssigneeInformationId : CurrentAssigneeId;
         public string CurrentAssigneeName { get; set; } = string.Empty;
         public int FacultyId { get; set; }
         public string SubjectId { get; set; } = string.Empty;
@@ -22,6 +24,8 @@ namespace ExamInvigilationManagement.Application.DTOs.InvigilatorSubstitution
         public int SessionId { get; set; }
         public int SlotId { get; set; }
         public int OfferingUserId { get; set; }
+        public int OfferingUserInformationId { get; set; }
+        public int OfferingUserPersonKey => OfferingUserInformationId > 0 ? OfferingUserInformationId : OfferingUserId;
         public string SlotName { get; set; } = string.Empty;
         public TimeOnly TimeStart { get; set; }
         public string RoomDisplay { get; set; } = string.Empty;

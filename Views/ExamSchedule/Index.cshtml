@@ -6,6 +6,7 @@
     var showFacultyFilter = ViewBag.ShowFacultyFilter as bool? ?? false;
     var showUserFilter = ViewBag.ShowUserFilter as bool? ?? false;
     var showStatusFilter = ViewBag.ShowStatusFilter as bool? ?? false;
+    var initialStatus = ViewBag.InitialStatus as string ?? "";
 }
 
 @await Html.PartialAsync("_CrudIndex", Model)
@@ -44,6 +45,8 @@
                 });
             }
 
+            const initialStatus = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(initialStatus));
+
             CrudPage.init({
                 api: '@Url.Action("GetList", "ExamSchedule")',
                 deleteUrl: @User.IsInRole("Admin").ToString().ToLower() ? '@Url.Action("Delete", "ExamSchedule")/' : '',
@@ -51,6 +54,7 @@
                 pageSize: '#pageSize',
                 filterSelector: '.crud-filter',
                 deleteName: '#deleteName',
+                autoLoad: !initialStatus,
                 extraData: function () {
                     return {
                         facultyId: val('#facultyId'),
@@ -72,6 +76,11 @@
                     };
                 }
             });
+
+            if (initialStatus) {
+                $('#status').val(initialStatus);
+                CrudPage.loadData(1);
+            }
 
             $('#exportDataFile').on('click', function (event) {
                 event.preventDefault();
@@ -138,9 +147,17 @@
                 }).map(function () {
                     return Number(this.value);
                 }).get();
+                const sentApprovalCount = $('.approval-schedule-checkbox').filter(function () {
+                    return ($(this).data('status') || '').toString().toLowerCase() === 'chờ duyệt' && $(this).data('approval-sent') === true;
+                }).length;
+                const selectablePendingCount = $('.approval-schedule-checkbox:not(:disabled)').filter(function () {
+                    return ($(this).data('status') || '').toString().toLowerCase() === 'chờ duyệt' && $(this).data('approval-sent') !== true;
+                }).length;
 
                 if (!ids.length) {
-                    showApprovalMessage('error', 'Vui lòng chọn ít nhất một lịch thi đang ở trạng thái Chờ duyệt.');
+                    showApprovalMessage('error', selectablePendingCount === 0 && sentApprovalCount > 0
+                        ? 'Lịch thi đã được gửi duyệt.'
+                        : 'Vui lòng chọn ít nhất một lịch thi đang ở trạng thái Chờ duyệt.');
                     return;
                 }
 

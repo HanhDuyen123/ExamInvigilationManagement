@@ -357,6 +357,10 @@
             padding-right: 0;
         }
 
+        .admin-sidebar.collapsed .sidebar-link.active::before {
+            display: none;
+        }
+
         .role-sidebar-tooltip {
             position: fixed;
             opacity: 0;
@@ -631,6 +635,13 @@
                             </a>
                         }
 
+                        @if (User.IsInRole("Trưởng khoa"))
+                        {
+                            <a asp-area="" asp-controller="LecturerManagement" asp-action="Index" aria-label="Quản lý giảng viên" title="Quản lý giảng viên" data-title="Quản lý giảng viên" class="sidebar-link @(IsActive("LecturerManagement") ? "active" : "")">
+                                <i class="bi bi-person-workspace"></i><span class="sidebar-text">Quản lý giảng viên</span>
+                            </a>
+                        }
+
                         @if (User.IsInRole("Thư ký khoa"))
                         {
                             <a asp-area="Secretary" asp-controller="AutoAssignment" asp-action="Index" aria-label="Tự động phân công" title="Tự động phân công" data-title="Tự động phân công" class="sidebar-link @(IsActive("AutoAssignment") ? "active" : "")">
@@ -718,6 +729,13 @@
                 {
                     <a asp-area="Secretary" asp-controller="ExamScheduleApproval" asp-action="Index" class="sidebar-link mb-2">
                         <i class="bi bi-check2-circle"></i><span>Duyệt lịch thi</span>
+                    </a>
+                }
+
+                @if (User.IsInRole("Trưởng khoa"))
+                {
+                    <a asp-area="" asp-controller="LecturerManagement" asp-action="Index" class="sidebar-link mb-2">
+                        <i class="bi bi-person-workspace"></i><span>Quản lý giảng viên</span>
                     </a>
                 }
 

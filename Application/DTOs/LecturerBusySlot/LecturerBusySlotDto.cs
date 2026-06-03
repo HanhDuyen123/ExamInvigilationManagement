@@ -23,6 +23,7 @@
         public string? ExamSessionName { get; set; }
 
         public int? ExamSlotId { get; set; }
+        public List<int> ExamSlotIds { get; set; } = new();
         public string? ExamSlotName { get; set; }
 
         public DateOnly BusyDate { get; set; }

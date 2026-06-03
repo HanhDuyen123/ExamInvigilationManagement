@@ -31,7 +31,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             if (isAdmin && filter.FacultyId.HasValue)
                 schedules = schedules.Where(x => x.Offering.Subject.FacultyId == filter.FacultyId.Value);
             if (isLecturer)
-                schedules = schedules.Where(x => x.ExamInvigilators.Any(i => i.AssigneeId == userId));
+                schedules = schedules.Where(x => x.Status == "Đã duyệt" && x.ExamInvigilators.Any(i => i.AssigneeId == userId));
 
             schedules = ApplyScheduleFilter(schedules, filter);
 

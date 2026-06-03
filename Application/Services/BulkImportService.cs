@@ -99,8 +99,8 @@ namespace ExamInvigilationManagement.Application.Services
                 Col("AcademyYearName", "Năm học", true, "Tên năm học phải khớp chính xác.", "2025-2026"),
                 Col("SemesterName", "Học kỳ", true, "Tên học kỳ trong năm học đã chọn.", "Học kỳ 1"),
                 Col("PeriodName", "Đợt thi", true, "Tên đợt thi trong học kỳ.", "Đợt 1"),
-                Col("SessionName", "Buổi thi", true, "Tên buổi thi trong đợt thi.", "Sáng"),
-                Col("SlotName", "Ca thi", true, "Tên ca thi trong buổi thi.", "Ca 1"),
+                Col("SessionName", "Buổi thi", true, "Tên buổi thi trong đợt thi; có thể nhập Cả ngày để lấy tất cả buổi/ca trong ngày.", "Sáng"),
+                Col("SlotName", "Ca thi", false, "Tên ca thi trong buổi thi; nhập Nguyên buổi để lấy tất cả ca của buổi. Nếu Buổi thi là Cả ngày thì có thể để trống hoặc nhập Nguyên buổi.", "Ca 1"),
                 Col("BuildingId", "Mã giảng đường", true, "Mã giảng đường dạng string, ví dụ A1.", "A1"),
                 Col("RoomName", "Tên phòng", true, "Tên phòng trong giảng đường đã chọn.", "101"),
                 Col("ExamDate", "Ngày thi", true, "Định dạng yyyy-MM-dd hoặc dd/MM/yyyy.", "2026-06-01"),
@@ -403,24 +403,17 @@ namespace ExamInvigilationManagement.Application.Services
                 var semesterId = semester?.SemesterId ?? 0;
                 var period = ResolveExamPeriod(periods.Where(x => semester == null || x.SemesterId == semester.SemesterId), x => x.PeriodName, Val(row, "Đợt thi"), result, r, "Đợt thi");
                 var periodId = period?.PeriodId ?? 0;
-                var session = ResolveOne(sessions.Where(x => period == null || x.PeriodId == period.PeriodId), x => x.SessionName, Val(row, "Buổi thi"), result, r, "Buổi thi");
-                var sessionId = session?.SessionId ?? 0;
+                var sessionRaw = Val(row, "Buổi thi");
                 var slotRaw = Val(row, "Ca thi");
-                var sessionSlots = slots
-                    .Where(x => session != null && x.SessionId == session.SessionId)
-                    .Select(x => (x.SlotId, SlotName: (string?)x.SlotName))
-                    .ToList();
-                var targetSlotIds = ResolveScheduleSlotIds(sessionSlots, slotRaw, result, r);
+                var periodSessions = sessions.Where(x => period == null || x.PeriodId == period.PeriodId).ToList();
+                var targetSlots = ResolveScheduleTargets(periodSessions, slots, sessionRaw, slotRaw, result, r);
                 var buildingId = Val(row, "Mã giảng đường").Trim();
                 Required(result, r, "Mã giảng đường", buildingId);
                 var room = ResolveOne(rooms.Where(x => string.Equals(x.BuildingId, buildingId, StringComparison.OrdinalIgnoreCase)), x => x.RoomName, Val(row, "Tên phòng"), result, r, "Tên phòng");
                 var roomId = room?.RoomId ?? 0;
                 var examFormatValue = Val(row, "Hình thức thi").Trim();
                 Required(result, r, "Hình thức thi", examFormatValue);
-                var examFormat = examFormats.FirstOrDefault(x =>
-                    string.Equals(NormalizeExamFormat(x.Code), NormalizeExamFormat(examFormatValue), StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(x.Name, examFormatValue, StringComparison.OrdinalIgnoreCase) ||
-                    string.Equals(x.Code + " - " + x.Name, examFormatValue, StringComparison.OrdinalIgnoreCase));
+                var examFormat = examFormats.FirstOrDefault(x => IsExamFormatMatch(x.Code, x.Name, examFormatValue));
                 if (examFormat == null) result.Errors.Add(Error(r, "Hình thức thi", examFormatValue, "Không tồn tại trong danh mục hình thức thi."));
                 var offering = offerings.FirstOrDefault(x => x.SemesterId == semesterId && string.Equals(x.SubjectId, Val(row, "Mã môn"), StringComparison.OrdinalIgnoreCase) && string.Equals(x.UserName, Val(row, "Tên đăng nhập giảng viên"), StringComparison.OrdinalIgnoreCase) && string.Equals(x.ClassName, Val(row, "Lớp học phần"), StringComparison.OrdinalIgnoreCase) && string.Equals(x.GroupNumber, Val(row, "Nhóm"), StringComparison.OrdinalIgnoreCase));
                 if (offering == null) result.Errors.Add(Error(r, "Học phần mở", "", "Không tìm thấy học phần mở theo Mã môn + Giảng viên + Lớp + Nhóm + Học kỳ."));
@@ -429,14 +422,69 @@ namespace ExamInvigilationManagement.Application.Services
                 var status = Val(row, "Trạng thái").Trim();
                 if (string.IsNullOrWhiteSpace(status)) status = "Chờ phân công";
                 if (!ValidScheduleStatuses.Contains(status)) result.Errors.Add(Error(r, "Trạng thái", status, "Không hợp lệ."));
-                foreach (var targetSlotId in targetSlotIds)
+                foreach (var target in targetSlots)
                 {
-                    var schedule = new E.ExamSchedule { OfferingId = offeringId, AcademyYearId = yearId, SemesterId = semesterId, PeriodId = periodId, SessionId = sessionId, SlotId = targetSlotId, RoomId = roomId, ExamFormatId = examFormat?.ExamFormatId, ExamDate = examDate!.Value, Status = status };
+                    var schedule = new E.ExamSchedule { OfferingId = offeringId, AcademyYearId = yearId, SemesterId = semesterId, PeriodId = periodId, SessionId = target.SessionId, SlotId = target.SlotId, RoomId = roomId, ExamFormatId = examFormat?.ExamFormatId, ExamDate = examDate!.Value, Status = status };
                     if (offering?.Entity != null) schedule.Offering = offering.Entity;
                     list.Add(schedule);
                 }
             }
             return list;
+        }
+
+        private static List<(int SessionId, int SlotId)> ResolveScheduleTargets<TSession, TSlot>(
+            IEnumerable<TSession> sessionSource,
+            IEnumerable<TSlot> slotSource,
+            string sessionRaw,
+            string slotRaw,
+            ImportResultDto result,
+            int row)
+            where TSession : class
+            where TSlot : class
+        {
+            var sessions = sessionSource.ToList();
+            var slots = slotSource.ToList();
+            var sessionIdProperty = typeof(TSession).GetProperty("SessionId") ?? throw new InvalidOperationException("Session lookup thiếu SessionId.");
+            var sessionNameProperty = typeof(TSession).GetProperty("SessionName") ?? throw new InvalidOperationException("Session lookup thiếu SessionName.");
+            var slotIdProperty = typeof(TSlot).GetProperty("SlotId") ?? throw new InvalidOperationException("Slot lookup thiếu SlotId.");
+            var slotNameProperty = typeof(TSlot).GetProperty("SlotName") ?? throw new InvalidOperationException("Slot lookup thiếu SlotName.");
+            var slotSessionIdProperty = typeof(TSlot).GetProperty("SessionId") ?? throw new InvalidOperationException("Slot lookup thiếu SessionId.");
+
+            int SessionId(TSession x) => (int)(sessionIdProperty.GetValue(x) ?? 0);
+            string? SessionName(TSession x) => sessionNameProperty.GetValue(x)?.ToString();
+            int SlotId(TSlot x) => (int)(slotIdProperty.GetValue(x) ?? 0);
+            string? SlotName(TSlot x) => slotNameProperty.GetValue(x)?.ToString();
+            int SlotSessionId(TSlot x) => (int)(slotSessionIdProperty.GetValue(x) ?? 0);
+
+            if (IsAllDaySession(sessionRaw))
+            {
+                if (!string.IsNullOrWhiteSpace(slotRaw) && !IsFullSessionSlot(slotRaw))
+                {
+                    result.Errors.Add(Error(row, "Ca thi", slotRaw, "Khi buổi thi là Cả ngày, ca thi phải để trống hoặc nhập Nguyên buổi."));
+                    return [];
+                }
+
+                var allDayTargets = sessions
+                    .SelectMany(session => slots
+                        .Where(slot => SlotSessionId(slot) == SessionId(session))
+                        .Select(slot => (SessionId: SessionId(session), SlotId: SlotId(slot))))
+                    .ToList();
+
+                if (allDayTargets.Count > 0) return allDayTargets;
+                result.Errors.Add(Error(row, "Buổi thi", sessionRaw, "Không tìm thấy buổi/ca thi nào thuộc đợt thi đã chọn."));
+                return [];
+            }
+
+            var session = ResolveOne(sessions, SessionName, sessionRaw, result, row, "Buổi thi");
+            var sessionId = session == null ? 0 : SessionId(session);
+            var sessionSlots = slots
+                .Where(x => session != null && SlotSessionId(x) == sessionId)
+                .Select(x => (SlotId: SlotId(x), SlotName: SlotName(x)))
+                .ToList();
+
+            return ResolveScheduleSlotIds(sessionSlots, slotRaw, result, row)
+                .Select(slotId => (sessionId, slotId))
+                .ToList();
         }
 
         private static List<int> ResolveScheduleSlotIds(IEnumerable<(int SlotId, string? SlotName)> source, string raw, ImportResultDto result, int row)
@@ -833,6 +881,15 @@ namespace ExamInvigilationManagement.Application.Services
                 || normalized.Contains("ca buổi")
                 || normalized.Contains("cả buổi");
         }
+
+        private static bool IsAllDaySession(string value)
+        {
+            var normalized = NormalizeLookup(value);
+            return normalized is "ca ngay" or "cả ngày" or "nguyen ngay" or "nguyên ngày" or "toan ngay" or "toàn ngày"
+                || normalized.Contains("ca ngay")
+                || normalized.Contains("nguyen ngay")
+                || normalized.Contains("toan ngay");
+        }
         private static string InferAcademyYear(string title, string date)
         {
             var normalized = title ?? string.Empty;
@@ -871,13 +928,13 @@ namespace ExamInvigilationManagement.Application.Services
         private static string NormalizeExamFormat(string value)
         {
             value = (value ?? string.Empty).Trim();
-            var separator = value.IndexOf(" - ", StringComparison.Ordinal);
-            var code = (separator >= 0 ? value[..separator] : value).Trim().ToUpperInvariant();
-            code = System.Text.RegularExpressions.Regex.Replace(code, @"\s*[-/]\s*", "-");
+            var code = value.ToUpperInvariant();
+            code = System.Text.RegularExpressions.Regex.Replace(code, @"\s+", string.Empty);
+            code = System.Text.RegularExpressions.Regex.Replace(code, @"[-/]", "-");
             return code switch
             {
                 "TN" => "TN",
-                "TN-TL" => "TN/TL",
+                "TN-TL" => "TN-TL",
                 "BTL" => "BTL",
                 "BTL-VD" => "BTL-VD",
                 "TL-VD" => "TL-VD",
@@ -889,6 +946,28 @@ namespace ExamInvigilationManagement.Application.Services
                 "VD" => "VD",
                 _ => string.IsNullOrWhiteSpace(code) ? value : code
             };
+        }
+
+        private static bool IsExamFormatMatch(string? code, string? name, string raw)
+        {
+            var rawKey = NormalizeExamFormatLookup(raw);
+            return rawKey == NormalizeExamFormatLookup(code)
+                || rawKey == NormalizeExamFormatLookup(name)
+                || rawKey == NormalizeExamFormatLookup($"{code} - {name}")
+                || rawKey == NormalizeExamFormatLookup($"{code}/{name}");
+        }
+
+        private static string NormalizeExamFormatLookup(string? value)
+        {
+            var normalized = (value ?? string.Empty).Trim().ToUpperInvariant().Normalize(NormalizationForm.FormD);
+            var builder = new StringBuilder(normalized.Length);
+            foreach (var ch in normalized)
+            {
+                if (CharUnicodeInfo.GetUnicodeCategory(ch) != UnicodeCategory.NonSpacingMark && !char.IsWhiteSpace(ch))
+                    builder.Append(ch == 'Đ' ? 'D' : ch);
+            }
+
+            return System.Text.RegularExpressions.Regex.Replace(builder.ToString().Normalize(NormalizationForm.FormC), @"[-/]", "-");
         }
 
         private static Row BuildRow(uint index, IEnumerable<string> values)

@@ -34,7 +34,7 @@
                     }
                     else
                     {
-                        <span class="badge bg-danger">Đã khóa</span>
+                            <span class="badge bg-danger">Đã vô hiệu hóa</span>
                     }
                 </td>
                 <td class="col-action">
@@ -43,12 +43,18 @@
                             <i class="bi bi-pencil"></i>
                         </a>
 
-                        <a href="#"
-                           class="btn-icon delete btn-delete"
-                           data-id="@item.Id"
-                           data-name="@item.UserName">
-                            <i class="bi bi-trash"></i>
-                        </a>
+                        @if (item.IsActive)
+                        {
+                            <a href="#"
+                               class="btn-icon delete btn-delete"
+                               data-id="@item.Id"
+                               data-name="@item.UserName"
+                               data-modal-title="Xác nhận vô hiệu hóa"
+                               data-modal-message="Bạn có chắc muốn vô hiệu hóa tài khoản"
+                               data-modal-confirm="Vô hiệu hóa">
+                                <i class="bi bi-slash-circle"></i>
+                            </a>
+                        }
                     </div>
                 </td>
             </tr>

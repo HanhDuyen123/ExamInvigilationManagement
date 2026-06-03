@@ -50,6 +50,7 @@ namespace ExamInvigilationManagement.Application.DTOs.ExamSchedule
         public TimeOnly? SlotTimeStart { get; set; }
 
         public int? RoomId { get; set; }
+        public List<string> RoomDisplayTexts { get; set; } = new();
         public string? RoomName { get; set; }
         public int? RoomCapacity { get; set; }
         public string? BuildingId { get; set; }

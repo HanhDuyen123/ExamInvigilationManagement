@@ -141,8 +141,8 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         {
             try
             {
-                await _service.DeleteAsync(id);
-                TempData.SetNotification("success", "Xóa tài khoản thành công.");
+                await _service.SetActiveAsync(id, false);
+                TempData.SetNotification("success", "Vô hiệu hóa tài khoản thành công.");
             }
             catch (Exception ex)
             {

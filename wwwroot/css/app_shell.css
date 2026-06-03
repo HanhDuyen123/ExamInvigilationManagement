@@ -9,6 +9,97 @@
     --app-shadow: 0 18px 48px rgba(15, 23, 42, 0.08);
 }
 
+/* Dark mode coverage for module cards/areas that define their own light surfaces. */
+html[data-theme="dark"] body.app-shell-body .assignment-hero,
+html[data-theme="dark"] body.app-shell-body .assignment-card,
+html[data-theme="dark"] body.app-shell-body .info-tile,
+html[data-theme="dark"] body.app-shell-body .info-tile.primary,
+html[data-theme="dark"] body.app-shell-body .invigilator-item,
+html[data-theme="dark"] body.app-shell-body .empty-state,
+html[data-theme="dark"] body.app-shell-body .action-panel,
+html[data-theme="dark"] body.app-shell-body .lecturer-compact-wrap,
+html[data-theme="dark"] body.app-shell-body .busy-slot-picker,
+html[data-theme="dark"] body.app-shell-body .busy-slot-check,
+html[data-theme="dark"] body.app-shell-body .table-modern,
+html[data-theme="dark"] body.app-shell-body .table-inner,
+html[data-theme="dark"] body.app-shell-body .dash-card,
+html[data-theme="dark"] body.app-shell-body .profile-summary-card,
+html[data-theme="dark"] body.app-shell-body .profile-edit-card,
+html[data-theme="dark"] body.app-shell-body .import-card,
+html[data-theme="dark"] body.app-shell-body .import-result-card,
+html[data-theme="dark"] body.app-shell-body .modal-content,
+html[data-theme="dark"] body.app-shell-body .card,
+html[data-theme="dark"] body.app-shell-body .bg-white {
+    background: var(--surface-1) !important;
+    border-color: var(--line-soft) !important;
+    color: var(--text-main) !important;
+    box-shadow: var(--card-shadow);
+}
+
+html[data-theme="dark"] body.app-shell-body .assignment-hero,
+html[data-theme="dark"] body.app-shell-body .action-panel,
+html[data-theme="dark"] body.app-shell-body .table-modern,
+html[data-theme="dark"] body.app-shell-body .table-inner,
+html[data-theme="dark"] body.app-shell-body .busy-slot-picker,
+html[data-theme="dark"] body.app-shell-body .calendar-day,
+html[data-theme="dark"] body.app-shell-body .calendar-slot {
+    background: linear-gradient(180deg, var(--surface-1), var(--surface-3)) !important;
+}
+
+html[data-theme="dark"] body.app-shell-body .assignment-title,
+html[data-theme="dark"] body.app-shell-body .section-title,
+html[data-theme="dark"] body.app-shell-body .info-value,
+html[data-theme="dark"] body.app-shell-body .person-name,
+html[data-theme="dark"] body.app-shell-body .activity-title,
+html[data-theme="dark"] body.app-shell-body .lecturer-name,
+html[data-theme="dark"] body.app-shell-body .filter-head-title,
+html[data-theme="dark"] body.app-shell-body .card-title,
+html[data-theme="dark"] body.app-shell-body .modal-title,
+html[data-theme="dark"] body.app-shell-body .busy-slot-session-title,
+html[data-theme="dark"] body.app-shell-body .modern-table .cell-code {
+    color: var(--text-strong) !important;
+}
+
+html[data-theme="dark"] body.app-shell-body .assignment-subtitle,
+html[data-theme="dark"] body.app-shell-body .section-desc,
+html[data-theme="dark"] body.app-shell-body .info-label,
+html[data-theme="dark"] body.app-shell-body .info-note,
+html[data-theme="dark"] body.app-shell-body .person-meta,
+html[data-theme="dark"] body.app-shell-body .activity-text,
+html[data-theme="dark"] body.app-shell-body .reason-list,
+html[data-theme="dark"] body.app-shell-body .lecturer-account {
+    color: var(--text-muted) !important;
+}
+
+html[data-theme="dark"] body.app-shell-body .lecturer-compact-table th,
+html[data-theme="dark"] body.app-shell-body .modern-table thead th {
+    background: var(--surface-3) !important;
+    color: var(--text-muted) !important;
+    border-color: var(--line-soft) !important;
+}
+
+html[data-theme="dark"] body.app-shell-body .lecturer-compact-table td,
+html[data-theme="dark"] body.app-shell-body .lecturer-compact-table tr.disabled,
+html[data-theme="dark"] body.app-shell-body .busy-slot-session-group {
+    background: var(--surface-2) !important;
+    border-color: var(--line-soft) !important;
+    color: var(--text-main) !important;
+}
+
+html[data-theme="dark"] body.app-shell-body .replacement-note {
+    color: var(--text-main) !important;
+    border-left-color: var(--app-primary) !important;
+}
+
+html[data-theme="dark"] body.app-shell-body .alert-light,
+html[data-theme="dark"] body.app-shell-body .alert-success,
+html[data-theme="dark"] body.app-shell-body .alert-warning,
+html[data-theme="dark"] body.app-shell-body .alert-danger {
+    background: var(--surface-2) !important;
+    border-color: var(--line-medium) !important;
+    color: var(--text-main) !important;
+}
+
 body.app-shell-body {
     margin: 0;
     min-height: 100vh;
@@ -1182,6 +1273,26 @@ body.app-shell-body .schedule-table-compact .badge {
     line-height: 1.15;
 }
 
+body.app-shell-body .schedule-table-compact .approval-row-sent td {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+body.app-shell-body .schedule-table-compact .approval-row-sent:hover td {
+    background: #e2e8f0;
+}
+
+body.app-shell-body .schedule-table-compact .approval-row-sent .form-check-input:disabled {
+    opacity: .45;
+}
+
+body.app-shell-body .schedule-table-compact .col-action {
+    min-width: 72px;
+    white-space: normal;
+    overflow-wrap: normal;
+    word-break: keep-all;
+}
+
 body.app-shell-body .schedule-table-compact .action-group {
     gap: 4px;
     flex-wrap: wrap;
@@ -1244,13 +1355,21 @@ body.app-shell-body .schedule-table-compact .btn-icon {
 }
 
 .role-filter-main.user-search-grid {
-    grid-template-columns: minmax(190px, 1.1fr) minmax(170px, .8fr) minmax(220px, 1fr) minmax(220px, 1fr) minmax(170px, .8fr) minmax(112px, max-content);
+    grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
     max-width: 100%;
+}
+
+.role-filter-main.user-search-grid .search-field-wide {
+    grid-column: span 2;
 }
 
 @media (max-width: 1200px) {
     .role-filter-main.user-search-grid {
         grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+    }
+
+    .role-filter-main.user-search-grid .search-field-wide {
+        grid-column: span 1;
     }
 
     .role-filter-main.email-notification-search-grid .search-field-wide {

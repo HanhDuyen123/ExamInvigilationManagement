@@ -37,18 +37,29 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
         public async Task<List<ManualAssignmentLecturerOptionDto>> GetActiveLecturersAsync(int facultyId, CancellationToken cancellationToken = default)
         {
-            return await _db.Users
+            var rows = await _db.Users
                 .AsNoTracking()
-                .Where(x => x.IsActive && x.FacultyId == facultyId && x.Role.RoleName == "Giảng viên")
+                .Where(x => x.IsActive && x.FacultyId == facultyId && x.Role.RoleName != "Admin")
                 .Select(x => new ManualAssignmentLecturerOptionDto
                 {
                     UserId = x.UserId,
+                    InformationId = x.InformationId,
                     UserName = x.UserName,
                     FullName = x.Information.LastName + " " + x.Information.FirstName,
                     FacultyId = x.FacultyId,
-                    FacultyName = x.Faculty != null ? x.Faculty.FacultyName : string.Empty
+                    FacultyName = x.Faculty != null ? x.Faculty.FacultyName : string.Empty,
+                    RoleName = x.Role.RoleName,
+                    IsLecturerRole = x.Role.RoleName == "Giảng viên"
                 })
                 .ToListAsync(cancellationToken);
+
+            return rows
+                .GroupBy(x => x.PersonKey)
+                .Select(g => g
+                    .OrderBy(x => GetRolePriority(x.RoleName))
+                    .ThenBy(x => x.UserName)
+                    .First())
+                .ToList();
         }
 
         public async Task<List<(int UserId, string DisplayName)>> GetActiveSecretariesAsync(int facultyId, CancellationToken cancellationToken = default)
@@ -62,56 +73,64 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
         public async Task<List<int>> GetBusyLecturerIdsAsync(IEnumerable<int> userIds, int slotId, DateOnly examDate, CancellationToken cancellationToken = default)
         {
             var ids = userIds.Distinct().ToList();
-            return await _db.LecturerBusySlots.AsNoTracking()
-                .Where(x => ids.Contains(x.UserId) && x.SlotId == slotId && x.BusyDate == examDate)
-                .Select(x => x.UserId).Distinct().ToListAsync(cancellationToken);
+            var candidatePersonKeys = await GetPersonKeysByUserIdAsync(ids, cancellationToken);
+            var personKeySet = candidatePersonKeys.Values.ToHashSet();
+            var busyPersonKeys = await _db.LecturerBusySlots.AsNoTracking()
+                .Where(x => personKeySet.Contains(x.User.InformationId > 0 ? x.User.InformationId : x.UserId) && x.SlotId == slotId && x.BusyDate == examDate)
+                .Select(x => x.User.InformationId > 0 ? x.User.InformationId : x.UserId).Distinct().ToListAsync(cancellationToken);
+            var busySet = busyPersonKeys.ToHashSet();
+            return candidatePersonKeys.Where(x => busySet.Contains(x.Value)).Select(x => x.Key).ToList();
         }
 
         public async Task<List<int>> GetConflictingLecturerIdsAsync(int scheduleId, int semesterId, int periodId, int sessionId, int slotId, IEnumerable<int> userIds, CancellationToken cancellationToken = default)
         {
             var ids = userIds.Distinct().ToList();
+            var candidatePersonKeys = await GetPersonKeysByUserIdAsync(ids, cancellationToken);
+            var personKeySet = candidatePersonKeys.Values.ToHashSet();
             var matchingAssignments = _db.ExamInvigilators.AsNoTracking()
-                .Where(x => x.ExamScheduleId != scheduleId && x.ExamSchedule.SemesterId == semesterId && x.ExamSchedule.PeriodId == periodId && x.ExamSchedule.SessionId == sessionId && x.ExamSchedule.SlotId == slotId && ids.Contains(x.AssigneeId))
-                .Select(x => x.AssigneeId);
+                .Where(x => x.ExamScheduleId != scheduleId && x.ExamSchedule.SemesterId == semesterId && x.ExamSchedule.PeriodId == periodId && x.ExamSchedule.SessionId == sessionId && x.ExamSchedule.SlotId == slotId && personKeySet.Contains(x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId))
+                .Select(x => x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId);
             var matchingReplacements = _db.ExamInvigilators.AsNoTracking()
-                .Where(x => x.ExamScheduleId != scheduleId && x.ExamSchedule.SemesterId == semesterId && x.ExamSchedule.PeriodId == periodId && x.ExamSchedule.SessionId == sessionId && x.ExamSchedule.SlotId == slotId && x.NewAssigneeId.HasValue && ids.Contains(x.NewAssigneeId.Value))
-                .Select(x => x.NewAssigneeId!.Value);
+                .Where(x => x.ExamScheduleId != scheduleId && x.ExamSchedule.SemesterId == semesterId && x.ExamSchedule.PeriodId == periodId && x.ExamSchedule.SessionId == sessionId && x.ExamSchedule.SlotId == slotId && x.NewAssigneeId.HasValue && personKeySet.Contains(x.NewAssignee!.InformationId > 0 ? x.NewAssignee.InformationId : x.NewAssigneeId.Value))
+                .Select(x => x.NewAssignee!.InformationId > 0 ? x.NewAssignee.InformationId : x.NewAssigneeId!.Value);
 
-            return await matchingAssignments.Concat(matchingReplacements).Distinct().ToListAsync(cancellationToken);
+            var conflictingPersonKeys = await matchingAssignments.Concat(matchingReplacements).Distinct().ToListAsync(cancellationToken);
+            var conflictSet = conflictingPersonKeys.ToHashSet();
+            return candidatePersonKeys.Where(x => conflictSet.Contains(x.Value)).Select(x => x.Key).ToList();
         }
 
         public Task<Dictionary<int, int>> GetLecturerLoadsAsync(int semesterId, int facultyId, CancellationToken cancellationToken = default)
         {
             return _db.ExamInvigilators.AsNoTracking()
                 .Where(x => x.ExamSchedule.SemesterId == semesterId && x.Assignee.FacultyId == facultyId && x.Assignee.IsActive)
-                .GroupBy(x => x.AssigneeId)
-                .Select(g => new { UserId = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.UserId, x => x.Count, cancellationToken);
+                .GroupBy(x => x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId)
+                .Select(g => new { PersonKey = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.PersonKey, x => x.Count, cancellationToken);
         }
 
         public Task<Dictionary<int, int>> GetPeriodLoadsAsync(int semesterId, int periodId, int facultyId, CancellationToken cancellationToken = default)
         {
             return _db.ExamInvigilators.AsNoTracking()
                 .Where(x => x.ExamSchedule.SemesterId == semesterId && x.ExamSchedule.PeriodId == periodId && x.Assignee.FacultyId == facultyId && x.Assignee.IsActive)
-                .GroupBy(x => x.AssigneeId)
-                .Select(g => new { UserId = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.UserId, x => x.Count, cancellationToken);
+                .GroupBy(x => x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId)
+                .Select(g => new { PersonKey = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.PersonKey, x => x.Count, cancellationToken);
         }
 
         public Task<Dictionary<int, int>> GetSameDayLoadsAsync(int semesterId, int facultyId, DateTime examDate, CancellationToken cancellationToken = default)
         {
             return _db.ExamInvigilators.AsNoTracking()
                 .Where(x => x.ExamSchedule.SemesterId == semesterId && x.Assignee.FacultyId == facultyId && x.ExamSchedule.ExamDate == examDate)
-                .GroupBy(x => x.AssigneeId)
-                .Select(g => new { UserId = g.Key, Count = g.Count() })
-                .ToDictionaryAsync(x => x.UserId, x => x.Count, cancellationToken);
+                .GroupBy(x => x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId)
+                .Select(g => new { PersonKey = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.PersonKey, x => x.Count, cancellationToken);
         }
 
         public async Task<List<int>> GetSubjectTeacherIdsAsync(int semesterId, string subjectId, int facultyId, CancellationToken cancellationToken = default)
         {
             return await _db.CourseOfferings.AsNoTracking()
                 .Where(x => x.SemesterId == semesterId && x.SubjectId == subjectId && x.User.FacultyId == facultyId && x.User.IsActive)
-                .Select(x => x.UserId)
+                .Select(x => x.User.InformationId > 0 ? x.User.InformationId : x.UserId)
                 .Distinct()
                 .ToListAsync(cancellationToken);
         }
@@ -120,7 +139,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
         {
             return await _db.CourseOfferings.AsNoTracking()
                 .Where(x => x.SemesterId == semesterId && x.SubjectId == subjectId && x.ClassName == className && x.GroupNumber == groupNumber && x.User.FacultyId == facultyId && x.User.IsActive)
-                .Select(x => x.UserId)
+                .Select(x => x.User.InformationId > 0 ? x.User.InformationId : x.UserId)
                 .Distinct()
                 .ToListAsync(cancellationToken);
         }
@@ -212,6 +231,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 substitution.Status = InvigilatorSubstitutionStatuses.Approved;
                 var oldAssigneeId = substitution.ExamInvigilator.NewAssigneeId ?? substitution.ExamInvigilator.AssigneeId;
                 substitution.ExamInvigilator.NewAssigneeId = substitution.SubstituteUserId;
+                substitution.ExamInvigilator.Status = ExamInvigilatorStatuses.PendingConfirmation;
+                substitution.ExamInvigilator.ConfirmationSentAt = null;
                 substitution.ExamInvigilator.UpdateAt = now;
                 MarkSchedulePendingApproval(substitution.ExamInvigilator.ExamSchedule);
 
@@ -245,6 +266,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 substitution.SubstituteUserId = replacementUserId;
                 substitution.Status = InvigilatorSubstitutionStatuses.Approved;
                 substitution.ExamInvigilator.NewAssigneeId = replacementUserId;
+                substitution.ExamInvigilator.Status = ExamInvigilatorStatuses.PendingConfirmation;
+                substitution.ExamInvigilator.ConfirmationSentAt = null;
                 substitution.ExamInvigilator.UpdateAt = now;
                 MarkSchedulePendingApproval(substitution.ExamInvigilator.ExamSchedule);
 
@@ -277,6 +300,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 ExamScheduleId = x.ExamScheduleId,
                 PositionNo = x.PositionNo,
                 CurrentAssigneeId = x.AssigneeId,
+                CurrentAssigneeInformationId = x.Assignee.InformationId,
                 CurrentAssigneeName = x.Assignee.Information.LastName + " " + x.Assignee.Information.FirstName,
                 FacultyId = x.ExamSchedule.Offering.Subject.FacultyId,
                 SubjectId = x.ExamSchedule.Offering.SubjectId,
@@ -290,6 +314,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 SessionId = x.ExamSchedule.SessionId,
                 SlotId = x.ExamSchedule.SlotId,
                 OfferingUserId = x.ExamSchedule.Offering.UserId,
+                OfferingUserInformationId = x.ExamSchedule.Offering.User.InformationId,
                 SlotName = x.ExamSchedule.Slot.SlotName,
                 TimeStart = x.ExamSchedule.Slot.TimeStart,
                 RoomDisplay = x.ExamSchedule.Room.BuildingId + "." + x.ExamSchedule.Room.RoomName,
@@ -297,6 +322,27 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 ResponseStatus = x.InvigilatorResponses.Where(r => r.UserId == x.AssigneeId).OrderByDescending(r => r.ResponseAt).Select(r => r.Status).FirstOrDefault() ?? "Chưa phản hồi",
                 ResponseNote = x.InvigilatorResponses.Where(r => r.UserId == x.AssigneeId).OrderByDescending(r => r.ResponseAt).Select(r => r.Note).FirstOrDefault()
             });
+        }
+
+        private async Task<Dictionary<int, int>> GetPersonKeysByUserIdAsync(IEnumerable<int> userIds, CancellationToken cancellationToken)
+        {
+            var ids = userIds.Distinct().ToList();
+            if (ids.Count == 0) return new Dictionary<int, int>();
+            return await _db.Users.AsNoTracking()
+                .Where(x => ids.Contains(x.UserId))
+                .Select(x => new { x.UserId, PersonKey = x.InformationId > 0 ? x.InformationId : x.UserId })
+                .ToDictionaryAsync(x => x.UserId, x => x.PersonKey, cancellationToken);
+        }
+
+        private static int GetRolePriority(string? roleName)
+        {
+            return roleName switch
+            {
+                "Giảng viên" => 0,
+                "Trưởng khoa" => 1,
+                "Thư ký khoa" => 2,
+                _ => 3
+            };
         }
 
         private IQueryable<InvigilatorSubstitutionListItemDto> BuildListQuery(int facultyId)

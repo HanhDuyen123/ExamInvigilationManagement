@@ -1,5 +1,6 @@
 ﻿using ExamInvigilationManagement.Application.DTOs.ManualAssignment;
 using ExamInvigilationManagement.Application.Interfaces.Repositories;
+using ExamInvigilationManagement.Common.Constants;
 using ExamInvigilationManagement.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,13 +41,18 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     SlotName = x.Slot.SlotName,
                     TimeStart = x.Slot.TimeStart,
                     AcademyYearId = x.AcademyYearId,
+                    AcademyYearName = x.AcademyYear.AcademyYearName,
                     SemesterId = x.SemesterId,
+                    SemesterName = x.Semester.SemesterName,
                     PeriodId = x.PeriodId,
+                    PeriodName = x.Period.PeriodName,
                     SessionId = x.SessionId,
+                    SessionName = x.Session.SessionName,
                     RoomId = x.RoomId,
                     RoomDisplay = x.Room.BuildingId + "-" + x.Room.RoomName,
                     OfferingId = x.OfferingId,
                     OfferingUserId = x.Offering.UserId,
+                    OfferingUserInformationId = x.Offering.User.InformationId,
                     OfferingUserName = x.Offering.User.UserName,
                     OfferingUserFullName = x.Offering.User.Information.LastName + " " + x.Offering.User.Information.FirstName,
                     OfferingFacultyId = x.Offering.Subject.FacultyId,
@@ -57,7 +63,13 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     ExamFormatDisplay = x.ExamFormat != null ? x.ExamFormat.Code + " - " + x.ExamFormat.Name : string.Empty,
                     ExamDate = x.ExamDate,
                     Status = x.Status,
-                    CurrentInvigilatorCount = x.ExamInvigilators.Count
+                    CurrentInvigilatorCount = x.ExamInvigilators.Count(i =>
+                        i.Status != InvigilatorResponseStatuses.Rejected &&
+                        (i.InvigilatorResponses
+                            .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
+                            .OrderByDescending(r => r.ResponseAt)
+                            .Select(r => r.Status)
+                            .FirstOrDefault() ?? string.Empty) != InvigilatorResponseStatuses.Rejected)
                 })
                 .FirstOrDefaultAsync(cancellationToken);
         }
@@ -78,22 +90,23 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     UserName = x.Assignee.UserName,
                     FullName = x.Assignee.Information.LastName + " " + x.Assignee.Information.FirstName,
                     NewUserId = x.NewAssigneeId,
+                    NewInformationId = x.NewAssignee != null ? x.NewAssignee.InformationId : null,
                     NewUserName = x.NewAssignee != null ? x.NewAssignee.UserName : string.Empty,
                     NewFullName = x.NewAssignee != null ? x.NewAssignee.Information.LastName + " " + x.NewAssignee.Information.FirstName : string.Empty,
                     PositionNo = x.PositionNo,
                     Status = x.Status,
                     ResponseStatus = x.InvigilatorResponses
-                        .Where(r => r.UserId == x.AssigneeId)
+                        .Where(r => r.UserId == (x.NewAssigneeId ?? x.AssigneeId))
                         .OrderByDescending(r => r.ResponseAt)
                         .Select(r => r.Status)
                         .FirstOrDefault() ?? (x.Status == "Chờ xác nhận" ? "Chờ phản hồi" : x.Status),
                     ResponseNote = x.InvigilatorResponses
-                        .Where(r => r.UserId == x.AssigneeId)
+                        .Where(r => r.UserId == (x.NewAssigneeId ?? x.AssigneeId))
                         .OrderByDescending(r => r.ResponseAt)
                         .Select(r => r.Note)
                         .FirstOrDefault() ?? string.Empty,
                     ResponseAt = x.InvigilatorResponses
-                        .Where(r => r.UserId == x.AssigneeId)
+                        .Where(r => r.UserId == (x.NewAssigneeId ?? x.AssigneeId))
                         .OrderByDescending(r => r.ResponseAt)
                         .Select(r => r.ResponseAt)
                         .FirstOrDefault(),
@@ -166,6 +179,12 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             int ownerUserId,
             CancellationToken cancellationToken = default)
         {
+            var ownerInformationId = await _db.Users
+                .AsNoTracking()
+                .Where(x => x.UserId == ownerUserId)
+                .Select(x => x.InformationId)
+                .FirstOrDefaultAsync(cancellationToken);
+
             var subjectLecturerIds = await _db.CourseOfferings
                 .AsNoTracking()
                 .Where(x => x.SubjectId == subjectId && x.User.IsActive && x.User.Role.RoleName == "Giảng viên")
@@ -173,11 +192,22 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .Distinct()
                 .ToListAsync(cancellationToken);
 
-            return await _db.Users
+            var subjectLecturerPersonKeys = await _db.CourseOfferings
+                .AsNoTracking()
+                .Where(x => x.SubjectId == subjectId && x.User.IsActive && x.User.Role.RoleName == "Giảng viên")
+                .Select(x => x.User.InformationId > 0 ? x.User.InformationId : x.UserId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            var rows = await _db.Users
                 .AsNoTracking()
                 .Where(x =>
                     x.IsActive &&
-                    (x.FacultyId == facultyId || x.UserId == ownerUserId || subjectLecturerIds.Contains(x.UserId)) &&
+                    (x.FacultyId == facultyId ||
+                     x.UserId == ownerUserId ||
+                     (ownerInformationId > 0 && x.InformationId == ownerInformationId) ||
+                     subjectLecturerIds.Contains(x.UserId) ||
+                     subjectLecturerPersonKeys.Contains(x.InformationId > 0 ? x.InformationId : x.UserId)) &&
                     x.Role.RoleName != "Admin")
                 .Select(x => new ManualAssignmentLecturerOptionDto
                 {
@@ -191,6 +221,15 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     IsLecturerRole = x.Role.RoleName == "Giảng viên"
                 })
                 .ToListAsync(cancellationToken);
+
+            return rows
+                .GroupBy(x => x.PersonKey)
+                .Select(g => g
+                    .OrderBy(x => GetRolePriority(x.RoleName))
+                    .ThenByDescending(x => x.UserId == ownerUserId)
+                    .ThenBy(x => x.UserName)
+                    .First())
+                .ToList();
         }
 
         public async Task<Dictionary<int, int>> GetLecturerLoadsAsync(
@@ -199,25 +238,37 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             var userIdList = userIds.Distinct().ToList();
-            return await _db.ExamInvigilators
+            var candidatePersonKeys = await GetPersonKeysByUserIdAsync(userIdList, cancellationToken);
+            var personKeySet = candidatePersonKeys.Values.ToHashSet();
+
+            var rows = await _db.ExamInvigilators
                 .AsNoTracking()
                 .Where(x =>
                     x.ExamSchedule.SemesterId == semesterId &&
-                    userIdList.Contains(x.AssigneeId) &&
                     x.Assignee.IsActive &&
+                    personKeySet.Contains((x.NewAssignee != null && x.NewAssignee.InformationId > 0) ? x.NewAssignee.InformationId : (x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId)) &&
                     x.Status != "Từ chối" &&
                     (x.InvigilatorResponses
-                        .Where(r => r.UserId == x.AssigneeId)
+                        .Where(r => r.UserId == (x.NewAssigneeId ?? x.AssigneeId))
                         .OrderByDescending(r => r.ResponseAt)
                         .Select(r => r.Status)
                         .FirstOrDefault() ?? string.Empty) != "Từ chối")
-                .GroupBy(x => x.AssigneeId)
+                .Select(x => new
+                {
+                    PersonKey = (x.NewAssignee != null && x.NewAssignee.InformationId > 0) ? x.NewAssignee.InformationId : (x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId)
+                })
+                .GroupBy(x => x.PersonKey)
                 .Select(g => new
                 {
-                    UserId = g.Key,
+                    PersonKey = g.Key,
                     Count = g.Count()
                 })
-                .ToDictionaryAsync(x => x.UserId, x => x.Count, cancellationToken);
+                .ToListAsync(cancellationToken);
+
+            var countByPersonKey = rows.ToDictionary(x => x.PersonKey, x => x.Count);
+            return candidatePersonKeys.ToDictionary(
+                x => x.Key,
+                x => countByPersonKey.TryGetValue(x.Value, out var count) ? count : 0);
         }
 
         public async Task<Dictionary<int, int>> GetSameDayLoadsAsync(
@@ -227,25 +278,37 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             var userIdList = userIds.Distinct().ToList();
-            return await _db.ExamInvigilators
+            var candidatePersonKeys = await GetPersonKeysByUserIdAsync(userIdList, cancellationToken);
+            var personKeySet = candidatePersonKeys.Values.ToHashSet();
+
+            var rows = await _db.ExamInvigilators
                 .AsNoTracking()
                 .Where(x =>
                     x.ExamSchedule.SemesterId == semesterId &&
-                    userIdList.Contains(x.AssigneeId) &&
+                    personKeySet.Contains((x.NewAssignee != null && x.NewAssignee.InformationId > 0) ? x.NewAssignee.InformationId : (x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId)) &&
                     x.ExamSchedule.ExamDate == examDate &&
                     x.Status != "Từ chối" &&
                     (x.InvigilatorResponses
-                        .Where(r => r.UserId == x.AssigneeId)
+                        .Where(r => r.UserId == (x.NewAssigneeId ?? x.AssigneeId))
                         .OrderByDescending(r => r.ResponseAt)
                         .Select(r => r.Status)
                         .FirstOrDefault() ?? string.Empty) != "Từ chối")
-                .GroupBy(x => x.AssigneeId)
+                .Select(x => new
+                {
+                    PersonKey = (x.NewAssignee != null && x.NewAssignee.InformationId > 0) ? x.NewAssignee.InformationId : (x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId)
+                })
+                .GroupBy(x => x.PersonKey)
                 .Select(g => new
                 {
-                    UserId = g.Key,
+                    PersonKey = g.Key,
                     Count = g.Count()
                 })
-                .ToDictionaryAsync(x => x.UserId, x => x.Count, cancellationToken);
+                .ToListAsync(cancellationToken);
+
+            var countByPersonKey = rows.ToDictionary(x => x.PersonKey, x => x.Count);
+            return candidatePersonKeys.ToDictionary(
+                x => x.Key,
+                x => countByPersonKey.TryGetValue(x.Value, out var count) ? count : 0);
         }
 
         public async Task<HashSet<int>> GetSubjectLecturerIdsAsync(
@@ -255,7 +318,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             var rows = await _db.CourseOfferings
                 .AsNoTracking()
                 .Where(x => x.SubjectId == subjectId && x.User.IsActive && x.User.Role.RoleName == "Giảng viên")
-                .Select(x => x.UserId)
+                .Select(x => x.User.InformationId > 0 ? x.User.InformationId : x.UserId)
                 .Distinct()
                 .ToListAsync(cancellationToken);
 
@@ -269,16 +332,24 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             var ids = userIds.Distinct().ToList();
+            var candidatePersonKeys = await GetPersonKeysByUserIdAsync(ids, cancellationToken);
+            var personKeySet = candidatePersonKeys.Values.ToHashSet();
 
-            return await _db.LecturerBusySlots
+            var busyPersonKeys = await _db.LecturerBusySlots
                 .AsNoTracking()
                 .Where(x =>
-                    ids.Contains(x.UserId) &&
+                    personKeySet.Contains(x.User.InformationId > 0 ? x.User.InformationId : x.UserId) &&
                     x.SlotId == slotId &&
                     x.BusyDate == examDate)
-                .Select(x => x.UserId)
+                .Select(x => x.User.InformationId > 0 ? x.User.InformationId : x.UserId)
                 .Distinct()
                 .ToListAsync(cancellationToken);
+
+            var busySet = busyPersonKeys.ToHashSet();
+            return candidatePersonKeys
+                .Where(x => busySet.Contains(x.Value))
+                .Select(x => x.Key)
+                .ToList();
         }
 
         public async Task<List<int>> GetConflictingLecturerIdsAsync(
@@ -289,6 +360,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             CancellationToken cancellationToken = default)
         {
             var ids = userIds.Distinct().ToList();
+            var candidatePersonKeys = await GetPersonKeysByUserIdAsync(ids, cancellationToken);
+            var personKeySet = candidatePersonKeys.Values.ToHashSet();
 
             var matchingAssignments = _db.ExamInvigilators
                 .AsNoTracking()
@@ -296,8 +369,14 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     x.ExamScheduleId != scheduleId &&
                     x.ExamSchedule.SlotId == slotId &&
                     x.ExamSchedule.ExamDate == examDate &&
-                    ids.Contains(x.AssigneeId))
-                .Select(x => x.AssigneeId);
+                    x.Status != "Từ chối" &&
+                    (x.InvigilatorResponses
+                        .Where(r => r.UserId == (x.NewAssigneeId ?? x.AssigneeId))
+                        .OrderByDescending(r => r.ResponseAt)
+                        .Select(r => r.Status)
+                        .FirstOrDefault() ?? string.Empty) != "Từ chối" &&
+                    personKeySet.Contains(x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId))
+                .Select(x => x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId);
 
             var matchingReplacements = _db.ExamInvigilators
                 .AsNoTracking()
@@ -305,11 +384,22 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     x.ExamScheduleId != scheduleId &&
                     x.ExamSchedule.SlotId == slotId &&
                     x.ExamSchedule.ExamDate == examDate &&
+                    x.Status != "Từ chối" &&
+                    (x.InvigilatorResponses
+                        .Where(r => r.UserId == (x.NewAssigneeId ?? x.AssigneeId))
+                        .OrderByDescending(r => r.ResponseAt)
+                        .Select(r => r.Status)
+                        .FirstOrDefault() ?? string.Empty) != "Từ chối" &&
                     x.NewAssigneeId.HasValue &&
-                    ids.Contains(x.NewAssigneeId.Value))
-                .Select(x => x.NewAssigneeId!.Value);
+                    personKeySet.Contains(x.NewAssignee!.InformationId > 0 ? x.NewAssignee.InformationId : x.NewAssigneeId.Value))
+                .Select(x => x.NewAssignee!.InformationId > 0 ? x.NewAssignee.InformationId : x.NewAssigneeId!.Value);
 
-            return await matchingAssignments.Concat(matchingReplacements).Distinct().ToListAsync(cancellationToken);
+            var conflictingPersonKeys = await matchingAssignments.Concat(matchingReplacements).Distinct().ToListAsync(cancellationToken);
+            var conflictSet = conflictingPersonKeys.ToHashSet();
+            return candidatePersonKeys
+                .Where(x => conflictSet.Contains(x.Value))
+                .Select(x => x.Key)
+                .ToList();
         }
 
         public async Task SaveAsync(
@@ -330,14 +420,24 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     .Where(x => x.ExamScheduleId == plan.ExamScheduleId)
                     .ToListAsync(cancellationToken);
 
-                var existingUserIds = existing.Select(x => x.NewAssigneeId ?? x.AssigneeId).ToHashSet();
+                var selectedUserIds = plan.NewInvigilators.Select(x => x.AssigneeId)
+                    .Concat(plan.ReplaceInvigilators.Select(x => x.NewAssigneeId))
+                    .Distinct()
+                    .ToList();
+                var selectedPersonKeys = await GetPersonKeysByUserIdAsync(selectedUserIds, cancellationToken);
+                var existingPersonKeys = await _db.ExamInvigilators
+                    .AsNoTracking()
+                    .Where(x => x.ExamScheduleId == plan.ExamScheduleId)
+                    .Select(x => (x.NewAssignee != null && x.NewAssignee.InformationId > 0) ? x.NewAssignee.InformationId : (x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId))
+                    .ToListAsync(cancellationToken);
+                var existingPersonKeySet = existingPersonKeys.ToHashSet();
 
                 if (existing.Count >= 2 && plan.NewInvigilators.Any())
                     throw new InvalidOperationException("Lịch thi này đã đủ 2 giám thị, không thể phân công thêm.");
 
                 foreach (var item in plan.NewInvigilators)
                 {
-                    if (existingUserIds.Contains(item.AssigneeId))
+                    if (selectedPersonKeys.TryGetValue(item.AssigneeId, out var personKey) && existingPersonKeySet.Contains(personKey))
                         throw new InvalidOperationException("Một giảng viên đã được phân công cho lịch thi này.");
 
                     _db.ExamInvigilators.Add(new Data.Entities.ExamInvigilator
@@ -350,6 +450,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                         CreateAt = item.CreateAt,
                         UpdateAt = item.UpdateAt
                     });
+                    if (personKey > 0)
+                        existingPersonKeySet.Add(personKey);
                 }
 
                 foreach (var item in plan.ReplaceInvigilators)
@@ -358,14 +460,16 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     if (existingItem is null)
                         throw new InvalidOperationException("Không tìm thấy vị trí giám thị cần thay thế.");
 
-                    if (existingUserIds.Contains(item.NewAssigneeId))
+                    if (selectedPersonKeys.TryGetValue(item.NewAssigneeId, out var personKey) && existingPersonKeySet.Contains(personKey))
                         throw new InvalidOperationException("Một giảng viên đã được phân công cho lịch thi này.");
 
                     existingItem.NewAssigneeId = item.NewAssigneeId;
                     existingItem.AssignerId = item.AssignerId;
-                    existingItem.Status = "Chưa gửi xác nhận";
+                    existingItem.Status = ExamInvigilatorStatuses.PendingConfirmation;
+                    existingItem.ConfirmationSentAt = null;
                     existingItem.UpdateAt = item.UpdateAt;
-                    existingUserIds.Add(item.NewAssigneeId);
+                    if (personKey > 0)
+                        existingPersonKeySet.Add(personKey);
                 }
 
                 schedule.Status = plan.StatusAfter;
@@ -378,6 +482,36 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 await transaction.RollbackAsync(cancellationToken);
                 throw;
             }
+        }
+
+        private async Task<Dictionary<int, int>> GetPersonKeysByUserIdAsync(
+            IEnumerable<int> userIds,
+            CancellationToken cancellationToken)
+        {
+            var ids = userIds.Distinct().ToList();
+            if (ids.Count == 0)
+                return new Dictionary<int, int>();
+
+            return await _db.Users
+                .AsNoTracking()
+                .Where(x => ids.Contains(x.UserId))
+                .Select(x => new
+                {
+                    x.UserId,
+                    PersonKey = x.InformationId > 0 ? x.InformationId : x.UserId
+                })
+                .ToDictionaryAsync(x => x.UserId, x => x.PersonKey, cancellationToken);
+        }
+
+        private static int GetRolePriority(string? roleName)
+        {
+            return roleName switch
+            {
+                "Giảng viên" => 0,
+                "Trưởng khoa" => 1,
+                "Thư ký khoa" => 2,
+                _ => 3
+            };
         }
     }
 }

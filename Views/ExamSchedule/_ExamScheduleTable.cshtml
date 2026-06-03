@@ -8,7 +8,7 @@
     var canSendSupportRequest = ViewBag.CanSendSupportRequest as bool? ?? false;
     var canSelectSchedule = canSendApprovalRequest || canSendConfirmationRequest || canSendSupportRequest;
     var showActionColumn = true;
-    var colSpan = 14 + (canSelectSchedule ? 1 : 0);
+    var colSpan = 15 + (canSelectSchedule ? 1 : 0);
     var actionHeader = actionMode == "secretary" ? "Phân công" : "Thao tác";
 }
 
@@ -18,22 +18,23 @@
         {
             <col style="width:3%;" />
         }
-        <col style="width:6%;" />
-        <col style="width:16%;" />
-        <col style="width:9%;" />
+        <col style="width:5.5%;" />
+        <col style="width:13%;" />
+        <col style="width:8%;" />
         <col style="width:7%;" />
         <col style="width:4%;" />
-        <col style="width:7%;" />
-        <col style="width:5%;" />
+        <col style="width:6%;" />
+        <col style="width:4.5%;" />
+        <col style="width:6%;" />
         <col style="width:6%;" />
         <col style="width:5%;" />
         <col style="width:5%;" />
-        <col style="width:10%;" />
-        <col style="width:10%;" />
+        <col style="width:9%;" />
+        <col style="width:9%;" />
         <col style="width:7%;" />
         @if (showActionColumn)
         {
-            <col style="width:@(canSelectSchedule ? "4%" : "7%");" />
+            <col style="width:@(canSelectSchedule ? "5.5%" : "7%");" />
         }
     </colgroup>
     <thead>
@@ -52,6 +53,7 @@
             <th>Năm học</th>
             <th>Học kỳ</th>
             <th>Đợt thi</th>
+            <th>Ngày thi</th>
             <th>Buổi thi</th>
             <th>Ca thi</th>
             <th>GT1</th>
@@ -69,10 +71,11 @@
         {
             foreach (var item in Model.Items)
             {
-                <tr class="approval-row">
+                var isPendingApprovalAlreadySent = string.Equals(item.Status, "Chờ duyệt", StringComparison.OrdinalIgnoreCase) && item.ApprovalCount > 0;
+                <tr class="approval-row @(isPendingApprovalAlreadySent ? "approval-row-sent" : string.Empty)">
                     @if (canSelectSchedule)
                     {
-                        var isApprovalAlreadySent = string.Equals(item.Status, "Chờ duyệt", StringComparison.OrdinalIgnoreCase) && item.ApprovalCount > 0;
+                        var isApprovalAlreadySent = isPendingApprovalAlreadySent;
                         var canSelect = !isApprovalAlreadySent && (string.Equals(item.Status, "Chờ duyệt", StringComparison.OrdinalIgnoreCase)
                             || string.Equals(item.Status, "Đã duyệt", StringComparison.OrdinalIgnoreCase)
                             || string.Equals(item.Status, "Chờ phân công", StringComparison.OrdinalIgnoreCase)
@@ -107,6 +110,7 @@
                     <td class="cell-nowrap">@item.AcademyYearName</td>
                     <td class="cell-nowrap">@item.SemesterName</td>
                     <td class="cell-nowrap">@item.PeriodName</td>
+                    <td class="cell-nowrap">@(item.ExamDate?.ToString("dd/MM/yyyy") ?? "-")</td>
                     <td class="cell-nowrap">@item.SessionName</td>
                     <td class="cell-nowrap">@item.SlotName</td>
                     <td class="cell-wrap ui-col-person">@(string.IsNullOrWhiteSpace(item.Lecturer1Name) ? "-" : item.Lecturer1Name)</td>
@@ -118,6 +122,10 @@
                               : "bg-secondary")">
                             @item.Status
                         </span>
+                        @if (isPendingApprovalAlreadySent)
+                        {
+                            <span class="badge rounded-pill bg-light text-secondary border ms-1" title="Lịch này đã được gửi duyệt, đang chờ Trưởng khoa xử lý">Đã gửi duyệt</span>
+                        }
                     </td>
 
                     @if (showActionColumn)

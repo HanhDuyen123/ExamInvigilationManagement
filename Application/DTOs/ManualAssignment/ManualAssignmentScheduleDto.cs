@@ -9,15 +9,21 @@
         public TimeOnly TimeStart { get; set; }
 
         public int AcademyYearId { get; set; }
+        public string AcademyYearName { get; set; } = string.Empty;
         public int SemesterId { get; set; }
+        public string SemesterName { get; set; } = string.Empty;
         public int PeriodId { get; set; }
+        public string PeriodName { get; set; } = string.Empty;
         public int SessionId { get; set; }
+        public string SessionName { get; set; } = string.Empty;
 
         public int RoomId { get; set; }
         public string RoomDisplay { get; set; } = string.Empty;
 
         public int OfferingId { get; set; }
         public int OfferingUserId { get; set; }
+        public int OfferingUserInformationId { get; set; }
+        public int OfferingUserPersonKey => OfferingUserInformationId > 0 ? OfferingUserInformationId : OfferingUserId;
         public string OfferingUserName { get; set; } = string.Empty;
         public string OfferingUserFullName { get; set; } = string.Empty;
         public int? OfferingFacultyId { get; set; }

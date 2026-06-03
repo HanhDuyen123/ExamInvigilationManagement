@@ -1,6 +1,7 @@
 using ExamInvigilationManagement.Application.DTOs.InvigilatorResponse;
 using ExamInvigilationManagement.Application.Interfaces.Repositories;
 using ExamInvigilationManagement.Common;
+using ExamInvigilationManagement.Common.Constants;
 using ExamInvigilationManagement.Common.Workflow;
 using ExamInvigilationManagement.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -30,8 +31,13 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
             var query = _db.ExamInvigilators
                 .AsNoTracking()
-                .Where(x => x.AssigneeId == userId || (userInformationId.HasValue && x.Assignee.InformationId == userInformationId.Value))
-                .Where(x => x.ExamSchedule.Status == "Đã duyệt" && x.ConfirmationSentAt.HasValue)
+                .Where(x => (x.NewAssigneeId ?? x.AssigneeId) == userId ||
+                    (userInformationId.HasValue && ((x.NewAssignee != null ? x.NewAssignee.InformationId : x.Assignee.InformationId) == userInformationId.Value)))
+                .Where(x =>
+                    (x.ExamSchedule.Status == ExamScheduleStatuses.Approved && x.ConfirmationSentAt.HasValue) ||
+                    x.InvigilatorResponses.Any(r =>
+                        (r.UserId == userId || (userInformationId.HasValue && r.User.InformationId == userInformationId.Value)) &&
+                        r.Status == InvigilatorResponseStatuses.Rejected))
                 .Select(x => new
                 {
                     Invigilator = x,
@@ -110,8 +116,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 SlotName = x.Schedule.Slot.SlotName,
                 TimeStart = x.Schedule.Slot.TimeStart,
                 ExamDate = x.Schedule.ExamDate,
-                Lecturer1Name = x.Schedule.ExamInvigilators.Where(i => i.PositionNo == 1).Select(i => i.Assignee.Information.LastName + " " + i.Assignee.Information.FirstName).FirstOrDefault(),
-                Lecturer2Name = x.Schedule.ExamInvigilators.Where(i => i.PositionNo == 2).Select(i => i.Assignee.Information.LastName + " " + i.Assignee.Information.FirstName).FirstOrDefault(),
+                Lecturer1Name = x.Schedule.ExamInvigilators.Where(i => i.PositionNo == 1).Select(i => i.NewAssignee != null ? i.NewAssignee.Information.LastName + " " + i.NewAssignee.Information.FirstName : i.Assignee.Information.LastName + " " + i.Assignee.Information.FirstName).FirstOrDefault(),
+                Lecturer2Name = x.Schedule.ExamInvigilators.Where(i => i.PositionNo == 2).Select(i => i.NewAssignee != null ? i.NewAssignee.Information.LastName + " " + i.NewAssignee.Information.FirstName : i.Assignee.Information.LastName + " " + i.Assignee.Information.FirstName).FirstOrDefault(),
                 ResponseStatus = x.LatestResponse == null ? "Chưa phản hồi" : x.LatestResponse.Status,
                 ResponseNote = x.LatestResponse == null ? null : x.LatestResponse.Note,
                 HasSubstitutionProposal = x.LatestSubstitution != null,
@@ -157,18 +163,19 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
         {
             var deadline = DateTime.Now.Subtract(responseWindow);
             var targets = await _db.ExamInvigilators
-                .Where(x => x.Status == "Chờ xác nhận" && x.ConfirmationSentAt.HasValue && x.ConfirmationSentAt.Value <= deadline && !x.InvigilatorResponses.Any(r => r.UserId == x.AssigneeId))
+                .Where(x => x.Status == ExamInvigilatorStatuses.PendingConfirmation && x.ConfirmationSentAt.HasValue && x.ConfirmationSentAt.Value <= deadline && !x.InvigilatorResponses.Any(r => r.UserId == (x.NewAssigneeId ?? x.AssigneeId)))
                 .ToListAsync(cancellationToken);
 
             foreach (var target in targets)
             {
-                target.Status = "Xác nhận";
-                target.UpdateAt = DateTime.Now;
-                _db.InvigilatorResponses.Add(new Data.Entities.InvigilatorResponse
-                {
-                    ExamInvigilatorId = target.ExamInvigilatorId,
-                    UserId = target.AssigneeId,
-                    Status = "Xác nhận",
+                    var assigneeId = target.NewAssigneeId ?? target.AssigneeId;
+                    target.Status = InvigilatorResponseStatuses.Confirmed;
+                    target.UpdateAt = DateTime.Now;
+                    _db.InvigilatorResponses.Add(new Data.Entities.InvigilatorResponse
+                    {
+                        ExamInvigilatorId = target.ExamInvigilatorId,
+                        UserId = assigneeId,
+                        Status = InvigilatorResponseStatuses.Confirmed,
                     Note = "Hệ thống tự động xác nhận sau 48 giờ kể từ khi gửi yêu cầu xác nhận.",
                     ResponseAt = DateTime.Now
                 });
@@ -190,8 +197,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 {
                     ExamInvigilatorId = x.ExamInvigilatorId,
                     ExamScheduleId = x.ExamScheduleId,
-                    AssigneeId = x.AssigneeId,
-                    AssigneeInformationId = x.Assignee.InformationId,
+                    AssigneeId = x.NewAssigneeId ?? x.AssigneeId,
+                    AssigneeInformationId = x.NewAssignee != null ? x.NewAssignee.InformationId : x.Assignee.InformationId,
                     FacultyId = x.ExamSchedule.Offering.Subject.FacultyId,
                     ScheduleStatus = x.ExamSchedule.Status,
                     ConfirmationSentAt = x.ConfirmationSentAt,
@@ -247,13 +254,17 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             }
 
             var invigilators = await _db.ExamInvigilators
-                .Where(x => ids.Contains(x.ExamInvigilatorId) && (x.AssigneeId == userId || (userInformationId.HasValue && x.Assignee.InformationId == userInformationId.Value)))
+                .Include(x => x.ExamSchedule)
+                .Where(x => ids.Contains(x.ExamInvigilatorId) && ((x.NewAssigneeId ?? x.AssigneeId) == userId ||
+                    (userInformationId.HasValue && ((x.NewAssignee != null ? x.NewAssignee.InformationId : x.Assignee.InformationId) == userInformationId.Value))))
                 .ToListAsync(cancellationToken);
 
             foreach (var invigilator in invigilators)
             {
                 invigilator.Status = status;
                 invigilator.UpdateAt = DateTime.Now;
+                if (string.Equals(status, InvigilatorResponseStatuses.Rejected, StringComparison.OrdinalIgnoreCase))
+                    invigilator.ExamSchedule.Status = ExamScheduleStatuses.MissingInvigilator;
             }
 
             await _db.SaveChangesAsync(cancellationToken);
@@ -311,12 +322,18 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     ExamDate = x.ExamDate,
                     SlotName = x.Slot.SlotName,
                     TimeStart = x.Slot.TimeStart,
-                    Lecturers = x.ExamInvigilators.Select(i => new InvigilatorConfirmationLecturerDto
+                    Lecturers = x.ExamInvigilators
+                    .Where(i => i.Status != InvigilatorResponseStatuses.Rejected || i.NewAssigneeId.HasValue)
+                    .Select(i => new InvigilatorConfirmationLecturerDto
                     {
-                        UserId = i.Assignee.UserId,
-                        UserName = i.Assignee.UserName,
-                        FullName = i.Assignee.Information == null ? i.Assignee.UserName : i.Assignee.Information.LastName + " " + i.Assignee.Information.FirstName,
-                        Email = i.Assignee.Information == null ? null : i.Assignee.Information.Email
+                        UserId = i.NewAssignee != null ? i.NewAssignee.UserId : i.Assignee.UserId,
+                        UserName = i.NewAssignee != null ? i.NewAssignee.UserName : i.Assignee.UserName,
+                        FullName = i.NewAssignee != null
+                            ? (i.NewAssignee.Information == null ? i.NewAssignee.UserName : i.NewAssignee.Information.LastName + " " + i.NewAssignee.Information.FirstName)
+                            : (i.Assignee.Information == null ? i.Assignee.UserName : i.Assignee.Information.LastName + " " + i.Assignee.Information.FirstName),
+                        Email = i.NewAssignee != null
+                            ? (i.NewAssignee.Information == null ? null : i.NewAssignee.Information.Email)
+                            : (i.Assignee.Information == null ? null : i.Assignee.Information.Email)
                     }).ToList()
                 })
                 .ToListAsync(cancellationToken);

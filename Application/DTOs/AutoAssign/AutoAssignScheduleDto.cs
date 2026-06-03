@@ -17,6 +17,8 @@
 
         public int OfferingId { get; set; }
         public int OfferingUserId { get; set; }
+        public int OfferingUserInformationId { get; set; }
+        public int OfferingUserPersonKey => OfferingUserInformationId > 0 ? OfferingUserInformationId : OfferingUserId;
         public int? OfferingFacultyId { get; set; }
 
         public string SubjectId { get; set; } = string.Empty;

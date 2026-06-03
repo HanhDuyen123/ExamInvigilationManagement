@@ -139,7 +139,7 @@ namespace ExamInvigilationManagement.Application.Services
                 .ToDictionary(g => g.Key, g => g.Count());
 
             var ownerScheduleCountByLecturer = schedules
-                .GroupBy(x => x.OfferingUserId)
+                .GroupBy(x => x.OfferingUserPersonKey)
                 .ToDictionary(g => g.Key, g => g.Count());
 
             var solverResult = TryBuildCpSatPlan(
@@ -240,7 +240,7 @@ namespace ExamInvigilationManagement.Application.Services
                 var day = DateOnly.FromDateTime(schedule.ExamDate);
 
                 var exactOwner = lecturers.FirstOrDefault(x =>
-                    x.UserId == schedule.OfferingUserId &&
+                    x.PersonKey == schedule.OfferingUserPersonKey &&
                     IsFeasibleExactOwner(x, schedule, assignedUsers, busyKeySet, occupiedKeySet));
 
                 if (exactOwner != null)
@@ -411,12 +411,12 @@ namespace ExamInvigilationManagement.Application.Services
                 assignedUsers = new HashSet<int>();
 
             var hasExactOwner = lecturers.Any(l =>
-                l.UserId == schedule.OfferingUserId &&
+                l.PersonKey == schedule.OfferingUserPersonKey &&
                 IsFeasibleExactOwner(l, schedule, assignedUsers, busyKeySet, occupiedKeySet));
 
             var fallbackCandidates = lecturers.Count(l =>
                 l.IsActive &&
-                l.UserId != schedule.OfferingUserId &&
+                l.PersonKey != schedule.OfferingUserPersonKey &&
                 !assignedUsers.Contains(l.PersonKey) &&
                 !busyKeySet.Contains((l.UserId, schedule.SlotId, day)) &&
                 !occupiedKeySet.Contains((l.PersonKey, schedule.SlotId, day)));
@@ -436,7 +436,7 @@ namespace ExamInvigilationManagement.Application.Services
             var occupiedKey = (lecturer.PersonKey, schedule.SlotId, day);
 
             return lecturer.IsActive
-                   && lecturer.UserId == schedule.OfferingUserId
+                   && lecturer.PersonKey == schedule.OfferingUserPersonKey
                    && !assignedUsers.Contains(lecturer.PersonKey)
                    && !busyKeySet.Contains(busyKey)
                    && !occupiedKeySet.Contains(occupiedKey);
@@ -461,8 +461,8 @@ namespace ExamInvigilationManagement.Application.Services
                 {
                     var load = lecturerLoads.TryGetValue(l.UserId, out var currentLoad) ? currentLoad : 0;
                     var sameDayLoad = sameDayLoadMap.TryGetValue((l.PersonKey, day), out var d) ? d : 0;
-                    var ownerCount = ownerScheduleCountByLecturer.TryGetValue(l.UserId, out var c) ? c : 0;
-                    var tier = GetCandidateTier(l.UserId, schedule, subjectLecturerMap, isLecturerRoleByUser);
+                    var ownerCount = ownerScheduleCountByLecturer.TryGetValue(l.PersonKey, out var c) ? c : 0;
+                    var tier = GetCandidateTier(l, schedule, subjectLecturerMap, isLecturerRoleByUser);
 
                     var score = 0;
                     var reasons = new List<string>();
@@ -526,7 +526,7 @@ namespace ExamInvigilationManagement.Application.Services
             // Không cấm toàn bộ lecturer đang là owner của lịch khác,
             // vì pha 1 đã reserve owner rồi.
             return lecturer.IsActive
-                   && lecturer.UserId != schedule.OfferingUserId
+                   && lecturer.PersonKey != schedule.OfferingUserPersonKey
                    && !assignedUsers.Contains(lecturer.PersonKey)
                    && !busyKeySet.Contains(busyKey)
                    && !occupiedKeySet.Contains(occupiedKey);
@@ -687,7 +687,7 @@ namespace ExamInvigilationManagement.Application.Services
                         variables[(schedule.ExamScheduleId, lecturer.UserId)] = variable;
                         scheduleVars.Add(variable);
 
-                        var tier = GetCandidateTier(lecturer.UserId, schedule, subjectLecturerMap, isLecturerRoleByUser);
+                        var tier = GetCandidateTier(lecturer, schedule, subjectLecturerMap, isLecturerRoleByUser);
                         if (tier == CandidateTier.ExactOwner)
                             exactVars.Add(variable);
                         else if (tier == CandidateTier.SameSubject)
@@ -829,7 +829,7 @@ namespace ExamInvigilationManagement.Application.Services
                         Schedule = scheduleById[x.Key.ScheduleId],
                         Lecturer = lecturerById[x.Key.LecturerId]
                     })
-                    .OrderBy(x => GetCandidateTier(x.Lecturer.UserId, x.Schedule, subjectLecturerMap, isLecturerRoleByUser))
+                    .OrderBy(x => GetCandidateTier(x.Lecturer, x.Schedule, subjectLecturerMap, isLecturerRoleByUser))
                     .ThenBy(x => x.Schedule.ExamDate)
                     .ThenBy(x => x.Schedule.TimeStart)
                     .ThenBy(x => x.Lecturer.UserName)
@@ -851,7 +851,7 @@ namespace ExamInvigilationManagement.Application.Services
                     var day = DateOnly.FromDateTime(selected.Schedule.ExamDate);
                     var load = lecturerLoads.TryGetValue(selected.Lecturer.UserId, out var currentLoad) ? currentLoad : 0;
                     var sameDayLoad = sameDayLoadMap.TryGetValue((selected.Lecturer.PersonKey, day), out var d) ? d : 0;
-                    var tier = GetCandidateTier(selected.Lecturer.UserId, selected.Schedule, subjectLecturerMap, isLecturerRoleByUser);
+                    var tier = GetCandidateTier(selected.Lecturer, selected.Schedule, subjectLecturerMap, isLecturerRoleByUser);
                     var score = GetCandidateScore(tier, load, sameDayLoad);
                     var reason = GetCandidateTierReason(tier);
 
@@ -980,18 +980,18 @@ namespace ExamInvigilationManagement.Application.Services
         }
 
         private static CandidateTier GetCandidateTier(
-            int lecturerId,
+            AutoAssignLecturerDto lecturer,
             AutoAssignScheduleDto schedule,
             Dictionary<string, HashSet<int>> subjectLecturerMap,
             Dictionary<int, bool> isLecturerRoleByUser)
         {
-            if (lecturerId == schedule.OfferingUserId)
+            if (lecturer.PersonKey == schedule.OfferingUserPersonKey)
                 return CandidateTier.ExactOwner;
 
-            if (isLecturerRoleByUser.TryGetValue(lecturerId, out var isLecturerRole) && !isLecturerRole)
+            if (isLecturerRoleByUser.TryGetValue(lecturer.UserId, out var isLecturerRole) && !isLecturerRole)
                 return CandidateTier.FacultyMember;
 
-            return subjectLecturerMap.TryGetValue(schedule.SubjectId, out var lecturerIds) && lecturerIds.Contains(lecturerId)
+            return subjectLecturerMap.TryGetValue(schedule.SubjectId, out var lecturerIds) && lecturerIds.Contains(lecturer.UserId)
                 ? CandidateTier.SameSubject
                 : CandidateTier.Emergency;
         }

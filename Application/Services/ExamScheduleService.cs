@@ -88,8 +88,8 @@ namespace ExamInvigilationManagement.Application.Services
         {
             ValidateDto(dto);
 
-            if (await _repo.HasInvigilatorsAsync(dto.Id))
-                throw new InvalidOperationException("Lịch thi đã được phân công giám thị, không thể sửa để tránh lệch dữ liệu phân công.");
+            if (await _repo.HasInvigilatorsInRoomGroupAsync(dto.Id))
+                throw new InvalidOperationException("Nhóm lịch thi này đã được phân công giám thị, không thể sửa để tránh lệch dữ liệu phân công.");
 
             dto.Status = ExamScheduleStatusHelper.Normalize(dto.Status);
 
@@ -104,11 +104,17 @@ namespace ExamInvigilationManagement.Application.Services
             if (!await _repo.ExamFormatExistsAsync(dto.ExamFormatId!.Value))
                 throw new InvalidOperationException("Hình thức thi không tồn tại hoặc đã ngừng sử dụng.");
 
-            if (!dto.RoomId.HasValue)
-                throw new InvalidOperationException("Vui lòng chọn phòng thi.");
+            var roomIds = dto.RoomIds?
+                .Where(x => x > 0)
+                .Distinct()
+                .ToList()
+                ?? new List<int>();
 
-            if (!await _repo.RoomExistsAsync(dto.RoomId.Value))
-                throw new InvalidOperationException("Phòng thi không tồn tại.");
+            if (roomIds.Count == 0 && dto.RoomId.HasValue)
+                roomIds.Add(dto.RoomId.Value);
+
+            if (roomIds.Count == 0)
+                throw new InvalidOperationException("Vui lòng chọn ít nhất 1 phòng thi.");
 
             if (offeringCtx.AcademyYearId != slotCtx.AcademyYearId)
                 throw new InvalidOperationException("Học phần mở và ca thi không thuộc cùng năm học.");
@@ -116,8 +122,15 @@ namespace ExamInvigilationManagement.Application.Services
             if (offeringCtx.SemesterId != slotCtx.SemesterId)
                 throw new InvalidOperationException("Học phần mở và ca thi không thuộc cùng học kỳ.");
 
-            if (await _repo.ExistsRoomConflictAsync(dto.RoomId.Value, dto.ExamDate!.Value, dto.SlotId.Value, dto.Id))
-                throw new InvalidOperationException("Phòng thi đã có lịch ở ca thi và ngày thi này.");
+            var ignoreIds = await _repo.GetScheduleIdsInRoomGroupAsync(dto.Id);
+            foreach (var roomId in roomIds)
+            {
+                if (!await _repo.RoomExistsAsync(roomId))
+                    throw new InvalidOperationException($"Phòng thi {roomId} không tồn tại.");
+
+                if (await _repo.ExistsRoomConflictAsync(roomId, dto.ExamDate!.Value, dto.SlotId.Value, ignoreIds))
+                    throw new InvalidOperationException("Phòng thi đã có lịch ở ca thi và ngày thi này.");
+            }
 
             var entity = new ExamSchedule
             {
@@ -125,7 +138,7 @@ namespace ExamInvigilationManagement.Application.Services
                 OfferingId = dto.OfferingId.Value,
                 ExamFormatId = dto.ExamFormatId.Value,
                 SlotId = dto.SlotId.Value,
-                RoomId = dto.RoomId.Value,
+                RoomId = roomIds.First(),
                 ExamDate = dto.ExamDate.Value,
                 Status = dto.Status!,
 
@@ -135,7 +148,7 @@ namespace ExamInvigilationManagement.Application.Services
                 SessionId = slotCtx.SessionId
             };
 
-            await _repo.UpdateAsync(entity);
+            await _repo.UpdateRoomGroupAsync(dto.Id, entity, roomIds);
         }
 
         public async Task DeleteAsync(int id)

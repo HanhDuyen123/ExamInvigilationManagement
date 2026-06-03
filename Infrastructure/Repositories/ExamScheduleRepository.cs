@@ -157,8 +157,14 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     RoomId = x.RoomId,
                     ExamDate = x.ExamDate,
                     Status = x.Status,
-                    ApprovalCount = x.ExamScheduleApprovals.Count,
-                    InvigilatorCount = x.ExamInvigilators.Count,
+                    ApprovalCount = x.ExamScheduleApprovals.Count(a => a.Status == ExamScheduleStatuses.PendingApproval),
+                    InvigilatorCount = x.ExamInvigilators.Count(i =>
+                        i.Status != InvigilatorResponseStatuses.Rejected &&
+                        (i.InvigilatorResponses
+                            .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
+                            .OrderByDescending(r => r.ResponseAt)
+                            .Select(r => r.Status)
+                            .FirstOrDefault() ?? string.Empty) != InvigilatorResponseStatuses.Rejected),
                     IsLockedForScheduleEdit = x.ExamInvigilators.Any(),
 
                     SubjectId = x.Offering.SubjectId,
@@ -199,38 +205,80 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     RoomCapacity = x.Room.Capacity,
 
                     Lecturer1Name = x.ExamInvigilators
-                        .Where(i => i.PositionNo == 1)
+                        .Where(i =>
+                            i.PositionNo == 1 &&
+                            i.Status != InvigilatorResponseStatuses.Rejected &&
+                            (i.InvigilatorResponses
+                                .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
+                                .OrderByDescending(r => r.ResponseAt)
+                                .Select(r => r.Status)
+                                .FirstOrDefault() ?? string.Empty) != InvigilatorResponseStatuses.Rejected)
                         .Select(i => i.NewAssignee != null
                             ? (i.NewAssignee.Information != null ? $"{i.NewAssignee.Information.LastName} {i.NewAssignee.Information.FirstName}" : i.NewAssignee.UserName)
                             : (i.Assignee.Information != null ? $"{i.Assignee.Information.LastName} {i.Assignee.Information.FirstName}" : i.Assignee.UserName))
                         .FirstOrDefault(),
 
                     Lecturer1Code = x.ExamInvigilators
-                        .Where(i => i.PositionNo == 1)
+                        .Where(i =>
+                            i.PositionNo == 1 &&
+                            i.Status != InvigilatorResponseStatuses.Rejected &&
+                            (i.InvigilatorResponses
+                                .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
+                                .OrderByDescending(r => r.ResponseAt)
+                                .Select(r => r.Status)
+                                .FirstOrDefault() ?? string.Empty) != InvigilatorResponseStatuses.Rejected)
                         .Select(i => i.NewAssignee != null ? i.NewAssignee.UserName : i.Assignee.UserName)
                         .FirstOrDefault(),
 
                     Lecturer1FacultyName = x.ExamInvigilators
-                        .Where(i => i.PositionNo == 1)
+                        .Where(i =>
+                            i.PositionNo == 1 &&
+                            i.Status != InvigilatorResponseStatuses.Rejected &&
+                            (i.InvigilatorResponses
+                                .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
+                                .OrderByDescending(r => r.ResponseAt)
+                                .Select(r => r.Status)
+                                .FirstOrDefault() ?? string.Empty) != InvigilatorResponseStatuses.Rejected)
                         .Select(i => i.NewAssignee != null
                             ? (i.NewAssignee.Faculty != null ? i.NewAssignee.Faculty.FacultyName : null)
                             : (i.Assignee.Faculty != null ? i.Assignee.Faculty.FacultyName : null))
                         .FirstOrDefault(),
 
                     Lecturer2Name = x.ExamInvigilators
-                        .Where(i => i.PositionNo == 2)
+                        .Where(i =>
+                            i.PositionNo == 2 &&
+                            i.Status != InvigilatorResponseStatuses.Rejected &&
+                            (i.InvigilatorResponses
+                                .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
+                                .OrderByDescending(r => r.ResponseAt)
+                                .Select(r => r.Status)
+                                .FirstOrDefault() ?? string.Empty) != InvigilatorResponseStatuses.Rejected)
                         .Select(i => i.NewAssignee != null
                             ? (i.NewAssignee.Information != null ? $"{i.NewAssignee.Information.LastName} {i.NewAssignee.Information.FirstName}" : i.NewAssignee.UserName)
                             : (i.Assignee.Information != null ? $"{i.Assignee.Information.LastName} {i.Assignee.Information.FirstName}" : i.Assignee.UserName))
                         .FirstOrDefault(),
 
                     Lecturer2Code = x.ExamInvigilators
-                        .Where(i => i.PositionNo == 2)
+                        .Where(i =>
+                            i.PositionNo == 2 &&
+                            i.Status != InvigilatorResponseStatuses.Rejected &&
+                            (i.InvigilatorResponses
+                                .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
+                                .OrderByDescending(r => r.ResponseAt)
+                                .Select(r => r.Status)
+                                .FirstOrDefault() ?? string.Empty) != InvigilatorResponseStatuses.Rejected)
                         .Select(i => i.NewAssignee != null ? i.NewAssignee.UserName : i.Assignee.UserName)
                         .FirstOrDefault(),
 
                     Lecturer2FacultyName = x.ExamInvigilators
-                        .Where(i => i.PositionNo == 2)
+                        .Where(i =>
+                            i.PositionNo == 2 &&
+                            i.Status != InvigilatorResponseStatuses.Rejected &&
+                            (i.InvigilatorResponses
+                                .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
+                                .OrderByDescending(r => r.ResponseAt)
+                                .Select(r => r.Status)
+                                .FirstOrDefault() ?? string.Empty) != InvigilatorResponseStatuses.Rejected)
                         .Select(i => i.NewAssignee != null
                             ? (i.NewAssignee.Faculty != null ? i.NewAssignee.Faculty.FacultyName : null)
                             : (i.Assignee.Faculty != null ? i.Assignee.Faculty.FacultyName : null))
@@ -286,6 +334,18 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
             if (x == null) return null;
 
+            var groupRooms = await _context.ExamSchedules
+                .AsNoTracking()
+                .Include(e => e.Room)
+                .Where(e => e.OfferingId == x.OfferingId && e.SlotId == x.SlotId && e.ExamDate.Date == x.ExamDate.Date)
+                .OrderBy(e => e.ExamScheduleId)
+                .Select(e => new
+                {
+                    e.RoomId,
+                    DisplayText = e.Room.BuildingId + "." + e.Room.RoomName
+                })
+                .ToListAsync();
+
             return new ExamScheduleDto
             {
                 Id = x.ExamScheduleId,
@@ -294,8 +354,14 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 RoomId = x.RoomId,
                 ExamDate = x.ExamDate,
                 Status = x.Status,
-                ApprovalCount = x.ExamScheduleApprovals.Count,
-                InvigilatorCount = x.ExamInvigilators.Count,
+                ApprovalCount = x.ExamScheduleApprovals.Count(a => a.Status == ExamScheduleStatuses.PendingApproval),
+                InvigilatorCount = x.ExamInvigilators.Count(i =>
+                    i.Status != InvigilatorResponseStatuses.Rejected &&
+                    (i.InvigilatorResponses
+                        .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
+                        .OrderByDescending(r => r.ResponseAt)
+                        .Select(r => r.Status)
+                        .FirstOrDefault() ?? string.Empty) != InvigilatorResponseStatuses.Rejected),
                 IsLockedForScheduleEdit = x.ExamInvigilators.Any(),
 
                 SubjectId = x.Offering?.SubjectId,
@@ -337,40 +403,85 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 BuildingName = x.Room?.Building?.BuildingName,
                 RoomName = x.Room?.RoomName,
                 RoomCapacity = x.Room?.Capacity,
+                RoomIds = groupRooms.Select(r => r.RoomId).ToList(),
+                RoomDisplayTexts = groupRooms.Select(r => r.DisplayText).ToList(),
+                RoomCount = groupRooms.Count == 0 ? 1 : groupRooms.Count,
 
                 Lecturer1Name = x.ExamInvigilators
-                    .Where(i => i.PositionNo == 1)
+                    .Where(i =>
+                        i.PositionNo == 1 &&
+                        i.Status != InvigilatorResponseStatuses.Rejected &&
+                        (i.InvigilatorResponses
+                            .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
+                            .OrderByDescending(r => r.ResponseAt)
+                            .Select(r => r.Status)
+                            .FirstOrDefault() ?? string.Empty) != InvigilatorResponseStatuses.Rejected)
                     .Select(i => i.NewAssignee != null
                         ? (i.NewAssignee.Information != null ? $"{i.NewAssignee.Information.LastName} {i.NewAssignee.Information.FirstName}" : i.NewAssignee.UserName)
                         : (i.Assignee.Information != null ? $"{i.Assignee.Information.LastName} {i.Assignee.Information.FirstName}" : i.Assignee.UserName))
                     .FirstOrDefault(),
 
                 Lecturer1Code = x.ExamInvigilators
-                    .Where(i => i.PositionNo == 1)
+                    .Where(i =>
+                        i.PositionNo == 1 &&
+                        i.Status != InvigilatorResponseStatuses.Rejected &&
+                        (i.InvigilatorResponses
+                            .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
+                            .OrderByDescending(r => r.ResponseAt)
+                            .Select(r => r.Status)
+                            .FirstOrDefault() ?? string.Empty) != InvigilatorResponseStatuses.Rejected)
                     .Select(i => i.NewAssignee != null ? i.NewAssignee.UserName : i.Assignee.UserName)
                     .FirstOrDefault(),
 
                 Lecturer1FacultyName = x.ExamInvigilators
-                    .Where(i => i.PositionNo == 1)
+                    .Where(i =>
+                        i.PositionNo == 1 &&
+                        i.Status != InvigilatorResponseStatuses.Rejected &&
+                        (i.InvigilatorResponses
+                            .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
+                            .OrderByDescending(r => r.ResponseAt)
+                            .Select(r => r.Status)
+                            .FirstOrDefault() ?? string.Empty) != InvigilatorResponseStatuses.Rejected)
                     .Select(i => i.NewAssignee != null
                         ? (i.NewAssignee.Faculty != null ? i.NewAssignee.Faculty.FacultyName : null)
                         : (i.Assignee.Faculty != null ? i.Assignee.Faculty.FacultyName : null))
                     .FirstOrDefault(),
 
                 Lecturer2Name = x.ExamInvigilators
-                    .Where(i => i.PositionNo == 2)
+                    .Where(i =>
+                        i.PositionNo == 2 &&
+                        i.Status != InvigilatorResponseStatuses.Rejected &&
+                        (i.InvigilatorResponses
+                            .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
+                            .OrderByDescending(r => r.ResponseAt)
+                            .Select(r => r.Status)
+                            .FirstOrDefault() ?? string.Empty) != InvigilatorResponseStatuses.Rejected)
                     .Select(i => i.NewAssignee != null
                         ? (i.NewAssignee.Information != null ? $"{i.NewAssignee.Information.LastName} {i.NewAssignee.Information.FirstName}" : i.NewAssignee.UserName)
                         : (i.Assignee.Information != null ? $"{i.Assignee.Information.LastName} {i.Assignee.Information.FirstName}" : i.Assignee.UserName))
                     .FirstOrDefault(),
 
                 Lecturer2Code = x.ExamInvigilators
-                    .Where(i => i.PositionNo == 2)
+                    .Where(i =>
+                        i.PositionNo == 2 &&
+                        i.Status != InvigilatorResponseStatuses.Rejected &&
+                        (i.InvigilatorResponses
+                            .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
+                            .OrderByDescending(r => r.ResponseAt)
+                            .Select(r => r.Status)
+                            .FirstOrDefault() ?? string.Empty) != InvigilatorResponseStatuses.Rejected)
                     .Select(i => i.NewAssignee != null ? i.NewAssignee.UserName : i.Assignee.UserName)
                     .FirstOrDefault(),
 
                 Lecturer2FacultyName = x.ExamInvigilators
-                    .Where(i => i.PositionNo == 2)
+                    .Where(i =>
+                        i.PositionNo == 2 &&
+                        i.Status != InvigilatorResponseStatuses.Rejected &&
+                        (i.InvigilatorResponses
+                            .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
+                            .OrderByDescending(r => r.ResponseAt)
+                            .Select(r => r.Status)
+                            .FirstOrDefault() ?? string.Empty) != InvigilatorResponseStatuses.Rejected)
                     .Select(i => i.NewAssignee != null
                         ? (i.NewAssignee.Faculty != null ? i.NewAssignee.Faculty.FacultyName : null)
                         : (i.Assignee.Faculty != null ? i.Assignee.Faculty.FacultyName : null))
@@ -399,6 +510,62 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             data.ExamFormatId = entity.ExamFormatId;
             data.ExamDate = entity.ExamDate;
             data.Status = entity.Status;
+
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task UpdateRoomGroupAsync(int baseScheduleId, ExamSchedule entity, List<int> roomIds)
+        {
+            var current = await _context.ExamSchedules
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.ExamScheduleId == baseScheduleId);
+
+            if (current == null)
+                throw new InvalidOperationException("Không tìm thấy lịch thi cần cập nhật.");
+
+            var group = await _context.ExamSchedules
+                .Where(x => x.OfferingId == current.OfferingId && x.SlotId == current.SlotId && x.ExamDate.Date == current.ExamDate.Date)
+                .OrderBy(x => x.ExamScheduleId)
+                .ToListAsync();
+
+            for (var i = 0; i < roomIds.Count; i++)
+            {
+                if (i < group.Count)
+                {
+                    var item = group[i];
+                    item.SlotId = entity.SlotId;
+                    item.AcademyYearId = entity.AcademyYearId;
+                    item.SemesterId = entity.SemesterId;
+                    item.PeriodId = entity.PeriodId;
+                    item.SessionId = entity.SessionId;
+                    item.RoomId = roomIds[i];
+                    item.OfferingId = entity.OfferingId;
+                    item.ExamFormatId = entity.ExamFormatId;
+                    item.ExamDate = entity.ExamDate;
+                    item.Status = entity.Status;
+                }
+                else
+                {
+                    _context.ExamSchedules.Add(new Data.Entities.ExamSchedule
+                    {
+                        SlotId = entity.SlotId,
+                        AcademyYearId = entity.AcademyYearId,
+                        SemesterId = entity.SemesterId,
+                        PeriodId = entity.PeriodId,
+                        SessionId = entity.SessionId,
+                        RoomId = roomIds[i],
+                        OfferingId = entity.OfferingId,
+                        ExamFormatId = entity.ExamFormatId,
+                        ExamDate = entity.ExamDate,
+                        Status = entity.Status
+                    });
+                }
+            }
+
+            if (group.Count > roomIds.Count)
+            {
+                _context.ExamSchedules.RemoveRange(group.Skip(roomIds.Count));
+            }
 
             await _context.SaveChangesAsync();
         }
@@ -434,6 +601,16 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             return await _context.Rooms.AnyAsync(x => x.RoomId == roomId);
         }
 
+        public async Task<bool> ExistsRoomConflictAsync(int roomId, DateTime examDate, int slotId, IEnumerable<int> ignoreIds)
+        {
+            var ignored = ignoreIds.ToList();
+            return await _context.ExamSchedules.AnyAsync(x =>
+                x.RoomId == roomId &&
+                x.SlotId == slotId &&
+                x.ExamDate.Date == examDate.Date &&
+                !ignored.Contains(x.ExamScheduleId));
+        }
+
         public async Task<bool> ExamFormatExistsAsync(int examFormatId)
         {
             return await _context.ExamFormats.AnyAsync(x => x.ExamFormatId == examFormatId && x.IsActive);
@@ -442,6 +619,27 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
         public async Task<bool> HasInvigilatorsAsync(int id)
         {
             return await _context.ExamInvigilators.AnyAsync(x => x.ExamScheduleId == id);
+        }
+
+        public async Task<bool> HasInvigilatorsInRoomGroupAsync(int baseScheduleId)
+        {
+            var ids = await GetScheduleIdsInRoomGroupAsync(baseScheduleId);
+            return await _context.ExamInvigilators.AnyAsync(x => ids.Contains(x.ExamScheduleId));
+        }
+
+        public async Task<List<int>> GetScheduleIdsInRoomGroupAsync(int baseScheduleId)
+        {
+            var current = await _context.ExamSchedules
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.ExamScheduleId == baseScheduleId);
+
+            if (current == null) return new List<int>();
+
+            return await _context.ExamSchedules
+                .AsNoTracking()
+                .Where(x => x.OfferingId == current.OfferingId && x.SlotId == current.SlotId && x.ExamDate.Date == current.ExamDate.Date)
+                .Select(x => x.ExamScheduleId)
+                .ToListAsync();
         }
 
         public async Task<List<ExamFormatDto>> GetExamFormatsAsync(CancellationToken cancellationToken = default)
@@ -533,12 +731,19 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
                 var existing = await _context.ExamScheduleApprovals
                     .Where(x => ids.Contains(x.ExamScheduleId) && deans.Contains(x.ApproverId))
-                    .Select(x => new { x.ExamScheduleId, x.ApproverId })
                     .ToListAsync(cancellationToken);
 
                 var existingKeys = existing
                     .Select(x => $"{x.ExamScheduleId}:{x.ApproverId}")
                     .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var item in existing)
+                {
+                    item.Status = ExamScheduleStatuses.PendingApproval;
+                    item.Note = note;
+                    item.ApproveAt = null;
+                    item.UpdateAt = now;
+                }
 
                 foreach (var scheduleId in ids)
                 {

@@ -125,8 +125,14 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     x.ExamDate,
                     x.Status,
 
-                    InvigilatorCount = x.ExamInvigilators.Count,
-                    ApprovalCount = x.ExamScheduleApprovals.Count
+                    InvigilatorCount = x.ExamInvigilators.Count(i =>
+                        i.Status != InvigilatorResponseStatuses.Rejected &&
+                        (i.InvigilatorResponses
+                            .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
+                            .OrderByDescending(r => r.ResponseAt)
+                            .Select(r => r.Status)
+                            .FirstOrDefault() ?? string.Empty) != InvigilatorResponseStatuses.Rejected),
+                    ApprovalCount = x.ExamScheduleApprovals.Count(a => a.Status == ExamScheduleStatuses.PendingApproval)
                 })
                 .OrderBy(x => x.ExamDate)
                 .ThenBy(x => x.TimeStart)
@@ -141,8 +147,10 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 {
                     x.ExamScheduleId,
                     x.PositionNo,
-                    x.AssigneeId,
-                    FullName = x.Assignee.Information.LastName + " " + x.Assignee.Information.FirstName
+                    AssigneeId = x.NewAssigneeId ?? x.AssigneeId,
+                    FullName = x.NewAssignee != null
+                        ? x.NewAssignee.Information.LastName + " " + x.NewAssignee.Information.FirstName
+                        : x.Assignee.Information.LastName + " " + x.Assignee.Information.FirstName
                 })
                 .ToListAsync(cancellationToken);
 

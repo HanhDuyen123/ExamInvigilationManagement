@@ -36,7 +36,7 @@
                 Model.ClassName,
                 Model.GroupNumber
                 }.Where(x => !string.IsNullOrWhiteSpace(x)))
-           })
+            })
             </div>
 
             <div class="row g-3 mb-3">
@@ -142,9 +142,14 @@
             </div>
 
             <div class="form-group">
+                <label>Số lượng phòng thi</label>
+                <input type="number" id="roomCount" name="RoomCount" class="input-modern" min="1" value="@(Model.RoomCount <= 0 ? Math.Max(Model.RoomIds?.Count ?? 0, 1) : Model.RoomCount)" />
+            </div>
+
+            <div class="form-group">
                 @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
-           {
-               Label = "Giảng đường",
+            {
+               Label = "Giảng đường dùng chung",
                InputId = "buildingInput",
                HiddenId = "buildingId",
                HiddenName = "BuildingId",
@@ -153,27 +158,12 @@
                InputClass = "input-modern",
                InitialValue = Model.BuildingId ?? "",
                InitialText = Model.BuildingName ?? ""
-           })
+            })
             </div>
 
-            <div class="form-group">
-                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
-           {
-               Label = "Phòng thi",
-               InputId = "roomInput",
-               HiddenId = "roomId",
-               HiddenName = "RoomId",
-               MenuId = "roomDropdown",
-               Placeholder = "Chọn phòng thi...",
-               InputClass = "input-modern",
-               InitialValue = Model.RoomId?.ToString(),
-               InitialText = string.Join(".", new[]
-                {
-                Model.BuildingId,
-                Model.RoomName
-                }.Where(x => !string.IsNullOrWhiteSpace(x)))
-           })
-            </div>
+            <div id="roomBlocks" class="d-grid gap-3"></div>
+            <div id="roomIdsPostFields"></div>
+            <span asp-validation-for="RoomIds" class="text-danger"></span>
 
             <div class="form-group">
                 <label>Trạng thái</label>
@@ -196,6 +186,9 @@
     <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
     <script>
         $(function () {
+            const initialRoomIds = @Html.Raw(JsonSerializer.Serialize(Model.RoomIds != null && Model.RoomIds.Any() ? Model.RoomIds : (Model.RoomId.HasValue ? new List<int> { Model.RoomId.Value } : new List<int>())));
+            const initialRoomTexts = @Html.Raw(JsonSerializer.Serialize(Model.RoomDisplayTexts ?? new List<string>()));
+
             function clearLookup(key) {
                 const lookup = AdminLookup.get(key);
                 if (lookup) lookup.clear();
@@ -243,13 +236,73 @@
 
             function syncRoomState() {
                 const hasBuilding = !!$('#buildingId').val();
-
-                $('#roomInput').prop('disabled', !hasBuilding);
-                $('#roomInput').attr(
-                    'placeholder',
-                    hasBuilding ? 'Chọn phòng thi...' : 'Vui lòng chọn giảng đường trước'
-                );
+                $('.room-input').prop('disabled', !hasBuilding);
+                $('.room-input').attr('placeholder', hasBuilding ? 'Chọn phòng thi...' : 'Vui lòng chọn giảng đường trước');
             }
+
+            function syncRoomPostFields() {
+                const values = $('.room-id-value').map(function () {
+                    return $(this).val();
+                }).get().filter(function (value, index, self) {
+                    return value && Number(value) > 0 && self.indexOf(value) === index;
+                });
+
+                const html = values.map(function (value, index) {
+                    return `<input type="hidden" name="RoomIds[${index}]" value="${value}" />`;
+                }).join('');
+
+                $('#roomIdsPostFields').html(html);
+            }
+
+            function renderRoomBlocks() {
+                const count = Math.max(parseInt($('#roomCount').val() || '1', 10), 1);
+                let html = '';
+
+                for (let i = 0; i < count; i++) {
+                    html += `
+                        <div class="form-card p-3">
+                            <label class="form-label">Phòng thi ${i + 1}</label>
+                            <input id="roomInput_${i}" class="input-modern room-input" placeholder="Chọn phòng thi..." autocomplete="off" />
+                            <div id="roomDropdown_${i}" class="dropdown-menu autocomplete-menu w-100"></div>
+                            <input type="hidden" class="room-id-value" id="roomId_${i}" value="${initialRoomIds[i] || ''}" />
+                        </div>`;
+                }
+
+                $('#roomBlocks').html(html);
+
+                for (let i = 0; i < count; i++) {
+                    if (initialRoomTexts[i]) $('#roomInput_' + i).val(initialRoomTexts[i]);
+                    AdminLookup.create({
+                        key: 'room-edit-' + i,
+                        input: '#roomInput_' + i,
+                        hidden: '#roomId_' + i,
+                        menu: '#roomDropdown_' + i,
+                        url: '@Url.Action("SearchByBuilding", "Room", new { area = "Admin" })',
+                        queryParam: 'keyword',
+                        extraParams: function () { return { buildingId: $('#buildingId').val() || null }; },
+                        valueField: 'id',
+                        textField: function (item) { return (item.buildingId || '') + '.' + (item.name || ''); },
+                        searchTransform: function (keyword) {
+                            const text = (keyword || '').trim();
+                            return text.includes('.') ? text.split('.').pop() : text;
+                        },
+                        beforeSearch: function () {
+                            if (!$('#buildingId').val()) {
+                                syncRoomState();
+                                return false;
+                            }
+                            return true;
+                        },
+                        onSelect: syncRoomPostFields,
+                        onClear: syncRoomPostFields
+                    });
+                }
+
+                syncRoomState();
+                syncRoomPostFields();
+            }
+
+            $('#offeringInput').prop('disabled', true).attr('title', 'Học phần mở không được chỉnh sửa tại màn cập nhật lịch thi.');
 
             AdminLookup.create({
                 key: 'offering-edit',
@@ -394,49 +447,25 @@
                 initialText: @Html.Raw(JsonSerializer.Serialize(Model.BuildingName ?? "")),
                 onSelect: function (ctx) {
                     $('#buildingId').val(ctx.value || (ctx.item && ctx.item.id) || '');
-                    const roomLookup = AdminLookup.get('room-edit');
-                    if (roomLookup) roomLookup.clear();
+                    $('.room-id-value').val('');
+                    $('.room-input').val('');
+                    syncRoomPostFields();
                     syncRoomState();
                 },
                 onClear: function () {
                     $('#buildingId').val('');
-                    const roomLookup = AdminLookup.get('room-edit');
-                    if (roomLookup) roomLookup.clear();
+                    $('.room-id-value').val('');
+                    $('.room-input').val('');
+                    syncRoomPostFields();
                     syncRoomState();
                 }
             });
 
-            AdminLookup.create({
-                key: 'room-edit',
-                input: '#roomInput',
-                hidden: '#roomId',
-                menu: '#roomDropdown',
-                url: '@Url.Action("SearchByBuilding", "Room", new { area = "Admin" })',
-                queryParam: 'keyword',
-                extraParams: function () {
-                    return { buildingId: $('#buildingId').val() || null };
-                },
-                valueField: 'id',
-                textField: function (item) {
-                    return (item.buildingId || '') + '.' + (item.name || '');
-                },
-                searchTransform: function (keyword) {
-                    const text = (keyword || '').trim();
-                    return text.includes('.') ? text.split('.').pop() : text;
-                },
-                initialValue: '@Model.RoomId',
-                initialText: @Html.Raw(JsonSerializer.Serialize(
-        string.Join(".", new[] { Model.BuildingId, Model.RoomName }.Where(x => !string.IsNullOrWhiteSpace(x)))
-            )),
-                beforeSearch: function () {
-                    if (!$('#buildingId').val()) {
-                        syncRoomState();
-                        return false;
-                    }
-                    return true;
-                }
+            $('#roomCount').on('change input', function () {
+                renderRoomBlocks();
             });
 
+            renderRoomBlocks();
             syncRoomState();
         });
     </script>

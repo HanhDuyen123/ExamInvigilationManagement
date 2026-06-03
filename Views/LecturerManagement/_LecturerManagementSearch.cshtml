@@ -1,0 +1,40 @@
+@{
+    var showFacultyFilter = ViewBag.ShowFacultyFilter as bool? ?? false;
+}
+
+<div class="role-filter-compact">
+    <div class="role-filter-main">
+        <div class="search-field search-field-wide">
+            <label class="form-label mb-1">Từ khóa</label>
+            <input id="keyword" class="input-modern crud-filter" placeholder="Mã GV, họ tên, email..." />
+        </div>
+
+        @if (showFacultyFilter)
+        {
+            <div class="lookup-modern position-relative search-field search-field-wide">
+                <label class="form-label mb-1">Khoa/Viện</label>
+                <input id="facultyInput" class="input-modern" placeholder="Chọn khoa/viện..." autocomplete="off" />
+                <div id="facultyDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                <input type="hidden" id="facultyId" />
+            </div>
+        }
+
+        <div class="search-field">
+            <label class="form-label mb-1">Trạng thái</label>
+            <select id="status" class="select-modern crud-filter">
+                <option value="">Tất cả</option>
+                <option value="true">Đang hoạt động</option>
+                <option value="false">Đã vô hiệu hóa</option>
+            </select>
+        </div>
+
+        <div class="search-field search-page-size">
+            <label class="form-label mb-1">Số dòng</label>
+            <select id="pageSize" class="select-modern">
+                <option value="5">5</option>
+                <option value="10">10</option>
+                <option value="20">20</option>
+            </select>
+        </div>
+    </div>
+</div>

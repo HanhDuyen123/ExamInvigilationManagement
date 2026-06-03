@@ -560,7 +560,7 @@ namespace ExamInvigilationManagement.Controllers
 
                 if (schedule.ApprovalCount > 0)
                 {
-                    errors.Add($"Lịch thi {BuildScheduleLabel(schedule)} đã được gửi duyệt trước đó, không thể gửi lại.");
+                    errors.Add($"Lịch thi {BuildScheduleLabel(schedule)} đã được gửi duyệt.");
                     continue;
                 }
 
@@ -569,10 +569,14 @@ namespace ExamInvigilationManagement.Controllers
 
             if (errors.Any())
             {
+                var message = errors.All(x => x.Contains("đã được gửi duyệt", StringComparison.OrdinalIgnoreCase))
+                    ? "Lịch thi đã được gửi duyệt."
+                    : "Chưa thể gửi yêu cầu duyệt. Vui lòng kiểm tra lại các lịch đã chọn.";
+
                 return BadRequest(new
                 {
                     success = false,
-                    message = "Chưa thể gửi yêu cầu duyệt. Vui lòng kiểm tra lại các lịch đã chọn.",
+                    message,
                     errors
                 });
             }

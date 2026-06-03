@@ -114,6 +114,7 @@
                         <a asp-area="Admin" asp-controller="Faculty" asp-action="Index" aria-label="Khoa" class="sidebar-link @(IsActive("Faculty", "Admin") ? "active" : "")"><i class="bi bi-mortarboard"></i><span class="sidebar-text">Khoa</span></a>
                         <a asp-area="Admin" asp-controller="Information" asp-action="Index" aria-label="Thông tin cá nhân" class="sidebar-link @(IsActive("Information", "Admin") ? "active" : "")"><i class="bi bi-person-lines-fill"></i><span class="sidebar-text">Thông tin cá nhân</span></a>
                         <a asp-area="Admin" asp-controller="User" asp-action="Index" aria-label="Tài khoản" class="sidebar-link @(IsActive("User", "Admin") ? "active" : "")"><i class="bi bi-people"></i><span class="sidebar-text">Tài khoản</span></a>
+                        <a asp-area="" asp-controller="LecturerManagement" asp-action="Index" aria-label="Quản lý giảng viên" class="sidebar-link @(IsActive("LecturerManagement") ? "active" : "")"><i class="bi bi-person-workspace"></i><span class="sidebar-text">Quản lý giảng viên</span></a>
                         <a asp-area="Admin" asp-controller="EmailNotification" asp-action="Index" aria-label="Nhật ký email" class="sidebar-link @(IsActive("EmailNotification", "Admin") ? "active" : "")"><i class="bi bi-envelope-check"></i><span class="sidebar-text">Nhật ký email</span></a>
                         <a asp-area="Admin" asp-controller="Outbox" asp-action="Index" aria-label="Theo dõi Outbox" class="sidebar-link @(IsActive("Outbox", "Admin") ? "active" : "")"><i class="bi bi-hdd-network"></i><span class="sidebar-text">Outbox</span></a>
                         <a asp-area="Admin" asp-controller="AuditLog" asp-action="Index" aria-label="Lịch sử hệ thống" class="sidebar-link @(IsActive("AuditLog", "Admin") ? "active" : "")"><i class="bi bi-clock-history"></i><span class="sidebar-text">Lịch sử hệ thống</span></a>
@@ -199,6 +200,9 @@
                         </a>
                         <a asp-area="Admin" asp-controller="User" asp-action="Index" class="sidebar-link @(IsActive("User", "Admin") ? "active" : "")">
                             <i class="bi bi-people"></i><span class="sidebar-text">Tài khoản</span>
+                        </a>
+                        <a asp-area="" asp-controller="LecturerManagement" asp-action="Index" class="sidebar-link @(IsActive("LecturerManagement") ? "active" : "")">
+                            <i class="bi bi-person-workspace"></i><span class="sidebar-text">Quản lý giảng viên</span>
                         </a>
                         <a asp-area="Admin" asp-controller="EmailNotification" asp-action="Index" class="sidebar-link @(IsActive("EmailNotification", "Admin") ? "active" : "")">
                             <i class="bi bi-envelope-check"></i><span class="sidebar-text">Nhật ký email</span>

@@ -73,13 +73,13 @@ namespace ExamInvigilationManagement.Application.Services
                 .Select(x => x.PositionNo)
                 .ToHashSet();
 
-            var currentPersonKeys = currentInvigilators.Select(x => x.PersonKey).ToHashSet();
+            var currentPersonKeys = currentInvigilators.Select(x => x.EffectivePersonKey).ToHashSet();
 
             var options = lecturers
                 .Select(x =>
                 {
-                    var isExactOwner = x.UserId == schedule.OfferingUserId;
-                    var hasTaughtSubject = subjectLecturerIds.Contains(x.UserId);
+                    var isExactOwner = x.UserId == schedule.OfferingUserId || x.PersonKey == schedule.OfferingUserPersonKey;
+                    var hasTaughtSubject = subjectLecturerIds.Contains(x.UserId) || subjectLecturerIds.Contains(x.PersonKey);
                     var isBusy = busyIds.Contains(x.UserId);
                     var isConflict = conflictIds.Contains(x.UserId);
                     var isAlreadyAssigned = currentPersonKeys.Contains(x.PersonKey);
@@ -114,6 +114,7 @@ namespace ExamInvigilationManagement.Application.Services
                     return new ManualAssignmentLecturerOptionDto
                     {
                         UserId = x.UserId,
+                        InformationId = x.InformationId,
                         UserName = x.UserName,
                         FullName = x.FullName,
                         FacultyId = x.FacultyId,
@@ -145,6 +146,7 @@ namespace ExamInvigilationManagement.Application.Services
             var missingPositions = new List<byte>();
             if (!currentInvigilators.Any(x => x.PositionNo == 1) || replaceablePositions.Contains(1)) missingPositions.Add(1);
             if (!currentInvigilators.Any(x => x.PositionNo == 2) || replaceablePositions.Contains(2)) missingPositions.Add(2);
+            var effectiveInvigilatorCount = currentInvigilators.Count - replaceablePositions.Count;
 
             return new ManualAssignmentPageDto
             {
@@ -155,13 +157,18 @@ namespace ExamInvigilationManagement.Application.Services
                     SlotName = schedule.SlotName,
                     TimeStart = schedule.TimeStart,
                     AcademyYearId = schedule.AcademyYearId,
+                    AcademyYearName = schedule.AcademyYearName,
                     SemesterId = schedule.SemesterId,
+                    SemesterName = schedule.SemesterName,
                     PeriodId = schedule.PeriodId,
+                    PeriodName = schedule.PeriodName,
                     SessionId = schedule.SessionId,
+                    SessionName = schedule.SessionName,
                     RoomId = schedule.RoomId,
                     RoomDisplay = schedule.RoomDisplay,
                     OfferingId = schedule.OfferingId,
                     OfferingUserId = schedule.OfferingUserId,
+                    OfferingUserInformationId = schedule.OfferingUserInformationId,
                     OfferingUserName = schedule.OfferingUserName,
                     OfferingUserFullName = schedule.OfferingUserFullName,
                     OfferingFacultyId = schedule.OfferingFacultyId,
@@ -172,8 +179,8 @@ namespace ExamInvigilationManagement.Application.Services
                     ExamFormatDisplay = schedule.ExamFormatDisplay,
                     ExamDate = schedule.ExamDate,
                     Status = schedule.Status,
-                    CurrentInvigilatorCount = currentInvigilators.Count,
-                    MissingCount = Math.Max(0, RequiredInvigilatorsPerSchedule - currentInvigilators.Count),
+                    CurrentInvigilatorCount = effectiveInvigilatorCount,
+                    MissingCount = Math.Max(0, RequiredInvigilatorsPerSchedule - effectiveInvigilatorCount),
                     CanEdit = (IsEditableStatus(schedule.Status) && currentInvigilators.Count < RequiredInvigilatorsPerSchedule) || replaceablePositions.Any(),
                     EditReason = BuildEditReason(schedule.Status, currentInvigilators.Count, replaceablePositions.Any())
                 },
@@ -228,7 +235,7 @@ namespace ExamInvigilationManagement.Application.Services
             var replaceableByPosition = currentInvigilators
                 .Where(x => !x.HasReplacement && string.Equals(x.ResponseStatus, "Từ chối", StringComparison.OrdinalIgnoreCase))
                 .ToDictionary(x => x.PositionNo);
-            var currentPersonKeys = currentInvigilators.Select(x => x.PersonKey).ToHashSet();
+            var currentPersonKeys = currentInvigilators.Select(x => x.EffectivePersonKey).ToHashSet();
 
             var selectedByPosition = new Dictionary<byte, int?>
             {
@@ -298,7 +305,8 @@ namespace ExamInvigilationManagement.Application.Services
                 };
             }
 
-            var totalAfterSave = currentInvigilators.Count + selectedAssignments.Count;
+            var effectiveCurrentCount = currentInvigilators.Count - replaceableByPosition.Count;
+            var totalAfterSave = effectiveCurrentCount + selectedAssignments.Count + selectedReplacements.Count;
 
             var plan = new ManualAssignmentSavePlanDto
             {

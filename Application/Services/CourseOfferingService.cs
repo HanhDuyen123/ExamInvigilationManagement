@@ -138,7 +138,7 @@ namespace ExamInvigilationManagement.Application.Services
                 Id = x.Id,
                 UserId = x.UserId,
                 SemesterId = x.SemesterId,
-                AcademyYearId = x.Semester?.AcademyYear?.Id,
+                AcademyYearId = x.Semester?.AcademyYearId,
                 SubjectId = x.SubjectId,
                 ClassName = x.ClassName,
                 GroupNumber = x.GroupNumber,

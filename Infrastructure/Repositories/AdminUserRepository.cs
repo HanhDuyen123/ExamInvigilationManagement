@@ -21,7 +21,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             return await _context.Users
                 .AsNoTracking()
                 .Include(x => x.Role)
-                .Include(x => x.Information)
+                .Include(x => x.Information).ThenInclude(x => x.Position)
                 .Include(x => x.Faculty)
                 .Select(x => x.ToDomain())
                 .ToListAsync();
@@ -32,7 +32,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             var entity = await _context.Users
                 .AsNoTracking()
                 .Include(x => x.Role)
-                .Include(x => x.Information)
+                .Include(x => x.Information).ThenInclude(x => x.Position)
                 .Include(x => x.Faculty)
                 .FirstOrDefaultAsync(x => x.UserId == id);
 
@@ -51,7 +51,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             var query = _context.Users
                 .AsNoTracking()
                 .Include(x => x.Role)
-                .Include(x => x.Information)
+                .Include(x => x.Information).ThenInclude(x => x.Position)
                 .Include(x => x.Faculty)
                 .AsQueryable();
 
@@ -126,6 +126,15 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .AsNoTracking()
                 .Where(x => x.RoleId == roleId)
                 .Select(x => x.RoleName)
+                .FirstOrDefaultAsync();
+        }
+
+        public async Task<byte?> GetRoleIdByNameAsync(string roleName)
+        {
+            return await _context.Roles
+                .AsNoTracking()
+                .Where(x => x.RoleName == roleName)
+                .Select(x => (byte?)x.RoleId)
                 .FirstOrDefaultAsync();
         }
 

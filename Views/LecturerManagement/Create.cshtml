@@ -1,0 +1,97 @@
+@model ExamInvigilationManagement.Application.DTOs.Admin.User.LecturerManagementDto
+
+@{
+    ViewData["Title"] = "Thêm giảng viên";
+    var isAdmin = User.IsInRole("Admin");
+}
+
+<form asp-action="Create" method="post" id="lecturerForm">
+    @Html.AntiForgeryToken()
+    <div class="form-page">
+        @await Html.PartialAsync("_FormHeader", "Thêm giảng viên")
+        <div class="form-card lecturer-form-card">
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+            <div class="lecturer-form-grid">
+                <div class="form-group">
+                    <label class="form-label">Mã GV</label>
+                    <input asp-for="UserName" class="input-modern" />
+                    <span asp-validation-for="UserName" class="text-danger d-block mt-1"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Mật khẩu</label>
+                    <input asp-for="Password" type="password" class="input-modern" />
+                    <span asp-validation-for="Password" class="text-danger d-block mt-1"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Họ</label>
+                    <input asp-for="LastName" class="input-modern" />
+                    <span asp-validation-for="LastName" class="text-danger d-block mt-1"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Tên</label>
+                    <input asp-for="FirstName" class="input-modern" />
+                    <span asp-validation-for="FirstName" class="text-danger d-block mt-1"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Email</label>
+                    <input asp-for="Email" class="input-modern" />
+                    <span asp-validation-for="Email" class="text-danger d-block mt-1"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Số điện thoại</label>
+                    <input asp-for="Phone" class="input-modern" />
+                    <span asp-validation-for="Phone" class="text-danger d-block mt-1"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Ngày sinh</label>
+                    <input asp-for="Dob" type="date" class="input-modern" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Chức vụ</label>
+                    <input id="positionInput" class="input-modern" autocomplete="off" placeholder="Chọn chức vụ..." />
+                    <div id="positionDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                    <input type="hidden" asp-for="PositionId" id="positionId" />
+                    <span asp-validation-for="PositionId" class="text-danger d-block mt-1"></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Khoa/Viện</label>
+                    @if (isAdmin)
+                    {
+                        <input id="facultyInput" class="input-modern" autocomplete="off" placeholder="Chọn khoa/viện..." />
+                        <div id="facultyDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                        <input type="hidden" asp-for="FacultyId" id="facultyId" />
+                    }
+                    else
+                    {
+                        <input type="hidden" asp-for="FacultyId" />
+                        <input class="input-modern" value="Khoa hiện tại" disabled />
+                    }
+                    <span asp-validation-for="FacultyId" class="text-danger d-block mt-1"></span>
+                </div>
+                <div class="form-check mb-3 align-self-end">
+                    <input asp-for="IsActive" class="form-check-input" />
+                    <label class="form-check-label">Hoạt động</label>
+                </div>
+            </div>
+            @await Html.PartialAsync("_FormFooter")
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+    <script>
+        $(function () {
+            AdminLookup.create({ key: 'lecturer-position-create', input: '#positionInput', hidden: '#positionId', menu: '#positionDropdown', url: '@Url.Action("SearchPositions", "LecturerManagement")', valueField: 'id', textField: 'name' });
+            if ($('#facultyInput').length) {
+                AdminLookup.create({ key: 'lecturer-faculty-create', input: '#facultyInput', hidden: '#facultyId', menu: '#facultyDropdown', url: '@Url.Action("SearchFaculties", "LecturerManagement")', valueField: 'id', textField: 'name' });
+            }
+        });
+    </script>
+    <style>
+        .lecturer-form-card { width: 100%; max-width: 1100px; }
+        .lecturer-form-grid { display: grid; grid-template-columns: repeat(2, minmax(280px, 1fr)); gap: 16px 18px; align-items: start; }
+        .lecturer-form-grid .form-group { margin-bottom: 0; }
+        @@media (max-width: 768px) { .lecturer-form-grid { grid-template-columns: 1fr; } }
+    </style>
+}

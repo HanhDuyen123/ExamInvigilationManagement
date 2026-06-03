@@ -198,6 +198,13 @@
 
                 deleteId = $(this).data('id');
                 const name = $(this).data('name');
+                const modalTitle = $(this).data('modalTitle') || 'Xác nhận xóa';
+                const modalMessage = $(this).data('modalMessage') || 'Bạn có chắc muốn xóa';
+                const modalConfirm = $(this).data('modalConfirm') || 'Xóa';
+
+                $('#deleteModalTitle').text(modalTitle);
+                $('#deleteModalMessage').text(modalMessage);
+                $('#confirmDelete').text(modalConfirm);
 
                 if (config.deleteName) {
                     $(config.deleteName).text(name || '');

@@ -10,6 +10,7 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
         Task<LecturerBusySlotDto?> GetByIdAsync(int id);
 
         Task AddAsync(LecturerBusySlot entity);
+        Task AddRangeAsync(List<LecturerBusySlot> entities);
         Task UpdateAsync(LecturerBusySlot entity);
         Task DeleteAsync(int id);
 

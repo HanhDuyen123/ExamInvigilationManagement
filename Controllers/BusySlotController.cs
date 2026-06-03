@@ -123,8 +123,8 @@ namespace ExamInvigilationManagement.Controllers
 
             try
             {
-                await _service.CreateAsync(dto);
-                TempData.SetNotification("success", "Đăng ký lịch bận thành công!");
+                var count = await _service.CreateManyAsync(dto);
+                TempData.SetNotification("success", $"Đăng ký lịch bận thành công cho {count} ca.");
                 return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)

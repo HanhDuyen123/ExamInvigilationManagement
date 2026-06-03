@@ -147,13 +147,13 @@ namespace ExamInvigilationManagement.Application.Services
             {
                 var isBusy = busyIds.Contains(x.UserId);
                 var isConflict = conflictIds.Contains(x.UserId);
-                var isRejectedUser = x.UserId == rejectedUserId;
-                var currentLoad = loads.TryGetValue(x.UserId, out var load) ? load : 0;
-                var periodLoad = periodLoads.TryGetValue(x.UserId, out var pLoad) ? pLoad : 0;
-                var sameDayLoad = sameDayLoads.TryGetValue(x.UserId, out var dayLoad) ? dayLoad : 0;
-                var hasTaughtSubject = subjectTeacherIds.Contains(x.UserId);
-                var hasTaughtClass = classTeacherIds.Contains(x.UserId);
-                var isExactOwner = x.UserId == schedule.OfferingUserId;
+                var isRejectedUser = x.UserId == rejectedUserId || x.PersonKey == schedule.CurrentAssigneePersonKey;
+                var currentLoad = loads.TryGetValue(x.PersonKey, out var load) ? load : 0;
+                var periodLoad = periodLoads.TryGetValue(x.PersonKey, out var pLoad) ? pLoad : 0;
+                var sameDayLoad = sameDayLoads.TryGetValue(x.PersonKey, out var dayLoad) ? dayLoad : 0;
+                var hasTaughtSubject = subjectTeacherIds.Contains(x.UserId) || subjectTeacherIds.Contains(x.PersonKey);
+                var hasTaughtClass = classTeacherIds.Contains(x.UserId) || classTeacherIds.Contains(x.PersonKey);
+                var isExactOwner = x.UserId == schedule.OfferingUserId || x.PersonKey == schedule.OfferingUserPersonKey;
                 var priorityScore = 1000;
                 priorityScore -= currentLoad * 20;
                 priorityScore -= periodLoad * 28;

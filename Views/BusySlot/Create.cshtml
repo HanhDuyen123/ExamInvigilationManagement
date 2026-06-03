@@ -1,110 +1,101 @@
-﻿@model ExamInvigilationManagement.Application.DTOs.LecturerBusySlot.LecturerBusySlotDto
+@model ExamInvigilationManagement.Application.DTOs.LecturerBusySlot.LecturerBusySlotDto
 @using ExamInvigilationManagement.ViewModel;
 
 @{
     ViewData["Title"] = "Thêm lịch bận";
 }
 
-<form asp-action="Create" method="post">
-
+<form asp-action="Create" method="post" id="busySlotForm">
     <div class="form-page">
-
         @await Html.PartialAsync("_FormHeader")
 
         <div class="form-card busy-slot-form-card">
             <div class="busy-slot-form-grid">
+                <div class="form-group">
+                    <label>Ngày bận</label>
+                    <input asp-for="BusyDate" type="date" class="input-modern" />
+                </div>
 
-            <!-- Busy Date -->
-            <div class="form-group">
-                <label>Ngày bận</label>
-                <input asp-for="BusyDate" type="date" class="input-modern" />
-            </div>
+                <div class="form-group">
+                    @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+                    {
+                        Label = "Năm học",
+                        InputId = "yearInput",
+                        HiddenId = "yearId",
+                        HiddenName = "",
+                        MenuId = "yearDropdown",
+                        Placeholder = "Chọn năm học...",
+                        InputClass = "input-modern"
+                    })
+                </div>
 
-            <!-- YEAR -->
-            <div class="form-group">
-                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
-           {
-               Label = "Năm học",
-               InputId = "yearInput",
-               HiddenId = "yearId",
-               HiddenName = "",
-               MenuId = "yearDropdown",
-               Placeholder = "Chọn năm học...",
-               InputClass = "input-modern"
-           })
-            </div>
+                <div class="form-group">
+                    @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+                    {
+                        Label = "Học kỳ",
+                        InputId = "semesterInput",
+                        HiddenId = "semesterId",
+                        HiddenName = "",
+                        MenuId = "semesterDropdown",
+                        Placeholder = "Chọn học kỳ...",
+                        InputClass = "input-modern"
+                    })
+                </div>
 
-            <!-- SEMESTER -->
-            <div class="form-group">
-                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
-           {
-               Label = "Học kỳ",
-               InputId = "semesterInput",
-               HiddenId = "semesterId",
-               HiddenName = "",
-               MenuId = "semesterDropdown",
-               Placeholder = "Chọn học kỳ...",
-               InputClass = "input-modern"
-           })
-            </div>
+                <div class="form-group">
+                    @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+                    {
+                        Label = "Đợt thi",
+                        InputId = "periodInput",
+                        HiddenId = "periodId",
+                        HiddenName = "",
+                        MenuId = "periodDropdown",
+                        Placeholder = "Chọn đợt thi...",
+                        InputClass = "input-modern"
+                    })
+                </div>
 
-            <!-- PERIOD -->
-            <div class="form-group">
-                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
-           {
-               Label = "Đợt thi",
-               InputId = "periodInput",
-               HiddenId = "periodId",
-               HiddenName = "",
-               MenuId = "periodDropdown",
-               Placeholder = "Chọn đợt thi...",
-               InputClass = "input-modern"
-           })
-            </div>
+                <div class="form-group">
+                    @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
+                    {
+                        Label = "Buổi thi",
+                        InputId = "sessionInput",
+                        HiddenId = "sessionId",
+                        HiddenName = "",
+                        MenuId = "sessionDropdown",
+                        Placeholder = "Chọn buổi thi...",
+                        InputClass = "input-modern"
+                    })
+                    <div class="busy-session-actions mt-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="selectPeriodSlots">Chọn cả ngày</button>
+                    </div>
+                </div>
 
-            <!-- SESSION -->
-            <div class="form-group">
-                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
-           {
-               Label = "Buổi thi",
-               InputId = "sessionInput",
-               HiddenId = "sessionId",
-               HiddenName = "",
-               MenuId = "sessionDropdown",
-               Placeholder = "Chọn buổi thi...",
-               InputClass = "input-modern"
-           })
-            </div>
+                <div class="form-group">
+                    <label>Ca bận</label>
+                    <div class="busy-slot-picker">
+                        <div class="busy-slot-picker-actions">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="selectSessionSlots">Chọn cả buổi</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="clearSlots">Bỏ chọn</button>
+                        </div>
+                        <div id="slotCheckboxList" class="busy-slot-checkbox-list text-muted">
+                            Chọn buổi thi để hiển thị các ca có thể đăng ký.
+                        </div>
+                    </div>
+                    <span class="text-danger d-block mt-1" data-valmsg-for="ExamSlotIds"></span>
+                </div>
 
-            <!-- SLOT (submit thật) -->
-            <div class="form-group">
-                @await Html.PartialAsync("_LookupField", new LookupFieldViewModel
-           {
-               Label = "Ca thi",
-               InputId = "slotInput",
-               HiddenId = "slotId",
-               HiddenName = "ExamSlotId",
-               MenuId = "slotDropdown",
-               Placeholder = "Chọn ca thi...",
-               InputClass = "input-modern"
-           })
-            </div>
-
-            <!-- NOTE -->
-            <div class="form-group busy-slot-note-field">
-                <label>Ghi chú</label>
-                <textarea asp-for="Note" class="input-modern"></textarea>
-            </div>
-
+                <div class="form-group busy-slot-note-field">
+                    <label>Ghi chú</label>
+                    <textarea asp-for="Note" class="input-modern"></textarea>
+                </div>
             </div>
 
             @await Html.PartialAsync("_FormFooter")
-
         </div>
-
     </div>
-
 </form>
+
 @section Scripts {
     <script src="~/js/admin_crud.js" asp-append-version="true"></script>
     <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
@@ -112,10 +103,9 @@
     <script>
         function clearBelow(level) {
             const map = {
-                semester: ['semester', 'period', 'session', 'slot'],
-                period: ['period', 'session', 'slot'],
-                session: ['session', 'slot'],
-                slot: ['slot']
+                semester: ['semester', 'period', 'session'],
+                period: ['period', 'session'],
+                session: ['session']
             };
 
             map[level]?.forEach(k => {
@@ -125,6 +115,69 @@
         }
 
         $(function () {
+            function renderSlotCheckboxes(slots, grouped) {
+                const list = $('#slotCheckboxList');
+                list.empty();
+
+                if (!slots.length) {
+                    list.removeClass('busy-slot-checkbox-list-grouped');
+                    list.addClass('text-muted').text('Không có ca thi phù hợp.');
+                    return;
+                }
+
+                list.removeClass('text-muted');
+                list.toggleClass('busy-slot-checkbox-list-grouped', !!grouped);
+
+                if (grouped) {
+                    const groups = new Map();
+                    slots.forEach(function (slot) {
+                        const sessionName = slot.sessionName || 'Buổi thi';
+                        if (!groups.has(sessionName)) groups.set(sessionName, []);
+                        groups.get(sessionName).push(slot);
+                    });
+
+                    groups.forEach(function (groupSlots, sessionName) {
+                        const group = $(`<div class="busy-slot-session-group"><div class="busy-slot-session-title">${sessionName}</div><div class="busy-slot-session-items"></div></div>`);
+                        const items = group.find('.busy-slot-session-items');
+                        groupSlots.forEach(function (slot) {
+                            const id = 'slot_' + slot.id;
+                            items.append(`
+                                <label class="busy-slot-check" for="${id}">
+                                    <input type="checkbox" id="${id}" name="ExamSlotIds" value="${slot.id}" />
+                                    <span>${slot.name}</span>
+                                </label>`);
+                        });
+                        list.append(group);
+                    });
+                    return;
+                }
+
+                slots.forEach(function (slot) {
+                    const id = 'slot_' + slot.id;
+                    list.append(`
+                        <label class="busy-slot-check" for="${id}">
+                            <input type="checkbox" id="${id}" name="ExamSlotIds" value="${slot.id}" />
+                            <span>${slot.name}</span>
+                        </label>`);
+                });
+            }
+
+            function syncBusySlotMode() { }
+
+            function loadSlotsBySession(sessionId) {
+                return $.get('@Url.Action("Slots", "Lookup")', { sessionId: sessionId });
+            }
+
+            function loadSessionSlots() {
+                const sessionId = $('#sessionId').val();
+                if (!sessionId) {
+                    renderSlotCheckboxes([]);
+                    return;
+                }
+
+                loadSlotsBySession(sessionId).done(renderSlotCheckboxes);
+            }
+
             AdminLookup.create({
                 key: 'busy-year',
                 input: '#yearInput',
@@ -133,10 +186,8 @@
                 url: '@Url.Action("AcademyYears", "Lookup")',
                 valueField: 'id',
                 textField: 'name',
-                onSelect: function () {
-                    clearBelow('semester');
-                },
-                onClear: function () { }
+                onSelect: function () { clearBelow('semester'); renderSlotCheckboxes([]); syncBusySlotMode(); },
+                onClear: function () { renderSlotCheckboxes([]); syncBusySlotMode(); }
             });
 
             AdminLookup.create({
@@ -146,11 +197,7 @@
                 menu: '#semesterDropdown',
                 url: '@Url.Action("Semesters", "Lookup")',
                 queryParam: 'keyword',
-                extraParams: function () {
-                    return {
-                        academyYearId: $('#yearId').val()
-                    };
-                },
+                extraParams: function () { return { academyYearId: $('#yearId').val() }; },
                 valueField: 'id',
                 textField: 'name',
                 beforeSearch: function () {
@@ -160,10 +207,8 @@
                     }
                     return true;
                 },
-                onSelect: function () {
-                    clearBelow('period');
-                },
-                onClear: function () { }
+                onSelect: function () { clearBelow('period'); renderSlotCheckboxes([]); syncBusySlotMode(); },
+                onClear: function () { renderSlotCheckboxes([]); syncBusySlotMode(); }
             });
 
             AdminLookup.create({
@@ -173,20 +218,12 @@
                 menu: '#periodDropdown',
                 url: '@Url.Action("Periods", "Lookup")',
                 queryParam: 'keyword',
-                extraParams: function () {
-                    return {
-                        semesterId: $('#semesterId').val()
-                    };
-                },
+                extraParams: function () { return { semesterId: $('#semesterId').val() }; },
                 valueField: 'id',
                 textField: 'name',
-                beforeSearch: function () {
-                    return !!$('#semesterId').val();
-                },
-                onSelect: function () {
-                    clearBelow('session');
-                },
-                onClear: function () { }
+                beforeSearch: function () { return !!$('#semesterId').val(); },
+                onSelect: function () { clearBelow('session'); renderSlotCheckboxes([]); syncBusySlotMode(); },
+                onClear: function () { renderSlotCheckboxes([]); syncBusySlotMode(); }
             });
 
             AdminLookup.create({
@@ -196,49 +233,70 @@
                 menu: '#sessionDropdown',
                 url: '@Url.Action("Sessions", "Lookup")',
                 queryParam: 'keyword',
-                extraParams: function () {
-                    return {
-                        periodId: $('#periodId').val()
-                    };
-                },
+                extraParams: function () { return { periodId: $('#periodId').val() }; },
                 valueField: 'id',
                 textField: 'name',
-                beforeSearch: function () {
-                    return !!$('#periodId').val();
-                },
-                onSelect: function () {
-                    clearBelow('slot');
-                },
-                onClear: function () { }
+                beforeSearch: function () { return !!$('#periodId').val(); },
+                onSelect: function () { loadSessionSlots(); syncBusySlotMode(); },
+                onClear: function () { renderSlotCheckboxes([]); syncBusySlotMode(); }
             });
 
-            AdminLookup.create({
-                key: 'busy-slot',
-                input: '#slotInput',
-                hidden: '#slotId',
-                menu: '#slotDropdown',
-                url: '@Url.Action("Slots", "Lookup")',
-                queryParam: 'keyword',
-                extraParams: function () {
-                    return {
-                        sessionId: $('#sessionId').val()
-                    };
-                },
-                valueField: 'id',
-                textField: 'name',
-                beforeSearch: function () {
-                    return !!$('#sessionId').val();
-                },
-                onSelect: function () { },
-                onClear: function () { }
+            $('#selectSessionSlots').on('click', function () {
+                if (!$('#sessionId').val()) {
+                    AppNotify.show('warning', 'Vui lòng chọn buổi thi trước.');
+                    return;
+                }
+                $('#slotCheckboxList input[type="checkbox"]').prop('checked', true);
+            });
+
+            $('#selectPeriodSlots').on('click', function () {
+                const periodId = $('#periodId').val();
+                if (!periodId) {
+                    AppNotify.show('warning', 'Vui lòng chọn đợt thi trước.');
+                    return;
+                }
+
+                const sessionLookup = AdminLookup.get('busy-session');
+                if (sessionLookup) sessionLookup.clear();
+                syncBusySlotMode();
+
+                $.get('@Url.Action("Sessions", "Lookup")', { periodId: periodId }).done(function (sessions) {
+                    const requests = sessions.map(function (session) { return loadSlotsBySession(session.id); });
+                    if (!requests.length) {
+                        renderSlotCheckboxes([]);
+                        return;
+                    }
+
+                    $.when.apply($, requests).done(function () {
+                        const responses = requests.length === 1 ? [arguments] : Array.from(arguments);
+                        const slots = responses.flatMap(function (response, index) {
+                            const data = response[0] || [];
+                            const sessionName = sessions[index]?.name || sessions[index]?.text || 'Buổi thi';
+                            return data.map(function (slot) { return { ...slot, sessionName }; });
+                        });
+                        renderSlotCheckboxes(slots, true);
+                        $('#slotCheckboxList input[type="checkbox"]').prop('checked', true);
+                    });
+                });
+            });
+
+            $('#clearSlots').on('click', function () {
+                $('#slotCheckboxList input[type="checkbox"]').prop('checked', false);
+            });
+
+            syncBusySlotMode();
+
+            $('#busySlotForm').on('submit', function (e) {
+                if ($('#slotCheckboxList input[type="checkbox"]:checked').length === 0) {
+                    e.preventDefault();
+                    $('span[data-valmsg-for="ExamSlotIds"]').text('Vui lòng chọn ít nhất một ca bận.');
+                }
             });
         });
     </script>
 
     <style>
-        .busy-slot-form-card {
-            max-width: 980px;
-        }
+        .busy-slot-form-card { max-width: 980px; }
 
         .busy-slot-form-grid {
             display: grid;
@@ -246,20 +304,75 @@
             gap: 14px 16px;
         }
 
-        .busy-slot-form-grid .form-group {
-            margin-bottom: 0;
+        .busy-slot-form-grid .form-group { margin-bottom: 0; }
+
+        .busy-slot-note-field { grid-column: 1 / -1; }
+
+        .busy-slot-note-field textarea { min-height: 92px; }
+
+        .busy-slot-picker {
+            border: 1px solid rgba(15, 23, 42, 0.12);
+            border-radius: 14px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.72);
         }
 
-        .busy-slot-note-field {
-            grid-column: 1 / -1;
+        .busy-slot-picker-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
         }
 
-        .busy-slot-note-field textarea {
-            min-height: 92px;
+        .busy-session-actions {
+            display: flex;
+            justify-content: flex-start;
+        }
+
+        .busy-slot-checkbox-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .busy-slot-check {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 10px;
+            border: 1px solid rgba(79, 70, 229, 0.12);
+            border-radius: 12px;
+            background: #fff;
+            cursor: pointer;
+        }
+
+        .busy-slot-checkbox-list-grouped {
+            grid-template-columns: 1fr;
+        }
+
+        .busy-slot-session-group {
+            border: 1px solid var(--line-soft);
+            border-radius: 14px;
+            padding: 10px;
+            background: var(--surface-3);
+        }
+
+        .busy-slot-session-title {
+            color: var(--text-strong);
+            font-weight: 900;
+            margin-bottom: 8px;
+        }
+
+        .busy-slot-session-items {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
         }
 
         @@media (max-width: 768px) {
-            .busy-slot-form-grid {
+            .busy-slot-form-grid,
+            .busy-slot-checkbox-list,
+            .busy-slot-session-items {
                 grid-template-columns: 1fr;
             }
         }

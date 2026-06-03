@@ -1,0 +1,47 @@
+@using ExamInvigilationManagement.ViewModel
+@model CrudIndexViewModel
+
+@{
+    ViewData["Title"] = "Quản lý giảng viên";
+    var showFacultyFilter = ViewBag.ShowFacultyFilter as bool? ?? false;
+}
+
+@await Html.PartialAsync("_CrudIndex", Model)
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+    <script>
+        $(function () {
+            CrudPage.init({
+                api: '@Url.Action("GetList", "LecturerManagement")',
+                deleteUrl: '@Url.Action("Delete", "LecturerManagement")',
+                tableId: '#crudTable',
+                searchBox: '#keyword',
+                pageSize: '#pageSize',
+                filterSelector: '.crud-filter',
+                deleteName: '#deleteName',
+                extraData: function () {
+                    return {
+                        facultyId: $('#facultyId').val() || null,
+                        status: $('#status').val() || null
+                    };
+                }
+            });
+
+            if (@showFacultyFilter.ToString().ToLower() && $('#facultyInput').length) {
+                AdminLookup.create({
+                    key: 'lecturer-management-faculty-filter',
+                    input: '#facultyInput',
+                    hidden: '#facultyId',
+                    menu: '#facultyDropdown',
+                    url: '@Url.Action("SearchFaculties", "LecturerManagement")',
+                    valueField: 'id',
+                    textField: 'name',
+                    onSelect: function () { CrudPage.loadData(1); },
+                    onClear: function () { CrudPage.loadData(1); }
+                });
+            }
+        });
+    </script>
+}

@@ -40,6 +40,7 @@ namespace ExamInvigilationManagement.Application.DTOs.Admin.User
 
         [Range(1, 255, ErrorMessage = "Vui lòng chọn chức vụ.")]
         public byte PositionId { get; set; }
+        public string? PositionName { get; set; }
 
         public bool IsActive { get; set; } = true;
     }

@@ -24,6 +24,7 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
         Task<bool> FacultyExistsAsync(int facultyId);
 
         Task<string?> GetRoleNameByIdAsync(byte roleId);
+        Task<byte?> GetRoleIdByNameAsync(string roleName);
 
         Task<bool> ExistsInformationInRoleAsync(
             int informationId,

@@ -216,7 +216,16 @@
             rows.forEach((row, index) => row.style.display = Math.floor(index / pageSize) + 1 === page ? '' : 'none');
             let html = '';
             if (page > 1) html += `<button type="button" class="page-link" data-page="${page - 1}">‹</button>`;
-            for (let i = 1; i <= totalPages; i++) html += `<button type="button" class="page-link ${i === page ? 'active' : ''}" data-page="${i}">${i}</button>`;
+            const pages = [];
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || Math.abs(i - page) <= 1) pages.push(i);
+            }
+            let previous = 0;
+            pages.forEach(function (i) {
+                if (previous && i - previous > 1) html += `<span class="page-link disabled">...</span>`;
+                html += `<button type="button" class="page-link ${i === page ? 'active' : ''}" data-page="${i}">${i}</button>`;
+                previous = i;
+            });
             if (page < totalPages) html += `<button type="button" class="page-link" data-page="${page + 1}">›</button>`;
             pager.innerHTML = html;
         }

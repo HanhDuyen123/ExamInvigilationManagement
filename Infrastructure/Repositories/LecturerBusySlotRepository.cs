@@ -177,6 +177,12 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             await _context.SaveChangesAsync();
         }
 
+        public async Task AddRangeAsync(List<LecturerBusySlot> entities)
+        {
+            _context.LecturerBusySlots.AddRange(entities.Select(x => x.ToEntity()));
+            await _context.SaveChangesAsync();
+        }
+
         public async Task UpdateAsync(LecturerBusySlot entity)
         {
             var data = await _context.LecturerBusySlots.FindAsync(entity.Id);

@@ -131,6 +131,7 @@
                 showMessage('success', result.message || 'Đã ghi nhận phản hồi.');
                 $('#responseRejectNote').val('');
                 bootstrap.Modal.getInstance(document.getElementById('responseRejectModal'))?.hide();
+                if (status === 'Từ chối') $('#status').val('Từ chối');
                 loadData(1);
             }
 
