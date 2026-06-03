@@ -100,6 +100,66 @@ html[data-theme="dark"] body.app-shell-body .alert-danger {
     color: var(--text-main) !important;
 }
 
+html[data-theme="dark"] body.app-shell-body .statistics-page .stat-metric,
+html[data-theme="dark"] body.app-shell-body .statistics-page .stat-panel,
+html[data-theme="dark"] body.app-shell-body .statistics-page .legend-row,
+html[data-theme="dark"] body.app-shell-body .statistics-page .response-tile,
+html[data-theme="dark"] body.app-shell-body .statistics-page .statistics-data-table-wrap {
+    background: var(--surface-1) !important;
+    border-color: var(--line-soft) !important;
+    color: var(--text-main) !important;
+    box-shadow: var(--card-shadow) !important;
+}
+
+html[data-theme="dark"] body.app-shell-body .statistics-page .accent-panel,
+html[data-theme="dark"] body.app-shell-body .statistics-page .risk-panel {
+    background: linear-gradient(180deg, var(--surface-1), var(--surface-3)) !important;
+}
+
+html[data-theme="dark"] body.app-shell-body .statistics-page .stat-value,
+html[data-theme="dark"] body.app-shell-body .statistics-page .panel-title,
+html[data-theme="dark"] body.app-shell-body .statistics-page .donut-center strong,
+html[data-theme="dark"] body.app-shell-body .statistics-page .legend-row strong,
+html[data-theme="dark"] body.app-shell-body .statistics-page .response-tile strong,
+html[data-theme="dark"] body.app-shell-body .statistics-page .bar-row strong {
+    color: var(--text-strong) !important;
+}
+
+html[data-theme="dark"] body.app-shell-body .statistics-page .stat-label,
+html[data-theme="dark"] body.app-shell-body .statistics-page .stat-hint,
+html[data-theme="dark"] body.app-shell-body .statistics-page .panel-subtitle,
+html[data-theme="dark"] body.app-shell-body .statistics-page .donut-center span,
+html[data-theme="dark"] body.app-shell-body .statistics-page .legend-row small,
+html[data-theme="dark"] body.app-shell-body .statistics-page .response-tile span,
+html[data-theme="dark"] body.app-shell-body .statistics-page .bar-label,
+html[data-theme="dark"] body.app-shell-body .statistics-page .empty-stat {
+    color: var(--text-muted) !important;
+}
+
+html[data-theme="dark"] body.app-shell-body .statistics-page .legend-label,
+html[data-theme="dark"] body.app-shell-body .statistics-page .rate-cell span {
+    color: var(--text-main) !important;
+}
+
+html[data-theme="dark"] body.app-shell-body .statistics-page .panel-total,
+html[data-theme="dark"] body.app-shell-body .statistics-page .bar-track,
+html[data-theme="dark"] body.app-shell-body .statistics-page .rate-track,
+html[data-theme="dark"] body.app-shell-body .statistics-page .donut-bg {
+    background: var(--surface-3) !important;
+    color: var(--text-main) !important;
+    border-color: var(--line-soft) !important;
+    stroke: var(--line-medium) !important;
+}
+
+html[data-theme="dark"] body.app-shell-body .statistics-page .statistics-data-table-wrap thead th,
+html[data-theme="dark"] body.app-shell-body .statistics-page .statistics-data-table-wrap tbody td,
+html[data-theme="dark"] body.app-shell-body .statistics-page .statistics-data-table-wrap tbody tr:nth-child(even) td {
+    background: var(--surface-2) !important;
+    color: var(--text-main) !important;
+    border-color: var(--line-soft) !important;
+    box-shadow: none !important;
+}
+
 body.app-shell-body {
     margin: 0;
     min-height: 100vh;

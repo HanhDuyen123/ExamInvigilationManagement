@@ -101,8 +101,8 @@ namespace ExamInvigilationManagement.Application.Services
                 Col("PeriodName", "Đợt thi", true, "Tên đợt thi trong học kỳ.", "Đợt 1"),
                 Col("SessionName", "Buổi thi", true, "Tên buổi thi trong đợt thi; có thể nhập Cả ngày để lấy tất cả buổi/ca trong ngày.", "Sáng"),
                 Col("SlotName", "Ca thi", false, "Tên ca thi trong buổi thi; nhập Nguyên buổi để lấy tất cả ca của buổi. Nếu Buổi thi là Cả ngày thì có thể để trống hoặc nhập Nguyên buổi.", "Ca 1"),
-                Col("BuildingId", "Mã giảng đường", true, "Mã giảng đường dạng string, ví dụ A1.", "A1"),
-                Col("RoomName", "Tên phòng", true, "Tên phòng trong giảng đường đã chọn.", "101"),
+                Col("BuildingId", "Mã giảng đường", false, "Mã giảng đường nếu có, ví dụ A1. Có thể để trống với phòng thi độc lập.", "A1"),
+                Col("RoomName", "Tên phòng", true, "Tên phòng thi. Có thể nhập 101, A1.101, P.DIEN AN hoặc DIEN AN.", "101"),
                 Col("ExamDate", "Ngày thi", true, "Định dạng yyyy-MM-dd hoặc dd/MM/yyyy.", "2026-06-01"),
                 Col("Status", "Trạng thái", false, "Mặc định Chờ phân công.", "Chờ phân công")
             ],
@@ -377,7 +377,7 @@ namespace ExamInvigilationManagement.Application.Services
             var periods = await _db.ExamPeriods.Select(x => new { x.PeriodId, x.PeriodName, x.SemesterId }).ToListAsync(ct);
             var sessions = await _db.ExamSessions.Select(x => new { x.SessionId, x.SessionName, x.PeriodId }).ToListAsync(ct);
             var slots = await _db.ExamSlots.Select(x => new { x.SlotId, x.SlotName, x.SessionId }).ToListAsync(ct);
-            var rooms = await _db.Rooms.Select(x => new { x.RoomId, x.RoomName, x.BuildingId }).ToListAsync(ct);
+            var rooms = await _db.Rooms.Select(x => new ImportRoomLookup(x.RoomId, x.RoomName, x.BuildingId)).ToListAsync(ct);
             var examFormats = await _db.ExamFormats.Where(x => x.IsActive).Select(x => new { x.ExamFormatId, x.Code, x.Name }).ToListAsync(ct);
             var usersById = await _db.Users.Select(x => new { x.UserId, x.UserName }).ToDictionaryAsync(x => x.UserId, x => x.UserName, ct);
             var offerings = (await _db.CourseOfferings
@@ -407,9 +407,7 @@ namespace ExamInvigilationManagement.Application.Services
                 var slotRaw = Val(row, "Ca thi");
                 var periodSessions = sessions.Where(x => period == null || x.PeriodId == period.PeriodId).ToList();
                 var targetSlots = ResolveScheduleTargets(periodSessions, slots, sessionRaw, slotRaw, result, r);
-                var buildingId = Val(row, "Mã giảng đường").Trim();
-                Required(result, r, "Mã giảng đường", buildingId);
-                var room = ResolveOne(rooms.Where(x => string.Equals(x.BuildingId, buildingId, StringComparison.OrdinalIgnoreCase)), x => x.RoomName, Val(row, "Tên phòng"), result, r, "Tên phòng");
+                var room = ResolveImportRoom(rooms, Val(row, "Mã giảng đường"), Val(row, "Tên phòng"), result, r);
                 var roomId = room?.RoomId ?? 0;
                 var examFormatValue = Val(row, "Hình thức thi").Trim();
                 Required(result, r, "Hình thức thi", examFormatValue);
@@ -424,7 +422,7 @@ namespace ExamInvigilationManagement.Application.Services
                 if (!ValidScheduleStatuses.Contains(status)) result.Errors.Add(Error(r, "Trạng thái", status, "Không hợp lệ."));
                 foreach (var target in targetSlots)
                 {
-                    var schedule = new E.ExamSchedule { OfferingId = offeringId, AcademyYearId = yearId, SemesterId = semesterId, PeriodId = periodId, SessionId = target.SessionId, SlotId = target.SlotId, RoomId = roomId, ExamFormatId = examFormat?.ExamFormatId, ExamDate = examDate!.Value, Status = status };
+                    var schedule = new E.ExamSchedule { OfferingId = offeringId, AcademyYearId = yearId, SemesterId = semesterId, PeriodId = periodId, SessionId = target.SessionId, SlotId = target.SlotId, RoomId = roomId, Room = room?.Entity, ExamFormatId = examFormat?.ExamFormatId, ExamDate = examDate!.Value, Status = status };
                     if (offering?.Entity != null) schedule.Offering = offering.Entity;
                     list.Add(schedule);
                 }
@@ -652,7 +650,10 @@ namespace ExamInvigilationManagement.Application.Services
 
         private async Task<int> UpsertExamSchedulesAsync(IEnumerable<E.ExamSchedule> schedules, CancellationToken ct)
         {
-            var incoming = schedules
+            var incoming = schedules.ToList();
+            await EnsureImportedScheduleRoomsAsync(incoming, ct);
+
+            incoming = incoming
                 .GroupBy(x => ScheduleImportKey(x.OfferingId, x.RoomId, x.ExamDate, x.SlotId), StringComparer.OrdinalIgnoreCase)
                 .Select(x => x.Last())
                 .ToList();
@@ -670,7 +671,9 @@ namespace ExamInvigilationManagement.Application.Services
                     && dates.Contains(x.ExamDate.Date))
                 .ToListAsync(ct);
 
-            var existingByKey = existing.ToDictionary(x => ScheduleImportKey(x.OfferingId, x.RoomId, x.ExamDate, x.SlotId), StringComparer.OrdinalIgnoreCase);
+            var existingByKey = existing
+                .GroupBy(x => ScheduleImportKey(x.OfferingId, x.RoomId, x.ExamDate, x.SlotId), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(x => x.Key, x => x.First(), StringComparer.OrdinalIgnoreCase);
 
             foreach (var item in incoming)
             {
@@ -689,6 +692,60 @@ namespace ExamInvigilationManagement.Application.Services
             }
 
             return incoming.Count;
+        }
+
+        private async Task EnsureImportedScheduleRoomsAsync(List<E.ExamSchedule> schedules, CancellationToken ct)
+        {
+            var roomsToResolve = schedules
+                .Where(x => x.RoomId <= 0 && x.Room != null)
+                .Select(x => x.Room!)
+                .GroupBy(x => RoomImportKey(x.BuildingId, x.RoomName), StringComparer.OrdinalIgnoreCase)
+                .Select(x => x.First())
+                .ToList();
+
+            if (roomsToResolve.Count == 0) return;
+
+            var buildingIds = roomsToResolve.Select(x => x.BuildingId).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            var existingBuildings = await _db.Buildings
+                .Where(x => buildingIds.Contains(x.BuildingId))
+                .Select(x => x.BuildingId)
+                .ToListAsync(ct);
+            var existingBuildingSet = existingBuildings.ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var buildingId in buildingIds.Where(x => !existingBuildingSet.Contains(x)))
+            {
+                _db.Buildings.Add(new E.Building
+                {
+                    BuildingId = buildingId,
+                    BuildingName = BuildImportedBuildingName(buildingId)
+                });
+            }
+
+            var existingRooms = await _db.Rooms
+                .Where(x => buildingIds.Contains(x.BuildingId))
+                .ToListAsync(ct);
+            var existingRoomByKey = existingRooms
+                .GroupBy(x => RoomImportKey(x.BuildingId, x.RoomName), StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(x => x.Key, x => x.First(), StringComparer.OrdinalIgnoreCase);
+
+            foreach (var room in roomsToResolve)
+            {
+                if (existingRoomByKey.ContainsKey(RoomImportKey(room.BuildingId, room.RoomName)))
+                    continue;
+
+                room.Building = null!;
+                _db.Rooms.Add(room);
+                existingRoomByKey[RoomImportKey(room.BuildingId, room.RoomName)] = room;
+            }
+
+            await _db.SaveChangesAsync(ct);
+
+            foreach (var schedule in schedules.Where(x => x.RoomId <= 0 && x.Room != null))
+            {
+                var room = existingRoomByKey[RoomImportKey(schedule.Room!.BuildingId, schedule.Room.RoomName)];
+                schedule.RoomId = room.RoomId;
+                schedule.Room = null!;
+            }
         }
 
         private static string ScheduleImportKey(int offeringId, int roomId, DateTime examDate, int slotId)
@@ -847,7 +904,7 @@ namespace ExamInvigilationManagement.Application.Services
         {
             room = (room ?? string.Empty).Trim();
             var cut = room.IndexOfAny(['.', '-']);
-            return cut > 0 ? room[..cut] : room;
+            return cut > 0 ? room[..cut] : string.Empty;
         }
         private static string ParseRoomName(string room, string building)
         {
@@ -856,6 +913,112 @@ namespace ExamInvigilationManagement.Application.Services
             if (!string.IsNullOrWhiteSpace(building) && room.StartsWith(building, StringComparison.OrdinalIgnoreCase))
                 room = room[building.Length..].TrimStart('.', '-').Trim();
             return room;
+        }
+
+        private static ImportRoomLookup? ResolveImportRoom(List<ImportRoomLookup> rooms, string buildingRaw, string roomRaw, ImportResultDto result, int row)
+        {
+            var (buildingId, roomName) = NormalizeImportRoomParts(buildingRaw, roomRaw);
+
+            Required(result, row, "Tên phòng", roomName);
+            if (string.IsNullOrWhiteSpace(roomName)) return null;
+
+            if (buildingId.Length > 10)
+            {
+                result.Errors.Add(Error(row, "Mã giảng đường", buildingId, "Tối đa 10 ký tự."));
+                return null;
+            }
+
+            if (roomName.Length > 50)
+            {
+                result.Errors.Add(Error(row, "Tên phòng", roomName, "Tối đa 50 ký tự."));
+                return null;
+            }
+
+            var existing = rooms.FirstOrDefault(x =>
+                string.Equals(x.BuildingId, buildingId, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(x.RoomName, roomName, StringComparison.OrdinalIgnoreCase));
+
+            if (existing != null) return existing;
+
+            var created = new ImportRoomLookup(0, roomName, buildingId)
+            {
+                Entity = new E.Room
+                {
+                    BuildingId = buildingId,
+                    RoomName = roomName
+                }
+            };
+            rooms.Add(created);
+            return created;
+        }
+
+        private static (string BuildingId, string RoomName) NormalizeImportRoomParts(string buildingRaw, string roomRaw)
+        {
+            var room = NormalizeImportRoomName(roomRaw);
+            var building = NormalizeImportBuildingId(buildingRaw);
+
+            if (string.IsNullOrWhiteSpace(building))
+            {
+                var parsedBuilding = ParseBuilding(room);
+                if (!string.Equals(parsedBuilding, room, StringComparison.OrdinalIgnoreCase))
+                {
+                    building = NormalizeImportBuildingId(parsedBuilding);
+                    room = NormalizeImportRoomName(ParseRoomName(room, parsedBuilding));
+                }
+            }
+            else
+            {
+                room = NormalizeImportRoomName(ParseRoomName(room, building));
+            }
+
+            if (string.IsNullOrWhiteSpace(building))
+                building = "KHAC";
+
+            return (building, room);
+        }
+
+        private static string NormalizeImportBuildingId(string value)
+        {
+            value = (value ?? string.Empty).Trim();
+            value = RegexReplaceWhitespace(value, string.Empty);
+            return value.ToUpperInvariant();
+        }
+
+        private static string NormalizeImportRoomName(string value)
+        {
+            value = (value ?? string.Empty).Trim();
+            value = RegexReplaceWhitespace(value, " ");
+            return value.ToUpperInvariant();
+        }
+
+        private static string RegexReplaceWhitespace(string value, string replacement)
+        {
+            var builder = new StringBuilder(value.Length);
+            var lastWasWhitespace = false;
+            foreach (var ch in value)
+            {
+                if (char.IsWhiteSpace(ch))
+                {
+                    if (!lastWasWhitespace && replacement.Length > 0)
+                        builder.Append(replacement);
+                    lastWasWhitespace = true;
+                    continue;
+                }
+
+                builder.Append(ch);
+                lastWasWhitespace = false;
+            }
+
+            return builder.ToString().Trim();
+        }
+
+        private static string RoomImportKey(string buildingId, string roomName) => $"{buildingId}|{roomName}";
+
+        private static string BuildImportedBuildingName(string buildingId)
+        {
+            return string.Equals(buildingId, "KHAC", StringComparison.OrdinalIgnoreCase)
+                ? "Phòng thi độc lập/khác"
+                : $"Khu {buildingId}";
         }
 
         private static string ParseOrgName(string value)
@@ -1113,5 +1276,10 @@ namespace ExamInvigilationManagement.Application.Services
             string ClassName,
             string GroupNumber,
             E.CourseOffering? Entity);
+
+        private sealed record ImportRoomLookup(int RoomId, string RoomName, string BuildingId)
+        {
+            public E.Room? Entity { get; init; }
+        }
     }
 }

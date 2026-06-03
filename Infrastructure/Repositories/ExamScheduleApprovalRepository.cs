@@ -120,7 +120,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     BuildingId = x.Room.BuildingId,
                     BuildingName = x.Room.Building.BuildingName,
                     RoomName = x.Room.RoomName,
-                    RoomDisplay = x.Room.BuildingId + "." + x.Room.RoomName,
+                    RoomDisplay = x.Room.BuildingId == "KHAC" ? x.Room.RoomName : x.Room.BuildingId + "." + x.Room.RoomName,
 
                     x.ExamDate,
                     x.Status,

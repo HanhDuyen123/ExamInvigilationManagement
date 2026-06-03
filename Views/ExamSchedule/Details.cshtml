@@ -41,7 +41,10 @@
             <div class="detail-item"><span>Ngày thi</span><strong>@(Model.ExamDate?.ToString("dd/MM/yyyy") ?? "-")</strong></div>
             <div class="detail-item"><span>Buổi thi</span><strong>@(Model.SessionName ?? "-")</strong></div>
             <div class="detail-item"><span>Ca thi</span><strong>@(Model.SlotName ?? "-")</strong></div>
-            <div class="detail-item"><span>Giảng đường</span><strong>@(Model.BuildingName ?? Model.BuildingId ?? "-")</strong></div>
+            @if (!string.Equals(Model.BuildingId, "KHAC", StringComparison.OrdinalIgnoreCase))
+            {
+                <div class="detail-item"><span>Giảng đường</span><strong>@(Model.BuildingName ?? Model.BuildingId ?? "-")</strong></div>
+            }
             <div class="detail-item"><span>Phòng thi</span><strong>@(Model.RoomName ?? "-")</strong></div>
         </div>
 

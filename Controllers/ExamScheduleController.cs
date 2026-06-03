@@ -29,6 +29,7 @@ namespace ExamInvigilationManagement.Controllers
         private readonly IEmailLogService _emailLogService;
         private readonly EmailSettings _emailSettings;
         private readonly IWebHostEnvironment _environment;
+        private readonly IConfiguration _configuration;
 
         public ExamScheduleController(
             IExamScheduleService service,
@@ -39,7 +40,8 @@ namespace ExamInvigilationManagement.Controllers
             IEmailService emailService,
             IEmailLogService emailLogService,
             IOptions<EmailSettings> emailOptions,
-            IWebHostEnvironment environment)
+            IWebHostEnvironment environment,
+            IConfiguration configuration)
             : base(userService)
         {
             _service = service;
@@ -50,6 +52,7 @@ namespace ExamInvigilationManagement.Controllers
             _emailLogService = emailLogService;
             _emailSettings = emailOptions.Value;
             _environment = environment;
+            _configuration = configuration;
         }
 
         public IActionResult Index(string? status = null)
@@ -645,11 +648,11 @@ namespace ExamInvigilationManagement.Controllers
             if (!currentFacultyId.HasValue)
                 return BadRequest(new { success = false, message = "Không xác định được khoa của tài khoản hiện tại." });
 
-            var confirmationUrl = Url.Action(
+            var confirmationPath = Url.Action(
                 "Index",
                 "InvigilatorResponse",
-                new { area = "Lecturer", status = "Chưa phản hồi" },
-                Request.Scheme) ?? "/Lecturer/InvigilatorResponse?status=Ch%C6%B0a%20ph%E1%BA%A3n%20h%E1%BB%93i";
+                new { area = "Lecturer", status = "Chưa phản hồi" }) ?? "/Lecturer/InvigilatorResponse?status=Ch%C6%B0a%20ph%E1%BA%A3n%20h%E1%BB%93i";
+            var confirmationUrl = BuildAbsoluteUrl(confirmationPath);
 
             var result = await _invigilatorResponseService.SendConfirmationAsync(new InvigilatorConfirmationRequestDto
             {
@@ -721,6 +724,17 @@ namespace ExamInvigilationManagement.Controllers
             }
 
             return (role, userId, facultyId);
+        }
+
+        private string BuildAbsoluteUrl(string path)
+        {
+            var baseUrl = _configuration["App:BaseUrl"]?.Trim().TrimEnd('/');
+            if (string.IsNullOrWhiteSpace(baseUrl))
+            {
+                baseUrl = $"{Request.Scheme}://{Request.Host}".TrimEnd('/');
+            }
+
+            return $"{baseUrl}/{path.TrimStart('/')}";
         }
 
         public class ExamScheduleApprovalRequestDto

@@ -15,7 +15,7 @@ public partial class Room
     [StringLength(10)]
     public string BuildingId { get; set; } = null!;
 
-    [StringLength(5)]
+    [StringLength(50)]
     public string RoomName { get; set; } = null!;
 
     public int? Capacity { get; set; }

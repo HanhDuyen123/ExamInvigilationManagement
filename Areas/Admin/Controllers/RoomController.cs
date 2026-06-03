@@ -53,7 +53,7 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
                     (x.BuildingName ?? "").Contains(keyword, StringComparison.OrdinalIgnoreCase))
                 .ToList();
 
-            return Json(data.Select(x => new { id = x.RoomId, name = $"{x.BuildingId}.{x.RoomName}" }));
+            return Json(data.Select(x => new { id = x.RoomId, name = string.Equals(x.BuildingId, "KHAC", StringComparison.OrdinalIgnoreCase) ? x.RoomName : $"{x.BuildingId}.{x.RoomName}" }));
         }
 
         [HttpGet]

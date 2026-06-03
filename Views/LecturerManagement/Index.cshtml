@@ -4,6 +4,7 @@
 @{
     ViewData["Title"] = "Quản lý giảng viên";
     var showFacultyFilter = ViewBag.ShowFacultyFilter as bool? ?? false;
+    ViewBag.HideSearchPanelToggle = true;
 }
 
 @await Html.PartialAsync("_CrudIndex", Model)

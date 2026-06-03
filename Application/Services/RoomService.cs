@@ -158,7 +158,7 @@ namespace ExamInvigilationManagement.Application.Services
         private static string NormalizeRoomName(string? roomName)
         {
             var value = (roomName ?? string.Empty).Trim();
-            value = Regex.Replace(value, @"\s+", "");
+            value = Regex.Replace(value, @"\s+", " ");
             return value.ToUpperInvariant();
         }
 
@@ -173,11 +173,11 @@ namespace ExamInvigilationManagement.Application.Services
             if (string.IsNullOrWhiteSpace(roomName))
                 throw new InvalidOperationException("Vui lòng nhập tên phòng.");
 
-            if (roomName.Length > 5)
-                throw new InvalidOperationException("Tên phòng tối đa 5 ký tự.");
+            if (roomName.Length > 50)
+                throw new InvalidOperationException("Tên phòng tối đa 50 ký tự.");
 
-            if (!Regex.IsMatch(roomName, @"^[A-Z0-9]+$"))
-                throw new InvalidOperationException("Tên phòng chỉ được chứa chữ cái và số, không có khoảng trắng.");
+            if (!Regex.IsMatch(roomName, @"^[\p{L}0-9 ._\-/]+$"))
+                throw new InvalidOperationException("Tên phòng chỉ được chứa chữ cái, số, khoảng trắng, dấu chấm, gạch dưới hoặc gạch nối.");
         }
 
         private static void ValidateCapacity(int? capacity)

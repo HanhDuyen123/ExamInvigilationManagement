@@ -342,7 +342,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .Select(e => new
                 {
                     e.RoomId,
-                    DisplayText = e.Room.BuildingId + "." + e.Room.RoomName
+                    DisplayText = e.Room.BuildingId == "KHAC" ? e.Room.RoomName : e.Room.BuildingId + "." + e.Room.RoomName
                 })
                 .ToListAsync();
 

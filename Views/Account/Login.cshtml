@@ -376,7 +376,10 @@
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="returnUrl" value="@returnUrl" />
 
-                    @Html.ValidationSummary(false, "", new { @class = "auth-alert" })
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        @Html.ValidationSummary(false, "", new { @class = "auth-alert" })
+                    }
 
                     <div class="form-field">
                         <label for="UserName">Tên đăng nhập</label>

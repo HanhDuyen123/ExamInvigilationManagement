@@ -30,7 +30,7 @@ namespace ExamInvigilationManagement.Application.DTOs.InvigilatorResponse
         public string? ExamFormatDisplay { get; set; }
         public string? BuildingId { get; set; }
         public string? RoomName { get; set; }
-        public string RoomDisplay => string.IsNullOrWhiteSpace(BuildingId) ? (RoomName ?? "-") : $"{BuildingId}.{RoomName}";
+        public string RoomDisplay => string.IsNullOrWhiteSpace(BuildingId) || string.Equals(BuildingId, "KHAC", StringComparison.OrdinalIgnoreCase) ? (RoomName ?? "-") : $"{BuildingId}.{RoomName}";
         public string? AcademyYearName { get; set; }
         public string? SemesterName { get; set; }
         public string? PeriodName { get; set; }

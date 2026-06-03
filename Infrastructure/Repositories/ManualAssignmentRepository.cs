@@ -49,7 +49,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     SessionId = x.SessionId,
                     SessionName = x.Session.SessionName,
                     RoomId = x.RoomId,
-                    RoomDisplay = x.Room.BuildingId + "-" + x.Room.RoomName,
+                    RoomDisplay = x.Room.BuildingId == "KHAC" ? x.Room.RoomName : x.Room.BuildingId + "-" + x.Room.RoomName,
                     OfferingId = x.OfferingId,
                     OfferingUserId = x.Offering.UserId,
                     OfferingUserInformationId = x.Offering.User.InformationId,

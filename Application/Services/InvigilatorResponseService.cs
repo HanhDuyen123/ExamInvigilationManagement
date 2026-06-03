@@ -216,9 +216,13 @@ namespace ExamInvigilationManagement.Application.Services
         private static string BuildConfirmationEmail(string lecturerName, IReadOnlyList<InvigilatorConfirmationScheduleDto> schedules, string confirmationUrl)
         {
             static string H(string? value) => HtmlEncoder.Default.Encode(string.IsNullOrWhiteSpace(value) ? "-" : value);
+            static string RoomDisplay(InvigilatorConfirmationScheduleDto schedule) =>
+                string.Equals(schedule.BuildingId, "KHAC", StringComparison.OrdinalIgnoreCase)
+                    ? (schedule.RoomName ?? "-")
+                    : $"{schedule.BuildingId}.{schedule.RoomName}";
 
             var rows = string.Join("", schedules.Select(x =>
-                $"<tr><td>{H(x.SubjectId)}</td><td>{H(x.SubjectName)}</td><td>{H(x.ClassName)}</td><td>{H(x.GroupNumber)}</td><td>{H($"{x.BuildingId}.{x.RoomName}")}</td><td>{x.ExamDate:dd/MM/yyyy}</td><td>{H(x.SlotName)} ({x.TimeStart:HH\\:mm})</td></tr>"));
+                $"<tr><td>{H(x.SubjectId)}</td><td>{H(x.SubjectName)}</td><td>{H(x.ClassName)}</td><td>{H(x.GroupNumber)}</td><td>{H(RoomDisplay(x))}</td><td>{x.ExamDate:dd/MM/yyyy}</td><td>{H(x.SlotName)} ({x.TimeStart:HH\\:mm})</td></tr>"));
 
             return $@"
                 <div style='font-family:Arial,sans-serif;line-height:1.55;color:#172033'>
