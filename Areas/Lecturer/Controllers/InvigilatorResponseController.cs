@@ -30,13 +30,20 @@ namespace ExamInvigilationManagement.Areas.Lecturer.Controllers
             int page = 1,
             int pageSize = 5,
             string viewMode = "table",
+            DateTime? weekStart = null,
             CancellationToken cancellationToken = default)
         {
             var userId = GetCurrentUserId();
             if (!userId.HasValue) return Unauthorized();
 
+            if (string.Equals(viewMode, "calendar", StringComparison.OrdinalIgnoreCase))
+            {
+                var calendar = await _service.GetAssignmentCalendarWeekAsync(userId.Value, search, weekStart, cancellationToken);
+                return PartialView("_AssignmentCalendar", calendar);
+            }
+
             var result = await _service.GetAssignmentsAsync(userId.Value, search, page, pageSize, cancellationToken);
-            return PartialView(viewMode == "calendar" ? "_AssignmentCalendar" : "_AssignmentTable", result);
+            return PartialView("_AssignmentTable", result);
         }
 
         [HttpPost]

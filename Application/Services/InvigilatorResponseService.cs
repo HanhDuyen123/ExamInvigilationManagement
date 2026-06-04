@@ -43,6 +43,51 @@ namespace ExamInvigilationManagement.Application.Services
             return await _repository.GetAssignmentsAsync(userId, search, page, pageSize, cancellationToken);
         }
 
+        public async Task<InvigilatorAssignmentCalendarWeekDto> GetAssignmentCalendarWeekAsync(
+            int userId,
+            InvigilatorAssignmentSearchDto search,
+            DateTime? weekStart,
+            CancellationToken cancellationToken = default)
+        {
+            await _repository.AutoConfirmExpiredAsync(ResponseWindow, cancellationToken);
+
+            var anchorDate = weekStart?.Date
+                ?? search.FromDate?.Date
+                ?? (await _repository.GetFirstAssignmentDateAsync(userId, search, cancellationToken))?.Date
+                ?? DateTime.Today;
+            var start = GetWeekStart(anchorDate);
+            var end = start.AddDays(6);
+            var effectiveSearch = new InvigilatorAssignmentSearchDto
+            {
+                Keyword = search.Keyword,
+                SubjectId = search.SubjectId,
+                BuildingId = search.BuildingId,
+                RoomId = search.RoomId,
+                AcademyYearId = search.AcademyYearId,
+                SemesterId = search.SemesterId,
+                PeriodId = search.PeriodId,
+                SessionId = search.SessionId,
+                SlotId = search.SlotId,
+                Status = search.Status,
+                FromDate = start,
+                ToDate = end
+            };
+
+            var items = await _repository.GetAssignmentsForCalendarAsync(userId, effectiveSearch, start, end, cancellationToken);
+            return new InvigilatorAssignmentCalendarWeekDto
+            {
+                WeekStart = start,
+                WeekEnd = end,
+                Items = items
+            };
+        }
+
+        private static DateTime GetWeekStart(DateTime date)
+        {
+            var diff = ((int)date.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7;
+            return date.Date.AddDays(-diff);
+        }
+
         public async Task<InvigilatorResponseResultDto> SubmitAsync(
             int userId,
             InvigilatorResponseSubmitDto request,

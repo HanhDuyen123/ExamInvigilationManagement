@@ -52,6 +52,13 @@ namespace ExamInvigilationManagement.Application.DTOs.InvigilatorResponse
         public PagedResult<InvigilatorAssignmentItemDto> PagedItems { get; set; } = new();
     }
 
+    public class InvigilatorAssignmentCalendarWeekDto
+    {
+        public DateTime WeekStart { get; set; }
+        public DateTime WeekEnd { get; set; }
+        public List<InvigilatorAssignmentItemDto> Items { get; set; } = new();
+    }
+
     public class InvigilatorResponseSubmitDto
     {
         public List<int> ExamInvigilatorIds { get; set; } = new();

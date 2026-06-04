@@ -1,23 +1,91 @@
-@using ExamInvigilationManagement.Common
-@model PagedResult<ExamInvigilationManagement.Application.DTOs.InvigilatorResponse.InvigilatorAssignmentItemDto>
+@model ExamInvigilationManagement.Application.DTOs.InvigilatorResponse.InvigilatorAssignmentCalendarWeekDto
 
-<div class="calendar-grid">
-@foreach (var day in Model.Items.GroupBy(x => x.ExamDate?.Date).OrderBy(g => g.Key))
-{
-    <div class="calendar-day">
-        <div class="calendar-day-head">@(day.Key?.ToString("dddd, dd/MM/yyyy") ?? "Chưa có ngày")</div>
-        @foreach (var item in day.OrderBy(x => x.TimeStart))
+@{
+    var days = Enumerable.Range(0, 7).Select(offset => Model.WeekStart.Date.AddDays(offset)).ToList();
+    var dayLabels = new[] { "Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật" };
+    var itemsByDay = Model.Items
+        .Where(x => x.ExamDate.HasValue)
+        .GroupBy(x => x.ExamDate!.Value.Date)
+        .ToDictionary(g => g.Key, g => g.OrderBy(x => x.TimeStart).ThenBy(x => x.SubjectId).ToList());
+    var currentWeekStart = DateTime.Today.AddDays(-(((int)DateTime.Today.DayOfWeek - (int)DayOfWeek.Monday + 7) % 7));
+}
+
+<div class="assignment-calendar">
+    <div class="assignment-calendar-toolbar">
+        <div>
+            <div class="assignment-calendar-title">Tuần @Model.WeekStart.ToString("dd/MM") - @Model.WeekEnd.ToString("dd/MM/yyyy")</div>
+            <div class="assignment-calendar-subtitle">Hiển thị đầy đủ lịch coi thi từ thứ 2 đến chủ nhật, sắp xếp từ sáng đến tối.</div>
+        </div>
+        <div class="assignment-calendar-actions">
+            <button type="button" class="btn btn-sm btn-outline-secondary calendar-week-nav" data-week-start="@Model.WeekStart.AddDays(-7).ToString("yyyy-MM-dd")">
+                <i class="bi bi-chevron-left"></i> Tuần trước
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-primary calendar-week-nav" data-week-start="@currentWeekStart.ToString("yyyy-MM-dd")">
+                Tuần hiện tại
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary calendar-week-nav" data-week-start="@Model.WeekStart.AddDays(7).ToString("yyyy-MM-dd")">
+                Tuần sau <i class="bi bi-chevron-right"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="assignment-week-grid">
+        @for (var i = 0; i < days.Count; i++)
         {
-            var statusClass = item.ResponseStatus == "Xác nhận" ? "confirmed" : item.ResponseStatus == "Từ chối" ? "rejected" : "";
-            <div class="calendar-slot @statusClass d-block">
-                <div class="d-flex gap-2 align-items-start"><input type="checkbox" class="form-check-input assignment-checkbox mt-1" value="@item.ExamInvigilatorId" /><div><strong>@item.SubjectId - @item.SubjectName</strong><div class="calendar-meta">@item.ClassName | Nhóm @item.GroupNumber | @(string.IsNullOrWhiteSpace(item.ExamFormatDisplay) ? "Chưa có hình thức thi" : item.ExamFormatDisplay) | @item.RoomDisplay</div><div class="calendar-meta">@item.SessionName - @item.SlotName (@item.TimeStart?.ToString("HH\\:mm"))</div><span class="badge rounded-pill @(item.ResponseStatus == "Xác nhận" ? "bg-success" : item.ResponseStatus == "Từ chối" ? "bg-danger" : "bg-secondary") mt-2">@item.ResponseStatus</span>@if (item.ResponseStatus == "Từ chối" && !item.HasSubstitutionProposal) { <a href="@Url.Action("Create", "InvigilatorSubstitution", new { area = "Lecturer", examInvigilatorId = item.ExamInvigilatorId })" class="btn btn-sm btn-outline-primary rounded-3 mt-2 d-inline-flex"><i class="bi bi-arrow-left-right me-1"></i>Đề xuất thay thế</a> } else if (item.ResponseStatus == "Từ chối" && item.HasSubstitutionProposal) { <span class="badge rounded-pill bg-info text-dark mt-2">Đã đề xuất thay thế</span> }</div></div>
-            </div>
+            var day = days[i];
+            var hasItems = itemsByDay.TryGetValue(day, out var dayItems) && dayItems.Count > 0;
+            <section class="assignment-day @(day == DateTime.Today ? "is-today" : string.Empty)">
+                <div class="assignment-day-head">
+                    <span>@dayLabels[i]</span>
+                    <strong>@day.ToString("dd/MM")</strong>
+                </div>
+
+                <div class="assignment-day-body">
+                    @if (hasItems)
+                    {
+                        foreach (var item in dayItems!)
+                        {
+                            var statusClass = item.ResponseStatus == "Xác nhận" ? "confirmed" : item.ResponseStatus == "Từ chối" ? "rejected" : "pending";
+                            var badgeClass = item.ResponseStatus == "Xác nhận" ? "bg-success" : item.ResponseStatus == "Từ chối" ? "bg-danger" : "bg-secondary";
+
+                            <article class="assignment-calendar-card @statusClass">
+                                <div class="assignment-card-topline">
+                                    <input type="checkbox" class="form-check-input assignment-checkbox" value="@item.ExamInvigilatorId" />
+                                    <span class="assignment-card-time">@item.TimeStart?.ToString("HH:mm")</span>
+                                </div>
+
+                                <div class="assignment-card-subject">@item.SubjectId - @item.SubjectName</div>
+                                <div class="assignment-card-meta">Lớp @item.ClassName, nhóm @item.GroupNumber</div>
+                                <div class="assignment-card-meta">@item.RoomDisplay · @item.SessionName · @item.SlotName</div>
+                                <div class="assignment-card-meta">@(string.IsNullOrWhiteSpace(item.ExamFormatDisplay) ? "Chưa có hình thức thi" : item.ExamFormatDisplay)</div>
+
+                                <div class="assignment-card-footer">
+                                    <span class="badge rounded-pill @badgeClass">@item.ResponseStatus</span>
+                                    @if (item.ResponseStatus == "Từ chối" && !item.HasSubstitutionProposal)
+                                    {
+                                        <a href="@Url.Action("Create", "InvigilatorSubstitution", new { area = "Lecturer", examInvigilatorId = item.ExamInvigilatorId })" class="assignment-substitution-link">
+                                            Đề xuất thay thế
+                                        </a>
+                                    }
+                                    else if (item.ResponseStatus == "Từ chối" && item.HasSubstitutionProposal)
+                                    {
+                                        <span class="badge rounded-pill bg-info text-dark">Đã đề xuất</span>
+                                    }
+                                </div>
+                            </article>
+                        }
+                    }
+                    else
+                    {
+                        <div class="assignment-day-empty">Không có ca</div>
+                    }
+                </div>
+            </section>
         }
     </div>
-}
 </div>
+
 @if (!Model.Items.Any())
 {
-    <div class="text-center text-muted py-5">Không có lịch coi thi phù hợp</div>
+    <div class="text-center text-muted py-4">Không có lịch coi thi phù hợp trong tuần này</div>
 }
-@await Html.PartialAsync("_Pagination", Model)

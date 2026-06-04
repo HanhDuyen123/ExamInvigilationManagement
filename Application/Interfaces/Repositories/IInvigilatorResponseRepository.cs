@@ -12,6 +12,18 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
             int pageSize,
             CancellationToken cancellationToken = default);
 
+        Task<DateTime?> GetFirstAssignmentDateAsync(
+            int userId,
+            InvigilatorAssignmentSearchDto search,
+            CancellationToken cancellationToken = default);
+
+        Task<List<InvigilatorAssignmentItemDto>> GetAssignmentsForCalendarAsync(
+            int userId,
+            InvigilatorAssignmentSearchDto search,
+            DateTime weekStart,
+            DateTime weekEnd,
+            CancellationToken cancellationToken = default);
+
         Task<List<InvigilatorAssignmentSubmitItemDto>> GetSubmitItemsAsync(
             IEnumerable<int> examInvigilatorIds,
             CancellationToken cancellationToken = default);

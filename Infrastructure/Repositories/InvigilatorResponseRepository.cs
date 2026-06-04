@@ -4,6 +4,7 @@ using ExamInvigilationManagement.Common;
 using ExamInvigilationManagement.Common.Constants;
 using ExamInvigilationManagement.Common.Workflow;
 using ExamInvigilationManagement.Infrastructure.Data;
+using ExamInvigilationManagement.Infrastructure.Data.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace ExamInvigilationManagement.Infrastructure.Repositories
@@ -140,6 +141,144 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 Page = page,
                 PageSize = pageSize
             };
+        }
+
+        public async Task<DateTime?> GetFirstAssignmentDateAsync(
+            int userId,
+            InvigilatorAssignmentSearchDto search,
+            CancellationToken cancellationToken = default)
+        {
+            var userInformationId = await GetUserInformationIdAsync(userId, cancellationToken);
+            var query = BuildAssignmentBaseQuery(userId, userInformationId, search);
+
+            return await query
+                .OrderBy(x => x.Schedule.ExamDate)
+                .Select(x => (DateTime?)x.Schedule.ExamDate)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        public async Task<List<InvigilatorAssignmentItemDto>> GetAssignmentsForCalendarAsync(
+            int userId,
+            InvigilatorAssignmentSearchDto search,
+            DateTime weekStart,
+            DateTime weekEnd,
+            CancellationToken cancellationToken = default)
+        {
+            var userInformationId = await GetUserInformationIdAsync(userId, cancellationToken);
+            var query = BuildAssignmentBaseQuery(userId, userInformationId, search)
+                .Where(x => x.Schedule.ExamDate >= weekStart.Date && x.Schedule.ExamDate <= weekEnd.Date);
+
+            return await ProjectAssignments(query)
+                .OrderBy(x => x.ExamDate)
+                .ThenBy(x => x.TimeStart)
+                .ThenBy(x => x.SubjectId)
+                .ToListAsync(cancellationToken);
+        }
+
+        private IQueryable<AssignmentQueryRow> BuildAssignmentBaseQuery(
+            int userId,
+            int? userInformationId,
+            InvigilatorAssignmentSearchDto search)
+        {
+            var query = _db.ExamInvigilators
+                .AsNoTracking()
+                .Where(x => (x.NewAssigneeId ?? x.AssigneeId) == userId ||
+                    (userInformationId.HasValue && ((x.NewAssignee != null ? x.NewAssignee.InformationId : x.Assignee.InformationId) == userInformationId.Value)))
+                .Where(x =>
+                    (x.ExamSchedule.Status == ExamScheduleStatuses.Approved && x.ConfirmationSentAt.HasValue) ||
+                    x.InvigilatorResponses.Any(r =>
+                        (r.UserId == userId || (userInformationId.HasValue && r.User.InformationId == userInformationId.Value)) &&
+                        r.Status == InvigilatorResponseStatuses.Rejected))
+                .Select(x => new AssignmentQueryRow
+                {
+                    Invigilator = x,
+                    Schedule = x.ExamSchedule,
+                    LatestResponse = x.InvigilatorResponses
+                        .Where(r => r.UserId == userId || (userInformationId.HasValue && r.User.InformationId == userInformationId.Value))
+                        .OrderByDescending(r => r.ResponseAt)
+                        .FirstOrDefault(),
+                    LatestSubstitution = x.InvigilatorSubstitutions
+                        .Where(s => s.UserId == userId || (userInformationId.HasValue && s.User.InformationId == userInformationId.Value))
+                        .OrderByDescending(s => s.CreateAt)
+                        .FirstOrDefault()
+                });
+
+            if (!string.IsNullOrWhiteSpace(search.SubjectId))
+                query = query.Where(x => x.Schedule.Offering.SubjectId == search.SubjectId);
+
+            if (!string.IsNullOrWhiteSpace(search.BuildingId))
+                query = query.Where(x => x.Schedule.Room.BuildingId == search.BuildingId);
+
+            if (search.RoomId.HasValue)
+                query = query.Where(x => x.Schedule.RoomId == search.RoomId.Value);
+
+            if (search.AcademyYearId.HasValue)
+                query = query.Where(x => x.Schedule.AcademyYearId == search.AcademyYearId.Value);
+
+            if (search.SemesterId.HasValue)
+                query = query.Where(x => x.Schedule.SemesterId == search.SemesterId.Value);
+
+            if (search.PeriodId.HasValue)
+                query = query.Where(x => x.Schedule.PeriodId == search.PeriodId.Value);
+
+            if (search.SessionId.HasValue)
+                query = query.Where(x => x.Schedule.SessionId == search.SessionId.Value);
+
+            if (search.SlotId.HasValue)
+                query = query.Where(x => x.Schedule.SlotId == search.SlotId.Value);
+
+            if (search.FromDate.HasValue)
+                query = query.Where(x => x.Schedule.ExamDate >= search.FromDate.Value.Date);
+
+            if (search.ToDate.HasValue)
+                query = query.Where(x => x.Schedule.ExamDate <= search.ToDate.Value.Date);
+
+            if (!string.IsNullOrWhiteSpace(search.Status))
+                query = search.Status == "Chưa phản hồi"
+                    ? query.Where(x => x.LatestResponse == null)
+                    : query.Where(x => x.LatestResponse != null && x.LatestResponse.Status == search.Status);
+
+            if (!string.IsNullOrWhiteSpace(search.Keyword))
+            {
+                var keyword = search.Keyword.Trim().ToLower();
+                query = query.Where(x =>
+                    (x.Schedule.Offering.SubjectId ?? "").ToLower().Contains(keyword) ||
+                    (x.Schedule.Offering.Subject.SubjectName ?? "").ToLower().Contains(keyword) ||
+                    (x.Schedule.ExamFormat != null ? (x.Schedule.ExamFormat.Code + " " + x.Schedule.ExamFormat.Name) : "").ToLower().Contains(keyword) ||
+                    (x.Schedule.Offering.ClassName ?? "").ToLower().Contains(keyword));
+            }
+
+            return query;
+        }
+
+        private static IQueryable<InvigilatorAssignmentItemDto> ProjectAssignments(IQueryable<AssignmentQueryRow> query)
+        {
+            return query.Select(x => new InvigilatorAssignmentItemDto
+            {
+                ExamInvigilatorId = x.Invigilator.ExamInvigilatorId,
+                ExamScheduleId = x.Schedule.ExamScheduleId,
+                PositionNo = x.Invigilator.PositionNo,
+                SubjectId = x.Schedule.Offering.SubjectId,
+                SubjectName = x.Schedule.Offering.Subject.SubjectName,
+                ClassName = x.Schedule.Offering.ClassName,
+                GroupNumber = x.Schedule.Offering.GroupNumber,
+                ExamFormatDisplay = x.Schedule.ExamFormat != null ? x.Schedule.ExamFormat.Code + " - " + x.Schedule.ExamFormat.Name : string.Empty,
+                BuildingId = x.Schedule.Room.BuildingId,
+                RoomName = x.Schedule.Room.RoomName,
+                AcademyYearName = x.Schedule.AcademyYear.AcademyYearName,
+                SemesterName = x.Schedule.Semester.SemesterName,
+                PeriodName = x.Schedule.Period.PeriodName,
+                SessionName = x.Schedule.Session.SessionName,
+                SlotName = x.Schedule.Slot.SlotName,
+                TimeStart = x.Schedule.Slot.TimeStart,
+                ExamDate = x.Schedule.ExamDate,
+                Lecturer1Name = x.Schedule.ExamInvigilators.Where(i => i.PositionNo == 1).Select(i => i.NewAssignee != null ? i.NewAssignee.Information.LastName + " " + i.NewAssignee.Information.FirstName : i.Assignee.Information.LastName + " " + i.Assignee.Information.FirstName).FirstOrDefault(),
+                Lecturer2Name = x.Schedule.ExamInvigilators.Where(i => i.PositionNo == 2).Select(i => i.NewAssignee != null ? i.NewAssignee.Information.LastName + " " + i.NewAssignee.Information.FirstName : i.Assignee.Information.LastName + " " + i.Assignee.Information.FirstName).FirstOrDefault(),
+                ResponseStatus = x.LatestResponse == null ? "Chưa phản hồi" : x.LatestResponse.Status,
+                ResponseNote = x.LatestResponse == null ? null : x.LatestResponse.Note,
+                HasSubstitutionProposal = x.LatestSubstitution != null,
+                SubstitutionStatus = x.LatestSubstitution == null ? string.Empty : x.LatestSubstitution.Status
+            });
         }
 
         public async Task MarkConfirmationSentAsync(IEnumerable<int> scheduleIds, int lecturerUserId, CancellationToken cancellationToken = default)
@@ -341,6 +480,14 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     }).ToList()
                 })
                 .ToListAsync(cancellationToken);
+        }
+
+        private sealed class AssignmentQueryRow
+        {
+            public ExamInvigilator Invigilator { get; set; } = null!;
+            public ExamSchedule Schedule { get; set; } = null!;
+            public Data.Entities.InvigilatorResponse? LatestResponse { get; set; }
+            public InvigilatorSubstitution? LatestSubstitution { get; set; }
         }
     }
 }

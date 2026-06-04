@@ -67,13 +67,34 @@
 }
 
 <style>
-    .calendar-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:16px; }
-    .calendar-day { border:1px solid rgba(37,99,235,.14); border-radius:18px; background:linear-gradient(180deg,#fff,#f8fbff); overflow:hidden; }
-    .calendar-day-head { padding:14px 16px; background:#eff6ff; font-weight:800; color:#1d4ed8; }
-    .calendar-slot { margin:12px; padding:12px; border-radius:14px; background:white; box-shadow:0 10px 28px rgba(15,23,42,.08); border-left:4px solid #2563eb; }
-    .calendar-slot.rejected { border-left-color:#dc2626; }
-    .calendar-slot.confirmed { border-left-color:#16a34a; }
-    .calendar-meta { color:#64748b; font-size:.88rem; }
+    .assignment-calendar { padding: 14px; }
+    .assignment-calendar-toolbar { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:14px; }
+    .assignment-calendar-title { font-weight:800; color:#0f172a; }
+    .assignment-calendar-subtitle { color:#64748b; font-size:.9rem; margin-top:2px; }
+    .assignment-calendar-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+    .assignment-week-grid { display:grid; grid-template-columns:repeat(7, minmax(160px, 1fr)); gap:10px; min-width:1120px; }
+    .assignment-day { border:1px solid #e2e8f0; border-radius:12px; background:#fff; overflow:hidden; }
+    .assignment-day.is-today { border-color:#93c5fd; box-shadow:0 0 0 2px rgba(37,99,235,.08); }
+    .assignment-day-head { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:10px 12px; background:#f8fafc; border-bottom:1px solid #e2e8f0; color:#334155; font-size:.9rem; }
+    .assignment-day-head strong { color:#0f172a; }
+    .assignment-day-body { min-height:220px; padding:8px; }
+    .assignment-calendar-card { border:1px solid #e2e8f0; border-left:3px solid #64748b; border-radius:10px; padding:9px; margin-bottom:8px; background:#fff; }
+    .assignment-calendar-card.pending { border-left-color:#64748b; background:#f8fafc; }
+    .assignment-calendar-card.confirmed { border-left-color:#16a34a; background:#f0fdf4; }
+    .assignment-calendar-card.rejected { border-left-color:#dc2626; background:#fef2f2; }
+    .assignment-card-topline { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:6px; }
+    .assignment-card-time { font-weight:800; color:#1d4ed8; font-size:.88rem; }
+    .assignment-card-subject { font-weight:800; color:#0f172a; font-size:.9rem; line-height:1.25; }
+    .assignment-card-meta { color:#64748b; font-size:.78rem; line-height:1.35; margin-top:3px; overflow-wrap:anywhere; }
+    .assignment-card-footer { display:flex; align-items:center; flex-wrap:wrap; gap:6px; margin-top:8px; }
+    .assignment-substitution-link { font-size:.78rem; text-decoration:none; color:#2563eb; font-weight:700; }
+    .assignment-day-empty { color:#94a3b8; font-size:.86rem; text-align:center; padding:24px 8px; }
+    body .table-modern:has(.assignment-calendar) { overflow-x:auto; }
+    @@media (max-width: 992px) {
+        .assignment-calendar-toolbar { flex-direction:column; }
+        .assignment-calendar-actions { justify-content:flex-start; }
+        .assignment-week-grid { grid-template-columns:repeat(7, minmax(210px, 1fr)); }
+    }
 </style>
 
 @section Scripts {
@@ -81,9 +102,11 @@
     <script>
         $(function () {
             let viewMode = 'table';
+            let calendarWeekStart = null;
             const initialStatus = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(initialStatus));
 
             function val(selector) { return $(selector).val() || null; }
+            function reloadFromFilter() { if (viewMode === 'calendar') calendarWeekStart = null; loadData(1); }
             function clearBelow(level) {
                 const map = { year: ['semester', 'period', 'session', 'slot'], semester: ['period', 'session', 'slot'], period: ['session', 'slot'], session: ['slot'], building: ['room'] };
                 (map[level] || []).forEach(k => { const lookup = AdminLookup.get('ir-' + k); if (lookup) lookup.clear(); });
@@ -97,7 +120,7 @@
             }
             function loadData(page) {
                 $('#assignmentResult').fadeTo(100, .45);
-                $.get('@Url.Action("GetList", "InvigilatorResponse", new { area = "Lecturer" })', {
+                const requestData = {
                     page: page || 1,
                     pageSize: val('#pageSize') || 5,
                     viewMode,
@@ -113,7 +136,12 @@
                     status: val('#status'),
                     fromDate: val('#fromDate'),
                     toDate: val('#toDate')
-                }, function (html) { $('#assignmentResult').html(html).fadeTo(100, 1); });
+                };
+                if (viewMode === 'calendar' && calendarWeekStart) {
+                    requestData.weekStart = calendarWeekStart;
+                }
+
+                $.get('@Url.Action("GetList", "InvigilatorResponse", new { area = "Lecturer" })', requestData, function (html) { $('#assignmentResult').html(html).fadeTo(100, 1); });
             }
             window.CrudPage = { loadData };
             async function submit(status, noteValue) {
@@ -136,23 +164,24 @@
             }
 
             $(document).on('change', '#selectAllAssignments', function () { $('.assignment-checkbox').prop('checked', this.checked); });
-            $(document).on('click', '.pagination a[data-page]', function(e) { e.preventDefault(); loadData($(this).data('page')); });
+            $(document).on('click', '.pagination a[data-page]', function(e) { e.preventDefault(); if (viewMode === 'table') loadData($(this).data('page')); });
+            $(document).on('click', '.calendar-week-nav', function(e) { e.preventDefault(); calendarWeekStart = $(this).data('week-start') || null; loadData(1); });
             $('#confirmAssignments').on('click', () => submit('Xác nhận', ''));
             $('#confirmResponseRejectBtn').on('click', () => submit('Từ chối', $('#responseRejectNote').val()));
-            $('#viewTable').on('click', function(){ viewMode='table'; loadData(1); });
-            $('#viewCalendar').on('click', function(){ viewMode='calendar'; loadData(1); });
-            $('.assignment-filter').on('input change', function(){ clearTimeout(window.irSearchTimer); window.irSearchTimer = setTimeout(() => loadData(1), 250); });
-            $('#pageSize').on('change', () => loadData(1));
+            $('#viewTable').on('click', function(){ viewMode='table'; $('#pageSize').closest('.search-page-size').show(); loadData(1); });
+            $('#viewCalendar').on('click', function(){ viewMode='calendar'; calendarWeekStart = null; $('#pageSize').closest('.search-page-size').hide(); loadData(1); });
+            $('.assignment-filter').on('input change', function(){ clearTimeout(window.irSearchTimer); window.irSearchTimer = setTimeout(() => { if (viewMode === 'calendar') calendarWeekStart = null; loadData(1); }, 250); });
+            $('#pageSize').on('change', () => { if (viewMode === 'table') loadData(1); });
             if (initialStatus) $('#status').val(initialStatus);
 
-            AdminLookup.create({ key:'ir-subject', input:'#subjectInput', hidden:'#subjectId', menu:'#subjectDropdown', url:'@Url.Action("Subjects", "Lookup", new { area = "" })', valueField:'id', textField:'name', onSelect:function(){loadData(1)}, onClear:function(){loadData(1)} });
-            AdminLookup.create({ key:'ir-building', input:'#buildingInput', hidden:'#buildingId', menu:'#buildingDropdown', url:'@Url.Action("Buildings", "Lookup", new { area = "" })', valueField:'id', textField:'name', onSelect:function(){clearBelow('building');loadData(1)}, onClear:function(){clearBelow('building');loadData(1)} });
-            AdminLookup.create({ key:'ir-room', input:'#roomInput', hidden:'#roomId', menu:'#roomDropdown', url:'@Url.Action("Rooms", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { buildingId: val('#buildingId') }}, beforeSearch:function(){return val('#buildingId') ? true : 'Vui lòng chọn giảng đường'}, onSelect:function(){loadData(1)}, onClear:function(){loadData(1)} });
-            AdminLookup.create({ key:'ir-year', input:'#yearInput', hidden:'#yearId', menu:'#yearDropdown', url:'@Url.Action("AcademyYears", "Lookup", new { area = "" })', valueField:'id', textField:'name', onSelect:function(){clearBelow('year');loadData(1)}, onClear:function(){clearBelow('year');loadData(1)} });
-            AdminLookup.create({ key:'ir-semester', input:'#semesterInput', hidden:'#semesterId', menu:'#semesterDropdown', url:'@Url.Action("Semesters", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { academyYearId: val('#yearId') }}, beforeSearch:function(){return val('#yearId') ? true : 'Vui lòng chọn năm học'}, onSelect:function(){clearBelow('semester');loadData(1)}, onClear:function(){clearBelow('semester');loadData(1)} });
-            AdminLookup.create({ key:'ir-period', input:'#periodInput', hidden:'#periodId', menu:'#periodDropdown', url:'@Url.Action("Periods", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { semesterId: val('#semesterId') }}, beforeSearch:function(){return val('#yearId') && val('#semesterId') ? true : 'Vui lòng chọn năm học và học kỳ'}, onSelect:function(){clearBelow('period');loadData(1)}, onClear:function(){clearBelow('period');loadData(1)} });
-            AdminLookup.create({ key:'ir-session', input:'#sessionInput', hidden:'#sessionId', menu:'#sessionDropdown', url:'@Url.Action("Sessions", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { periodId: val('#periodId') }}, beforeSearch:function(){return val('#periodId') ? true : 'Vui lòng chọn đợt thi'}, onSelect:function(){clearBelow('session');loadData(1)}, onClear:function(){clearBelow('session');loadData(1)} });
-            AdminLookup.create({ key:'ir-slot', input:'#slotInput', hidden:'#slotId', menu:'#slotDropdown', url:'@Url.Action("Slots", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { sessionId: val('#sessionId') }}, beforeSearch:function(){return val('#sessionId') ? true : 'Vui lòng chọn buổi thi'}, onSelect:function(){loadData(1)}, onClear:function(){loadData(1)} });
+            AdminLookup.create({ key:'ir-subject', input:'#subjectInput', hidden:'#subjectId', menu:'#subjectDropdown', url:'@Url.Action("Subjects", "Lookup", new { area = "" })', valueField:'id', textField:'name', onSelect:reloadFromFilter, onClear:reloadFromFilter });
+            AdminLookup.create({ key:'ir-building', input:'#buildingInput', hidden:'#buildingId', menu:'#buildingDropdown', url:'@Url.Action("Buildings", "Lookup", new { area = "" })', valueField:'id', textField:'name', onSelect:function(){clearBelow('building');reloadFromFilter()}, onClear:function(){clearBelow('building');reloadFromFilter()} });
+            AdminLookup.create({ key:'ir-room', input:'#roomInput', hidden:'#roomId', menu:'#roomDropdown', url:'@Url.Action("Rooms", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { buildingId: val('#buildingId') }}, beforeSearch:function(){return val('#buildingId') ? true : 'Vui lòng chọn giảng đường'}, onSelect:reloadFromFilter, onClear:reloadFromFilter });
+            AdminLookup.create({ key:'ir-year', input:'#yearInput', hidden:'#yearId', menu:'#yearDropdown', url:'@Url.Action("AcademyYears", "Lookup", new { area = "" })', valueField:'id', textField:'name', onSelect:function(){clearBelow('year');reloadFromFilter()}, onClear:function(){clearBelow('year');reloadFromFilter()} });
+            AdminLookup.create({ key:'ir-semester', input:'#semesterInput', hidden:'#semesterId', menu:'#semesterDropdown', url:'@Url.Action("Semesters", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { academyYearId: val('#yearId') }}, beforeSearch:function(){return val('#yearId') ? true : 'Vui lòng chọn năm học'}, onSelect:function(){clearBelow('semester');reloadFromFilter()}, onClear:function(){clearBelow('semester');reloadFromFilter()} });
+            AdminLookup.create({ key:'ir-period', input:'#periodInput', hidden:'#periodId', menu:'#periodDropdown', url:'@Url.Action("Periods", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { semesterId: val('#semesterId') }}, beforeSearch:function(){return val('#yearId') && val('#semesterId') ? true : 'Vui lòng chọn năm học và học kỳ'}, onSelect:function(){clearBelow('period');reloadFromFilter()}, onClear:function(){clearBelow('period');reloadFromFilter()} });
+            AdminLookup.create({ key:'ir-session', input:'#sessionInput', hidden:'#sessionId', menu:'#sessionDropdown', url:'@Url.Action("Sessions", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { periodId: val('#periodId') }}, beforeSearch:function(){return val('#periodId') ? true : 'Vui lòng chọn đợt thi'}, onSelect:function(){clearBelow('session');reloadFromFilter()}, onClear:function(){clearBelow('session');reloadFromFilter()} });
+            AdminLookup.create({ key:'ir-slot', input:'#slotInput', hidden:'#slotId', menu:'#slotDropdown', url:'@Url.Action("Slots", "Lookup", new { area = "" })', valueField:'id', textField:'name', extraParams:function(){return { sessionId: val('#sessionId') }}, beforeSearch:function(){return val('#sessionId') ? true : 'Vui lòng chọn buổi thi'}, onSelect:reloadFromFilter, onClear:reloadFromFilter });
             (function initAssignmentSearchToggle() {
                 const panel = document.getElementById('assignmentSearchPanel');
                 const btn = document.getElementById('assignmentFilterToggleBtn');

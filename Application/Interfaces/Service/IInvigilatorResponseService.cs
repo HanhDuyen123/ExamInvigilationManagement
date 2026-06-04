@@ -12,6 +12,12 @@ namespace ExamInvigilationManagement.Application.Interfaces.Service
             int pageSize,
             CancellationToken cancellationToken = default);
 
+        Task<InvigilatorAssignmentCalendarWeekDto> GetAssignmentCalendarWeekAsync(
+            int userId,
+            InvigilatorAssignmentSearchDto search,
+            DateTime? weekStart,
+            CancellationToken cancellationToken = default);
+
         Task<InvigilatorResponseResultDto> SubmitAsync(
             int userId,
             InvigilatorResponseSubmitDto request,
