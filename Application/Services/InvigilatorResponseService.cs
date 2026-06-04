@@ -145,6 +145,7 @@ namespace ExamInvigilationManagement.Application.Services
                 {
                     await _emailService.SendEmailAsync(lecturer.Email!, "Xác nhận lịch coi thi", body);
                     await _emailLogService.LogAsync(lecturer.UserId, lecturer.Email!, "Sent", null, "InvigilatorConfirmation");
+                    await _repository.MarkConfirmationSentAsync(groupSchedules.Select(x => x.ExamScheduleId), lecturer.UserId, cancellationToken);
                 }
                 catch (Exception ex)
                 {
@@ -164,8 +165,6 @@ namespace ExamInvigilationManagement.Application.Services
                 }, cancellationToken);
                 sentCount++;
             }
-
-            await _repository.MarkConfirmationSentAsync(schedules.Select(x => x.ExamScheduleId), cancellationToken);
 
             return new InvigilatorConfirmationResultDto
             {

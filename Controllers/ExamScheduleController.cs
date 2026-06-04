@@ -485,8 +485,8 @@ namespace ExamInvigilationManagement.Controllers
                 return BadRequest(new { success = false, message = "Không thể tạo file đề nghị hỗ trợ CBCT từ mẫu Excel.", errors = new[] { ex.Message } });
             }
 
-            var subject = $"Đề nghị hỗ trợ CBCT - {result.SemesterName} năm học {result.AcademyYearName}";
-            var body = BuildSupportRequestEmailBody(result, currentUser?.FullName, replyTo);
+            var subject = $"Đề nghị hỗ trợ CBCT - {result.FacultyName} - {result.SemesterName} năm học {result.AcademyYearName}";
+            var body = BuildSupportRequestEmailBody(result, replyTo);
 
             try
             {
@@ -807,12 +807,14 @@ namespace ExamInvigilationManagement.Controllers
 
             var academyYear = schedules.FirstOrDefault()?.AcademyYearName ?? string.Empty;
             var semester = ToSemesterDisplayName(schedules.FirstOrDefault()?.SemesterName);
+            var facultyName = schedules.FirstOrDefault()?.FacultyName ?? "Khoa quản lý";
 
             return new SupportRequestBuildResult
             {
                 Success = true,
                 CurrentUserId = currentUserId,
                 CurrentFacultyId = currentFacultyId,
+                FacultyName = facultyName,
                 AcademyYearName = academyYear,
                 SemesterName = semester,
                 Title = $"DANH SÁCH HỖ TRỢ CBCT - {semester.ToUpperInvariant()} NĂM HỌC {academyYear}",
@@ -1174,10 +1176,10 @@ namespace ExamInvigilationManagement.Controllers
             return builder.ToString().Normalize(NormalizationForm.FormC);
         }
 
-        private static string BuildSupportRequestEmailBody(SupportRequestBuildResult result, string? senderName, string? replyTo)
+        private static string BuildSupportRequestEmailBody(SupportRequestBuildResult result, string? replyTo)
         {
             var missingCount = result.Schedules.Sum(CountMissingInvigilators);
-            var sender = string.IsNullOrWhiteSpace(senderName) ? "Thư ký khoa" : senderName;
+            var sender = string.IsNullOrWhiteSpace(result.FacultyName) ? "Khoa quản lý" : $"Khoa {result.FacultyName}";
             var replyLine = string.IsNullOrWhiteSpace(replyTo) ? string.Empty : $"<p>Email phản hồi: <b>{Html(replyTo)}</b></p>";
 
             return $"<p>Kính gửi Quý đơn vị,</p>" +
@@ -1476,6 +1478,7 @@ namespace ExamInvigilationManagement.Controllers
             public List<string> Errors { get; set; } = new();
             public int? CurrentUserId { get; set; }
             public int? CurrentFacultyId { get; set; }
+            public string FacultyName { get; set; } = string.Empty;
             public string AcademyYearName { get; set; } = string.Empty;
             public string SemesterName { get; set; } = string.Empty;
             public string Title { get; set; } = string.Empty;

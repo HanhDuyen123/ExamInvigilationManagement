@@ -39,7 +39,7 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
             IEnumerable<int> scheduleIds,
             CancellationToken cancellationToken = default);
 
-        Task MarkConfirmationSentAsync(IEnumerable<int> scheduleIds, CancellationToken cancellationToken = default);
+        Task MarkConfirmationSentAsync(IEnumerable<int> scheduleIds, int lecturerUserId, CancellationToken cancellationToken = default);
         Task<int> AutoConfirmExpiredAsync(TimeSpan responseWindow, CancellationToken cancellationToken = default);
     }
 }

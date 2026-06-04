@@ -137,9 +137,89 @@
     overflow: hidden;
 }
 
-.notification-menu .notification-item .small {
+.notification-menu-header .btn-link {
+    color: #2563eb;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.notification-menu-header .btn-link:hover {
+    color: #1d4ed8;
+}
+
+.notification-menu .notification-item {
+    padding: 12px 14px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+    white-space: normal;
+    transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+.notification-menu .notification-item:last-child {
+    border-bottom: 0;
+}
+
+.notification-menu .notification-item:hover {
+    background: #eef2ff;
+}
+
+.notification-menu .notification-item.is-unread {
+    background: linear-gradient(90deg, #eff6ff 0%, #f5f3ff 100%);
+}
+
+.notification-menu .notification-item.is-unread:hover {
+    background: #e0e7ff;
+}
+
+.notification-menu .notification-item.is-read {
+    background: #fff;
+    color: #64748b;
+}
+
+.notification-menu .notification-item-title {
+    color: #334155;
+    font-weight: 600;
+    line-height: 1.35;
+}
+
+.notification-menu .notification-item.is-unread .notification-item-title {
+    color: #0f172a;
+    font-weight: 800;
+}
+
+.notification-menu .notification-item-message {
+    margin-top: 4px;
+    color: #64748b;
+    line-height: 1.4;
     white-space: normal;
     overflow-wrap: anywhere;
+}
+
+.notification-menu .notification-item.is-unread .notification-item-message {
+    color: #334155;
+    font-weight: 600;
+}
+
+.notification-menu .notification-item-time {
+    color: #94a3b8;
+}
+
+.notification-unread-dot {
+    width: 8px;
+    height: 8px;
+    flex: 0 0 8px;
+    margin-top: 6px;
+    border-radius: 999px;
+    background: transparent;
+}
+
+.notification-item.is-unread .notification-unread-dot {
+    background: #2563eb;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.notification-item-content {
+    min-width: 0;
+    flex: 1 1 auto;
 }
 
 .notification-live-toast i {
@@ -214,6 +294,25 @@
 .notification-table .col-action {
     width: 72px;
     min-width: 72px;
+}
+
+.notification-table .notification-row.is-unread {
+    background: #f1f5ff;
+    font-weight: 700;
+}
+
+.notification-table .notification-row.is-unread .col-title,
+.notification-table .notification-row.is-unread .notification-content-cell {
+    color: #0f172a;
+}
+
+.notification-table .notification-row.is-read {
+    color: #64748b;
+}
+
+.notification-table .notification-row.is-read .col-title,
+.notification-table .notification-row.is-read .notification-content-cell {
+    font-weight: 400;
 }
 
 @keyframes notificationToastIn {

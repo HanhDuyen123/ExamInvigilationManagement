@@ -32,7 +32,7 @@
             var stt = (Model.Page - 1) * Model.PageSize + 1;
             foreach (var item in Model.Items)
             {
-                <tr class="@(item.IsRead ? "" : "table-light fw-semibold")">
+                <tr class="notification-row @(item.IsRead ? "is-read" : "is-unread")">
                     <td class="col-id">@stt</td>
                     <td class="col-title">@item.Title</td>
                     <td class="col-message notification-content-cell">@item.Content</td>

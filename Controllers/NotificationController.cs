@@ -106,12 +106,14 @@ namespace ExamInvigilationManagement.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> UnreadCount(CancellationToken cancellationToken = default)
+        public async Task<IActionResult> UnreadCount([FromQuery] int? afterId, CancellationToken cancellationToken = default)
         {
             var userId = GetCurrentUserId();
             if (userId is null) return Unauthorized();
 
-            var count = await _service.GetUnreadCountAsync(userId.Value, cancellationToken);
+            var count = afterId.HasValue && afterId.Value > 0
+                ? await _service.GetUnreadCountAfterAsync(userId.Value, afterId.Value, cancellationToken)
+                : await _service.GetUnreadCountAsync(userId.Value, cancellationToken);
             return Json(new { unreadCount = count });
         }
 

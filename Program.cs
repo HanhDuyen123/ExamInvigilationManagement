@@ -140,6 +140,7 @@ builder.Services.Configure<EmailSettings>(
 
 builder.Services.AddSignalR();
 builder.Services.AddHostedService<OutboxBackgroundService>();
+builder.Services.AddHostedService<InvigilatorAutoConfirmationBackgroundService>();
 
 
 var app = builder.Build();

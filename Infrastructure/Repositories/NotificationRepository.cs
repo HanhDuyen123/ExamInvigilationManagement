@@ -202,6 +202,20 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     cancellationToken);
         }
 
+        public async Task<int> GetUnreadCountAfterAsync(
+            int userId,
+            int afterNotificationId,
+            CancellationToken cancellationToken = default)
+        {
+            return await _db.Notifications
+                .AsNoTracking()
+                .CountAsync(x =>
+                    x.UserId == userId &&
+                    x.NotificationId > afterNotificationId &&
+                    !(x.IsRead ?? false),
+                    cancellationToken);
+        }
+
         public async Task<NotificationDetailDto?> GetByIdAsync(
             int id,
             int userId,

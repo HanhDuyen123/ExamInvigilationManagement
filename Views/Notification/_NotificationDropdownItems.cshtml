@@ -7,19 +7,20 @@
     foreach (var item in Model)
     {
         <a href="@Url.Action("Open", "Notification", new { id = item.Id })"
-           class="dropdown-item notification-item @(item.IsRead ? "" : "unread")"
+           class="dropdown-item notification-item @(item.IsRead ? "is-read" : "is-unread")"
            data-id="@item.Id">
-            <div class="d-flex justify-content-between align-items-start gap-2">
-                <div class="me-2">
-                    <div class="fw-semibold">
+            <div class="d-flex justify-content-between align-items-start gap-2 notification-item-inner">
+                <span class="notification-unread-dot" aria-hidden="true"></span>
+                <div class="notification-item-content me-2">
+                    <div class="notification-item-title">
                         <i class="bi @NotificationTypeHelper.GetIcon(item.Type)"></i>
                         @item.Title
                     </div>
-                    <div class="small text-muted">
+                    <div class="notification-item-message small">
                         @item.Content
                     </div>
                 </div>
-                <div class="small text-muted text-nowrap">
+                <div class="notification-item-time small text-nowrap">
                     @item.CreatedAt.ToString("dd/MM HH:mm")
                 </div>
             </div>

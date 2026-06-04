@@ -2,7 +2,7 @@
 {
     public interface INotificationRealtimePublisher
     {
-        Task PublishToUserAsync(int userId, CancellationToken cancellationToken = default);
-        Task PublishToUsersAsync(IEnumerable<int> userIds, CancellationToken cancellationToken = default);
+        Task PublishToUserAsync(int userId, string changeKind = "changed", CancellationToken cancellationToken = default);
+        Task PublishToUsersAsync(IEnumerable<int> userIds, string changeKind = "changed", CancellationToken cancellationToken = default);
     }
 }

@@ -142,18 +142,22 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             };
         }
 
-        public async Task MarkConfirmationSentAsync(IEnumerable<int> scheduleIds, CancellationToken cancellationToken = default)
+        public async Task MarkConfirmationSentAsync(IEnumerable<int> scheduleIds, int lecturerUserId, CancellationToken cancellationToken = default)
         {
             var ids = scheduleIds.Distinct().ToList();
             var invigilators = await _db.ExamInvigilators
-                .Where(x => ids.Contains(x.ExamScheduleId))
+                .Where(x =>
+                    ids.Contains(x.ExamScheduleId) &&
+                    (x.NewAssigneeId ?? x.AssigneeId) == lecturerUserId)
                 .ToListAsync(cancellationToken);
+
+            var sentAt = DateTime.Now;
 
             foreach (var item in invigilators)
             {
                 item.Status = "Chờ xác nhận";
-                item.UpdateAt = DateTime.Now;
-                item.ConfirmationSentAt = DateTime.Now;
+                item.UpdateAt = sentAt;
+                item.ConfirmationSentAt = sentAt;
             }
 
             await _db.SaveChangesAsync(cancellationToken);

@@ -26,7 +26,7 @@ namespace ExamInvigilationManagement.Application.Services
                 return;
 
             await _notificationRepository.CreateAsync(dto, cancellationToken);
-            await _realtimePublisher.PublishToUserAsync(dto.UserId, cancellationToken);
+            await _realtimePublisher.PublishToUserAsync(dto.UserId, "created", cancellationToken);
         }
 
         public async Task UpsertAsync(
@@ -37,7 +37,7 @@ namespace ExamInvigilationManagement.Application.Services
                 return;
 
             await _notificationRepository.UpsertAsync(dto, cancellationToken);
-            await _realtimePublisher.PublishToUserAsync(dto.UserId, cancellationToken);
+            await _realtimePublisher.PublishToUserAsync(dto.UserId, "created", cancellationToken);
         }
         public Task<PagedResult<NotificationListItemDto>> GetPagedAsync(
             int userId,
@@ -65,6 +65,14 @@ namespace ExamInvigilationManagement.Application.Services
             return _notificationRepository.GetUnreadCountAsync(userId, cancellationToken);
         }
 
+        public Task<int> GetUnreadCountAfterAsync(
+            int userId,
+            int afterNotificationId,
+            CancellationToken cancellationToken = default)
+        {
+            return _notificationRepository.GetUnreadCountAfterAsync(userId, afterNotificationId, cancellationToken);
+        }
+
         public Task<NotificationDetailDto?> GetByIdAsync(
             int id,
             int userId,
@@ -81,7 +89,7 @@ namespace ExamInvigilationManagement.Application.Services
         {
             var ok = await _notificationRepository.MarkAsReadAsync(id, userId, cancellationToken);
             if (ok)
-                await _realtimePublisher.PublishToUserAsync(userId, cancellationToken);
+                await _realtimePublisher.PublishToUserAsync(userId, "read", cancellationToken);
 
             return ok;
         }
@@ -92,7 +100,7 @@ namespace ExamInvigilationManagement.Application.Services
         {
             var count = await _notificationRepository.MarkAllAsReadAsync(userId, cancellationToken);
             if (count > 0)
-                await _realtimePublisher.PublishToUserAsync(userId, cancellationToken);
+                await _realtimePublisher.PublishToUserAsync(userId, "read-all", cancellationToken);
 
             return count;
         }

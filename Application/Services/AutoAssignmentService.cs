@@ -138,6 +138,14 @@ namespace ExamInvigilationManagement.Application.Services
                 .GroupBy(x => (x.PersonKey, DateOnly.FromDateTime(x.ExamDate)))
                 .ToDictionary(g => g.Key, g => g.Count());
 
+            var scheduleByIdForLocation = schedules.ToDictionary(x => x.ExamScheduleId);
+            var sameDayLocationMap = activeExistingAssignments
+                .Where(x => scheduleByIdForLocation.ContainsKey(x.ExamScheduleId))
+                .GroupBy(x => (x.PersonKey, DateOnly.FromDateTime(x.ExamDate), scheduleByIdForLocation[x.ExamScheduleId].SessionId))
+                .ToDictionary(
+                    g => g.Key,
+                    g => g.Select(x => scheduleByIdForLocation[x.ExamScheduleId]).ToList());
+
             var ownerScheduleCountByLecturer = schedules
                 .GroupBy(x => x.OfferingUserPersonKey)
                 .ToDictionary(g => g.Key, g => g.Count());
@@ -152,6 +160,7 @@ namespace ExamInvigilationManagement.Application.Services
                 scheduleAssignedUsers,
                 scheduleAssignedPositions,
                 sameDayLoadMap,
+                sameDayLocationMap,
                 subjectLecturerMap,
                 isLecturerRoleByUser,
                 assignmentMode);
@@ -250,6 +259,7 @@ namespace ExamInvigilationManagement.Application.Services
                         schedule,
                         lecturerLoads,
                         sameDayLoadMap,
+                        sameDayLocationMap,
                         day);
 
                     AssignOne(
@@ -262,6 +272,7 @@ namespace ExamInvigilationManagement.Application.Services
                         assignedPositions,
                         lecturerLoads,
                         sameDayLoadMap,
+                        sameDayLocationMap,
                         occupiedKeySet,
                         score,
                         "đúng giảng viên phụ trách lớp");
@@ -291,6 +302,7 @@ namespace ExamInvigilationManagement.Application.Services
                         assignedUsers,
                         lecturerLoads,
                         sameDayLoadMap,
+                        sameDayLocationMap,
                         busyKeySet,
                         occupiedKeySet,
                         ownerScheduleCountByLecturer,
@@ -311,6 +323,7 @@ namespace ExamInvigilationManagement.Application.Services
                         assignedPositions,
                         lecturerLoads,
                         sameDayLoadMap,
+                        sameDayLocationMap,
                         occupiedKeySet,
                         fallback.Score,
                         fallback.Reason);
@@ -448,6 +461,7 @@ namespace ExamInvigilationManagement.Application.Services
             HashSet<int> assignedUsers,
             Dictionary<int, int> lecturerLoads,
             Dictionary<(int PersonKey, DateOnly Day), int> sameDayLoadMap,
+            Dictionary<(int PersonKey, DateOnly Day, int SessionId), List<AutoAssignScheduleDto>> sameDayLocationMap,
             HashSet<(int UserId, int SlotId, DateOnly BusyDate)> busyKeySet,
             HashSet<(int PersonKey, int SlotId, DateOnly BusyDate)> occupiedKeySet,
             Dictionary<int, int> ownerScheduleCountByLecturer,
@@ -463,6 +477,7 @@ namespace ExamInvigilationManagement.Application.Services
                     var sameDayLoad = sameDayLoadMap.TryGetValue((l.PersonKey, day), out var d) ? d : 0;
                     var ownerCount = ownerScheduleCountByLecturer.TryGetValue(l.PersonKey, out var c) ? c : 0;
                     var tier = GetCandidateTier(l, schedule, subjectLecturerMap, isLecturerRoleByUser);
+                    var locationCost = CalculateSameDayLocationCost(l.PersonKey, day, schedule, sameDayLocationMap);
 
                     var score = 0;
                     var reasons = new List<string>();
@@ -494,6 +509,11 @@ namespace ExamInvigilationManagement.Application.Services
 
                     // Ưu tiên ít ca trong ngày
                     score += Math.Max(0, 120 - sameDayLoad * 40);
+
+                    score += GetLocationScoreBonus(locationCost);
+                    var locationReason = GetLocationReason(locationCost);
+                    if (!string.IsNullOrWhiteSpace(locationReason))
+                        reasons.Add(locationReason);
 
                     // Phạt nhẹ nếu người này là owner của nhiều lịch khác trong batch
                     // để tránh làm họ bị “ăn mất” quá nhiều, nhưng không loại bỏ hoàn toàn
@@ -537,14 +557,17 @@ namespace ExamInvigilationManagement.Application.Services
             AutoAssignScheduleDto schedule,
             Dictionary<int, int> lecturerLoads,
             Dictionary<(int PersonKey, DateOnly Day), int> sameDayLoadMap,
+            Dictionary<(int PersonKey, DateOnly Day, int SessionId), List<AutoAssignScheduleDto>> sameDayLocationMap,
             DateOnly day)
         {
             var load = lecturerLoads.TryGetValue(lecturer.UserId, out var currentLoad) ? currentLoad : 0;
             var sameDayLoad = sameDayLoadMap.TryGetValue((lecturer.PersonKey, day), out var d) ? d : 0;
+            var locationCost = CalculateSameDayLocationCost(lecturer.PersonKey, day, schedule, sameDayLocationMap);
 
             var score = 5000;
             score += Math.Max(0, 500 - load * 100);
             score += Math.Max(0, 100 - sameDayLoad * 30);
+            score += GetLocationScoreBonus(locationCost);
 
             return score;
         }
@@ -559,6 +582,7 @@ namespace ExamInvigilationManagement.Application.Services
             HashSet<byte> assignedPositions,
             Dictionary<int, int> lecturerLoads,
             Dictionary<(int PersonKey, DateOnly Day), int> sameDayLoadMap,
+            Dictionary<(int PersonKey, DateOnly Day, int SessionId), List<AutoAssignScheduleDto>> sameDayLocationMap,
             HashSet<(int PersonKey, int SlotId, DateOnly BusyDate)> occupiedKeySet,
             int score,
             string reason)
@@ -589,6 +613,15 @@ namespace ExamInvigilationManagement.Application.Services
             sameDayLoadMap[sameDayKey] = sameDayLoadMap.TryGetValue(sameDayKey, out var dayLoad)
                 ? dayLoad + 1
                 : 1;
+
+            var sameSessionKey = (lecturer.PersonKey, day, schedule.SessionId);
+            if (!sameDayLocationMap.TryGetValue(sameSessionKey, out var sameDayLocations))
+            {
+                sameDayLocations = new List<AutoAssignScheduleDto>();
+                sameDayLocationMap[sameSessionKey] = sameDayLocations;
+            }
+
+            sameDayLocations.Add(schedule);
 
             detail.AssignedLecturers.Add(new AutoAssignAssignedLecturerDto
             {
@@ -622,6 +655,7 @@ namespace ExamInvigilationManagement.Application.Services
             Dictionary<int, HashSet<int>> scheduleAssignedUsers,
             Dictionary<int, HashSet<byte>> scheduleAssignedPositions,
             Dictionary<(int PersonKey, DateOnly Day), int> sameDayLoadMap,
+            Dictionary<(int PersonKey, DateOnly Day, int SessionId), List<AutoAssignScheduleDto>> sameDayLocationMap,
             Dictionary<string, HashSet<int>> subjectLecturerMap,
             Dictionary<int, bool> isLecturerRoleByUser,
             AutoAssignmentMode assignmentMode)
@@ -638,6 +672,7 @@ namespace ExamInvigilationManagement.Application.Services
                 var practicalSpecialistVars = new List<BoolVar>();
                 var emergencyVars = new List<BoolVar>();
                 var facultyMemberVars = new List<BoolVar>();
+                var locationCostTerms = new List<LinearExpr>();
                 var scheduleById = schedules.ToDictionary(x => x.ExamScheduleId);
                 var lecturerById = lecturers.ToDictionary(x => x.UserId);
                 var plan = new AutoAssignPlanDto();
@@ -703,6 +738,10 @@ namespace ExamInvigilationManagement.Application.Services
                             if (formatPriority == ExamFormatPriority.Oral) oralSpecialistVars.Add(variable);
                             if (formatPriority == ExamFormatPriority.Practical) practicalSpecialistVars.Add(variable);
                         }
+
+                        var fixedLocationCost = CalculateSameDayLocationCost(lecturer.PersonKey, day, schedule, sameDayLocationMap);
+                        if (fixedLocationCost is int cost && cost > 0)
+                            locationCostTerms.Add(LinearExpr.Term(variable, cost * 45));
                     }
 
                     var shortage = model.NewIntVar(0, need, $"shortage_s{schedule.ExamScheduleId}");
@@ -760,6 +799,30 @@ namespace ExamInvigilationManagement.Application.Services
                     fairnessTerms.Add(LinearExpr.Term(overload, 600));
                 }
 
+                foreach (var group in variables.GroupBy(x =>
+                {
+                    var schedule = scheduleById[x.Key.ScheduleId];
+                    return (x.Key.LecturerId, Day: DateOnly.FromDateTime(schedule.ExamDate), schedule.SessionId);
+                }))
+                {
+                    var groupItems = group.ToList();
+                    for (var i = 0; i < groupItems.Count; i++)
+                    {
+                        for (var j = i + 1; j < groupItems.Count; j++)
+                        {
+                            var firstSchedule = scheduleById[groupItems[i].Key.ScheduleId];
+                            var secondSchedule = scheduleById[groupItems[j].Key.ScheduleId];
+                            var distanceCost = CalculateRoomDistanceCost(firstSchedule, secondSchedule);
+                            if (distanceCost == 0)
+                                continue;
+
+                            var pair = model.NewBoolVar($"loc_u{group.Key.LecturerId}_s{firstSchedule.ExamScheduleId}_s{secondSchedule.ExamScheduleId}");
+                            model.AddMultiplicationEquality(pair, new IntVar[] { groupItems[i].Value, groupItems[j].Value });
+                            locationCostTerms.Add(LinearExpr.Term(pair, distanceCost * 45));
+                        }
+                    }
+                }
+
                 var solver = new CpSolver
                 {
                     StringParameters = "max_time_in_seconds:8 num_search_workers:8"
@@ -815,6 +878,7 @@ namespace ExamInvigilationManagement.Application.Services
 
                 fairnessTerms.AddRange(emergencyVars.Select(x => LinearExpr.Term(x, 3_000)));
                 fairnessTerms.AddRange(facultyMemberVars.Select(x => LinearExpr.Term(x, 8_000)));
+                fairnessTerms.AddRange(locationCostTerms);
                 model.Minimize(LinearExpr.Sum(fairnessTerms.ToArray()));
                 status = solver.Solve(model);
                 if (status != CpSolverStatus.Feasible && status != CpSolverStatus.Optimal)
@@ -852,8 +916,11 @@ namespace ExamInvigilationManagement.Application.Services
                     var load = lecturerLoads.TryGetValue(selected.Lecturer.UserId, out var currentLoad) ? currentLoad : 0;
                     var sameDayLoad = sameDayLoadMap.TryGetValue((selected.Lecturer.PersonKey, day), out var d) ? d : 0;
                     var tier = GetCandidateTier(selected.Lecturer, selected.Schedule, subjectLecturerMap, isLecturerRoleByUser);
-                    var score = GetCandidateScore(tier, load, sameDayLoad);
-                    var reason = GetCandidateTierReason(tier);
+                    var locationCost = CalculateSameDayLocationCost(selected.Lecturer.PersonKey, day, selected.Schedule, sameDayLocationMap);
+                    var score = GetCandidateScore(tier, load, sameDayLoad, locationCost);
+                    var reasonParts = new[] { GetCandidateTierReason(tier), GetLocationReason(locationCost) }
+                        .Where(x => !string.IsNullOrWhiteSpace(x));
+                    var reason = string.Join("; ", reasonParts);
 
                     AssignOne(
                         plan,
@@ -865,6 +932,7 @@ namespace ExamInvigilationManagement.Application.Services
                         assignedPositions,
                         lecturerLoads,
                         sameDayLoadMap,
+                        sameDayLocationMap,
                         occupiedKeySet,
                         score,
                         reason);
@@ -1035,7 +1103,7 @@ namespace ExamInvigilationManagement.Application.Services
             };
         }
 
-        private static int GetCandidateScore(CandidateTier tier, int load, int sameDayLoad)
+        private static int GetCandidateScore(CandidateTier tier, int load, int sameDayLoad, int? locationCost)
         {
             var baseScore = tier switch
             {
@@ -1045,7 +1113,120 @@ namespace ExamInvigilationManagement.Application.Services
                 _ => 1_000
             };
 
-            return Math.Max(0, baseScore - load * 120 - sameDayLoad * 120);
+            return Math.Max(0, baseScore - load * 120 - sameDayLoad * 120 + GetLocationScoreBonus(locationCost));
+        }
+
+        private static int? CalculateSameDayLocationCost(
+            int personKey,
+            DateOnly day,
+            AutoAssignScheduleDto targetSchedule,
+            Dictionary<(int PersonKey, DateOnly Day, int SessionId), List<AutoAssignScheduleDto>> sameDayLocationMap)
+        {
+            if (!sameDayLocationMap.TryGetValue((personKey, day, targetSchedule.SessionId), out var sameDaySchedules) || sameDaySchedules.Count == 0)
+                return null;
+
+            return sameDaySchedules.Min(x => CalculateRoomDistanceCost(x, targetSchedule));
+        }
+
+        private static int CalculateRoomDistanceCost(AutoAssignScheduleDto first, AutoAssignScheduleDto second)
+        {
+            var firstLocation = ParseRoomLocation(first.RoomDisplay);
+            var secondLocation = ParseRoomLocation(second.RoomDisplay);
+
+            if (firstLocation.NormalizedRoom == secondLocation.NormalizedRoom)
+                return 0;
+
+            if (firstLocation.BuildingKey == secondLocation.BuildingKey)
+            {
+                if (firstLocation.Floor.HasValue && secondLocation.Floor.HasValue)
+                {
+                    if (firstLocation.Floor.Value == secondLocation.Floor.Value)
+                        return 10;
+
+                    return 20 + Math.Min(30, Math.Abs(firstLocation.Floor.Value - secondLocation.Floor.Value) * 5);
+                }
+
+                return 35;
+            }
+
+            return firstLocation.BuildingGroupKey == secondLocation.BuildingGroupKey ? 55 : 120;
+        }
+
+        private static int GetLocationScoreBonus(int? locationCost)
+        {
+            if (!locationCost.HasValue)
+                return 0;
+
+            return locationCost.Value switch
+            {
+                0 => 450,
+                <= 10 => 350,
+                <= 35 => 180,
+                <= 55 => 60,
+                _ => -180
+            };
+        }
+
+        private static string GetLocationReason(int? locationCost)
+        {
+            if (!locationCost.HasValue)
+                return string.Empty;
+
+            return locationCost.Value switch
+            {
+                0 => "Ưu tiên cùng phòng trong ngày",
+                <= 10 => "Ưu tiên cùng giảng đường, cùng tầng",
+                <= 35 => "Ưu tiên cùng giảng đường",
+                <= 55 => "Ưu tiên khu giảng đường gần",
+                _ => "Hạn chế di chuyển xa giữa các ca"
+            };
+        }
+
+        private static RoomLocation ParseRoomLocation(string? roomDisplay)
+        {
+            var normalized = NormalizeRoomDisplay(roomDisplay);
+            if (normalized.StartsWith("TH.HAI LY", StringComparison.Ordinal) || normalized.StartsWith("TH HAI LY", StringComparison.Ordinal))
+                return new RoomLocation(normalized, "TH.HAI LY", "C_TH_HAI_LY", null);
+
+            var parts = normalized
+                .Replace('-', '.')
+                .Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var building = parts.Length > 0 ? parts[0] : normalized;
+            if (string.IsNullOrWhiteSpace(building))
+                building = normalized;
+
+            var buildingGroup = building.StartsWith("C", StringComparison.Ordinal) && building.Length > 1 && char.IsDigit(building[1])
+                ? "C_TH_HAI_LY"
+                : building;
+            var floor = ExtractFloor(parts);
+
+            return new RoomLocation(normalized, building, buildingGroup, floor);
+        }
+
+        private static int? ExtractFloor(string[] roomParts)
+        {
+            if (roomParts.Length < 2)
+                return null;
+
+            var floorPart = roomParts[1];
+            if (floorPart.Length == 0 || !char.IsDigit(floorPart[0]))
+                return null;
+
+            if (floorPart.Length >= 2 && char.IsDigit(floorPart[1]) && roomParts.Length > 2)
+            {
+                return int.TryParse(floorPart, out var multiDigitFloor) ? multiDigitFloor : null;
+            }
+
+            return int.TryParse(floorPart[0].ToString(), out var floor) ? floor : null;
+        }
+
+        private static string NormalizeRoomDisplay(string? roomDisplay)
+        {
+            var normalized = (roomDisplay ?? string.Empty).Trim().ToUpperInvariant();
+            normalized = normalized.Replace('_', ' ').Replace('/', '.');
+            normalized = System.Text.RegularExpressions.Regex.Replace(normalized, @"\s+", " ");
+            normalized = System.Text.RegularExpressions.Regex.Replace(normalized, @"\s*[.-]\s*", ".");
+            return normalized;
         }
 
         private static string GetCandidateTierReason(CandidateTier tier)
@@ -1076,6 +1257,12 @@ namespace ExamInvigilationManagement.Application.Services
         private sealed record CpSatAssignmentResult(
             AutoAssignPlanDto Plan,
             AutoAssignResultDto Result);
+
+        private sealed record RoomLocation(
+            string NormalizedRoom,
+            string BuildingKey,
+            string BuildingGroupKey,
+            int? Floor);
 
         private enum CandidateTier
         {

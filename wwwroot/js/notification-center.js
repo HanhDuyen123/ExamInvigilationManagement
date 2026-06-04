@@ -6,31 +6,78 @@
     const markAllReadUrl = '/Notification/MarkAllAsRead';
     let suppressRealtimeToastUntil = 0;
 
+    function getStorageKey() {
+        const userId = $('#notificationBell').data('user-id') || 'anonymous';
+        return `notification:last-seen-id:${userId}`;
+    }
+
+    function getLastSeenNotificationId() {
+        const raw = localStorage.getItem(getStorageKey());
+        const value = Number(raw);
+        return Number.isFinite(value) && value > 0 ? value : 0;
+    }
+
+    function setLastSeenNotificationId(id) {
+        const value = Math.max(0, Number(id) || 0);
+        if (value > 0) {
+            localStorage.setItem(getStorageKey(), String(value));
+        }
+    }
+
+    function getLatestDropdownNotificationId() {
+        const ids = $('#notificationDropdownBody .notification-item')
+            .map(function () { return Number($(this).data('id')) || 0; })
+            .get();
+
+        return ids.length ? Math.max(...ids) : 0;
+    }
+
+    function setBadgeCount(count) {
+        const normalized = Math.max(0, Number(count) || 0);
+        const $badge = $('#notificationBadge');
+
+        if (normalized > 0) {
+            $badge.text(normalized).removeClass('d-none');
+        } else {
+            $badge.text('0').addClass('d-none');
+        }
+    }
+
     function getAntiForgeryToken() {
         return $('input[name="__RequestVerificationToken"]').first().val()
             || $('meta[name="request-verification-token"]').attr('content')
             || '';
     }
 
-    async function refreshBell() {
+    async function refreshBell(options) {
+        const forceZeroBadge = options?.forceZeroBadge === true;
+        const lastSeenId = getLastSeenNotificationId();
+        const unreadCountUrl = lastSeenId > 0
+            ? `${countUrl}?afterId=${encodeURIComponent(lastSeenId)}`
+            : countUrl;
+
         try {
             const [html, countRes] = await Promise.all([
                 fetch(bellUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(r => r.text()),
-                fetch(countUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(r => r.json())
+                fetch(unreadCountUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } }).then(r => r.json())
             ]);
 
             $('#notificationDropdownBody').html(html);
 
             const count = countRes?.unreadCount || 0;
-            const $badge = $('#notificationBadge');
-
-            if (count > 0) {
-                $badge.text(count).removeClass('d-none');
-            } else {
-                $badge.addClass('d-none');
-            }
+            setBadgeCount(forceZeroBadge ? 0 : count);
         } catch (e) {
             console.error('Refresh notification failed', e);
+        }
+    }
+
+    async function acknowledgeBellOpened() {
+        setBadgeCount(0);
+        await refreshBell({ forceZeroBadge: true });
+
+        const latestId = getLatestDropdownNotificationId();
+        if (latestId > 0) {
+            setLastSeenNotificationId(latestId);
         }
     }
 
@@ -78,7 +125,11 @@
                 }
             });
 
-            await refreshBell();
+            await refreshBell({ forceZeroBadge: true });
+            const latestId = getLatestDropdownNotificationId();
+            if (latestId > 0) {
+                setLastSeenNotificationId(latestId);
+            }
 
             if (window.CrudPage && typeof CrudPage.loadData === 'function') {
                 CrudPage.loadData(1);
@@ -103,9 +154,12 @@
                 .withAutomaticReconnect()
                 .build();
 
-            connection.on('notification:changed', function () {
+            connection.on('notification:changed', function (payload) {
+                const changeKind = payload?.changeKind || 'changed';
+                const isNewNotification = changeKind === 'created' || changeKind === 'changed';
+
                 refreshBell();
-                if (Date.now() > suppressRealtimeToastUntil) {
+                if (isNewNotification && Date.now() > suppressRealtimeToastUntil) {
                     showRealtimeToast();
                 }
 
@@ -119,7 +173,7 @@
             });
 
             connection.start()
-                .then(refreshBell)
+                .then(function () { return refreshBell(); })
                 .catch(console.error);
         }
 
@@ -128,8 +182,14 @@
             if (id) markRead(id);
         });
 
-        $(document).on('click', '#markAllReadBtn', function () {
+        $(document).on('click', '.mark-all-read-btn', function (event) {
+            event.preventDefault();
+            event.stopPropagation();
             markAllRead();
+        });
+
+        $('#notificationBell').on('shown.bs.dropdown', function () {
+            acknowledgeBellOpened();
         });
     });
 })();

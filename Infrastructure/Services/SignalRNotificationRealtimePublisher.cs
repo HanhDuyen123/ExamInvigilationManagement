@@ -13,9 +13,9 @@ namespace ExamInvigilationManagement.Infrastructure.Services
             _hub = hub;
         }
 
-        public async Task PublishToUserAsync(int userId, CancellationToken cancellationToken = default)
+        public async Task PublishToUserAsync(int userId, string changeKind = "changed", CancellationToken cancellationToken = default)
         {
-            var payload = new { userId, changedAt = DateTime.Now };
+            var payload = new { userId, changeKind, changedAt = DateTime.Now };
 
             await _hub.Clients.Group($"user-{userId}")
                 .SendAsync("notification:changed", payload, cancellationToken);
@@ -24,11 +24,11 @@ namespace ExamInvigilationManagement.Infrastructure.Services
                 .SendAsync("notification:changed", payload, cancellationToken);
         }
 
-        public async Task PublishToUsersAsync(IEnumerable<int> userIds, CancellationToken cancellationToken = default)
+        public async Task PublishToUsersAsync(IEnumerable<int> userIds, string changeKind = "changed", CancellationToken cancellationToken = default)
         {
             foreach (var userId in userIds.Distinct())
             {
-                await PublishToUserAsync(userId, cancellationToken);
+                await PublishToUserAsync(userId, changeKind, cancellationToken);
             }
         }
     }

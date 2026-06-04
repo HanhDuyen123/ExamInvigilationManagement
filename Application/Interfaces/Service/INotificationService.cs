@@ -30,6 +30,11 @@ namespace ExamInvigilationManagement.Application.Interfaces.Service
             int userId,
             CancellationToken cancellationToken = default);
 
+        Task<int> GetUnreadCountAfterAsync(
+            int userId,
+            int afterNotificationId,
+            CancellationToken cancellationToken = default);
+
         Task<NotificationDetailDto?> GetByIdAsync(
             int id,
             int userId,
