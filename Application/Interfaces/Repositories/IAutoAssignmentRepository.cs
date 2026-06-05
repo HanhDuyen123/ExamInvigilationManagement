@@ -20,6 +20,22 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
             IEnumerable<int> ownerUserIds,
             CancellationToken cancellationToken = default);
 
+        Task<HashSet<int>> GetPeriodAvailableLecturerIdsAsync(
+            int periodId,
+            int facultyId,
+            IEnumerable<int> userIds,
+            CancellationToken cancellationToken = default);
+
+        Task<bool> HasPeriodAvailabilityListAsync(
+            int periodId,
+            int facultyId,
+            CancellationToken cancellationToken = default);
+
+        Task<HashSet<int>> GetApprovedBusyPeriodLecturerIdsAsync(
+            int periodId,
+            IEnumerable<int> userIds,
+            CancellationToken cancellationToken = default);
+
         Task<Dictionary<int, int>> GetLecturerLoadsAsync(
             int semesterId,
             IEnumerable<int> userIds,

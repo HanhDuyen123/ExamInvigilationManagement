@@ -7,6 +7,7 @@ using ExamInvigilationManagement.Application.DTOs.Import;
 using ExamInvigilationManagement.Application.Interfaces.Common;
 using ExamInvigilationManagement.Application.Interfaces.Service;
 using ExamInvigilationManagement.Common;
+using ExamInvigilationManagement.Common.Constants;
 using ExamInvigilationManagement.Infrastructure.Data;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -30,7 +31,7 @@ namespace ExamInvigilationManagement.Application.Services
 
         public IReadOnlyList<string> SupportedModules { get; } =
         [
-            "subject", "information-user", "course-offering", "exam-schedule", "lecturer-busy-slot", "exam-invigilator"
+            "subject", "information-user", "course-offering", "exam-schedule", "lecturer-busy-slot", "lecturer-period-availability", "exam-invigilator"
         ];
 
         public string GetModuleTitle(string module) => NormalizeModule(module) switch
@@ -40,6 +41,7 @@ namespace ExamInvigilationManagement.Application.Services
             "course-offering" => "Import học phần mở",
             "exam-schedule" => "Import lịch thi",
             "lecturer-busy-slot" => "Import lịch bận giảng viên",
+            "lecturer-period-availability" => "Import giảng viên khả thi theo đợt",
             "exam-invigilator" => "Import phân công giám thị",
             _ => "Import dữ liệu"
         };
@@ -51,6 +53,7 @@ namespace ExamInvigilationManagement.Application.Services
             "course-offering" => "/Admin/CourseOffering",
             "exam-schedule" => "/ExamSchedule",
             "lecturer-busy-slot" => "/BusySlot",
+            "lecturer-period-availability" => "/LecturerManagement/Availability",
             "exam-invigilator" => "/ExamSchedule",
             _ => "/"
         };
@@ -116,6 +119,16 @@ namespace ExamInvigilationManagement.Application.Services
                 Col("SlotName", "Ca thi", true, "Tên ca thi trong buổi thi.", "Ca 1"),
                 Col("BusyDate", "Ngày bận", true, "Định dạng yyyy-MM-dd hoặc dd/MM/yyyy.", "2026-06-01"),
                 Col("Note", "Ghi chú", false, "Lý do bận.", "Đi công tác")
+            ],
+            "lecturer-period-availability" =>
+            [
+                Col("UserName", "Tên đăng nhập giảng viên", true, "Tài khoản giảng viên có khả năng tham gia coi thi trong đợt.", "gv001"),
+                Col("LastName", "Họ", true, "Họ giảng viên phải khớp với tên đăng nhập trong hệ thống.", "Nguyễn Văn"),
+                Col("FirstName", "Tên", true, "Tên giảng viên phải khớp với tên đăng nhập trong hệ thống.", "An"),
+                Col("AcademyYearName", "Năm học", true, "Tên năm học phải khớp chính xác.", "2025-2026"),
+                Col("SemesterName", "Học kỳ", true, "Tên học kỳ trong năm học đã chọn.", "Học kỳ 1"),
+                Col("PeriodName", "Đợt thi", true, "Tên đợt thi trong học kỳ.", "Đợt 1"),
+                Col("Note", "Ghi chú", false, "Thông tin bổ sung nếu có.", "Có thể coi thi trực tiếp")
             ],
             "exam-invigilator" =>
             [
@@ -197,6 +210,7 @@ namespace ExamInvigilationManagement.Application.Services
                 "course-offering" => (await MapCourseOfferingsWithSubjects(rows, result, ct)).Cast<object>().ToList(),
                 "exam-schedule" => (await MapExamSchedules(rows, result, ct)).Cast<object>().ToList(),
                 "lecturer-busy-slot" => (await MapBusySlots(rows, result, currentUserId, currentRole, ct)).Cast<object>().ToList(),
+                "lecturer-period-availability" => (await MapPeriodAvailabilities(rows, result, currentUserId, currentRole, ct)).Cast<object>().ToList(),
                 "exam-invigilator" => (await MapInvigilators(rows, result, currentUserId, ct)).Cast<object>().ToList(),
                 _ => []
             };
@@ -284,7 +298,7 @@ namespace ExamInvigilationManagement.Application.Services
 
         private async Task<List<E.CourseOffering>> MapCourseOfferings(List<Dictionary<string, string>> rows, ImportResultDto result, CancellationToken ct)
         {
-            var users = (await _db.Users.Include(x => x.Role).ToListAsync(ct)).ToDictionary(x => x.UserName, StringComparer.OrdinalIgnoreCase);
+            var users = (await _db.Users.Include(x => x.Role).Include(x => x.Information).ToListAsync(ct)).ToDictionary(x => x.UserName, StringComparer.OrdinalIgnoreCase);
             var years = await _db.AcademyYears.Select(x => new { x.AcademyYearId, x.AcademyYearName }).ToListAsync(ct);
             var semesters = await _db.Semesters.Select(x => new { x.SemesterId, x.SemesterName, x.AcademyYearId }).ToListAsync(ct);
             var subjects = (await _db.Subjects.Select(x => x.SubjectId).ToListAsync(ct))
@@ -301,7 +315,7 @@ namespace ExamInvigilationManagement.Application.Services
                 var group = Val(row, "Nhóm").Trim();
                 if (!users.TryGetValue(userName, out var user) || user.Role.RoleName != "Giảng viên") result.Errors.Add(Error(r, "Tên đăng nhập giảng viên", userName, "Không tồn tại hoặc không phải giảng viên."));
                 var year = ResolveOne(years, x => x.AcademyYearName, Val(row, "Năm học"), result, r, "Năm học");
-                var semester = ResolveOne(semesters.Where(x => year == null || x.AcademyYearId == year.AcademyYearId), x => x.SemesterName, Val(row, "Học kỳ"), result, r, "Học kỳ");
+                var semester = ResolveSemester(semesters.Where(x => year == null || x.AcademyYearId == year.AcademyYearId), x => x.SemesterName, Val(row, "Học kỳ"), result, r, "Học kỳ");
                 var semesterId = semester?.SemesterId ?? 0;
                 if (Required(result, r, "Mã môn", subjectId) && !subjects.Contains(subjectId)) result.Errors.Add(Error(r, "Mã môn", subjectId, "Không tồn tại."));
                 if (Required(result, r, "Lớp học phần", className) && className.Length > 30) result.Errors.Add(Error(r, "Lớp học phần", className, "Tối đa 30 ký tự."));
@@ -399,7 +413,7 @@ namespace ExamInvigilationManagement.Application.Services
                 var r = RowNo(row);
                 var year = ResolveOne(years, x => x.AcademyYearName, Val(row, "Năm học"), result, r, "Năm học");
                 var yearId = year?.AcademyYearId ?? 0;
-                var semester = ResolveOne(semesters.Where(x => year == null || x.AcademyYearId == year.AcademyYearId), x => x.SemesterName, Val(row, "Học kỳ"), result, r, "Học kỳ");
+                var semester = ResolveSemester(semesters.Where(x => year == null || x.AcademyYearId == year.AcademyYearId), x => x.SemesterName, Val(row, "Học kỳ"), result, r, "Học kỳ");
                 var semesterId = semester?.SemesterId ?? 0;
                 var period = ResolveExamPeriod(periods.Where(x => semester == null || x.SemesterId == semester.SemesterId), x => x.PeriodName, Val(row, "Đợt thi"), result, r, "Đợt thi");
                 var periodId = period?.PeriodId ?? 0;
@@ -508,7 +522,7 @@ namespace ExamInvigilationManagement.Application.Services
 
         private async Task<List<E.LecturerBusySlot>> MapBusySlots(List<Dictionary<string, string>> rows, ImportResultDto result, int currentUserId, string currentRole, CancellationToken ct)
         {
-            var users = (await _db.Users.Include(x => x.Role).ToListAsync(ct)).ToDictionary(x => x.UserName, StringComparer.OrdinalIgnoreCase);
+            var users = (await _db.Users.Include(x => x.Role).Include(x => x.Information).ToListAsync(ct)).ToDictionary(x => x.UserName, StringComparer.OrdinalIgnoreCase);
             var currentFacultyId = await _db.Users.Where(x => x.UserId == currentUserId).Select(x => x.FacultyId).FirstOrDefaultAsync(ct);
             var years = await _db.AcademyYears.Select(x => new { x.AcademyYearId, x.AcademyYearName }).ToListAsync(ct);
             var semesters = await _db.Semesters.Select(x => new { x.SemesterId, x.SemesterName, x.AcademyYearId }).ToListAsync(ct);
@@ -526,16 +540,75 @@ namespace ExamInvigilationManagement.Application.Services
                 if (!users.TryGetValue(userName, out var user) || user.Role.RoleName != "Giảng viên") result.Errors.Add(Error(r, "Tên đăng nhập giảng viên", userName, "Không tồn tại hoặc không phải giảng viên."));
                 if (currentRole == "Thư ký khoa" && user != null && user.FacultyId != currentFacultyId) result.Errors.Add(Error(r, "Tên đăng nhập giảng viên", userName, "Không thuộc khoa của thư ký hiện tại."));
                 var year = ResolveOne(years, x => x.AcademyYearName, Val(row, "Năm học"), result, r, "Năm học");
-                var semester = ResolveOne(semesters.Where(x => year == null || x.AcademyYearId == year.AcademyYearId), x => x.SemesterName, Val(row, "Học kỳ"), result, r, "Học kỳ");
+                var semester = ResolveSemester(semesters.Where(x => year == null || x.AcademyYearId == year.AcademyYearId), x => x.SemesterName, Val(row, "Học kỳ"), result, r, "Học kỳ");
                 var period = ResolveExamPeriod(periods.Where(x => semester == null || x.SemesterId == semester.SemesterId), x => x.PeriodName, Val(row, "Đợt thi"), result, r, "Đợt thi");
                 var session = ResolveOne(sessions.Where(x => period == null || x.PeriodId == period.PeriodId), x => x.SessionName, Val(row, "Buổi thi"), result, r, "Buổi thi");
                 var slot = ResolveOne(slots.Where(x => session == null || x.SessionId == session.SessionId), x => x.SlotName, Val(row, "Ca thi"), result, r, "Ca thi");
                 var slotId = slot?.SlotId ?? 0;
                 if (!TryDateOnly(row, "Ngày bận", result, r, out var busyDate)) busyDate = default;
+                var note = EmptyToNull(Val(row, "Ghi chú"));
+                if (string.IsNullOrWhiteSpace(note)) result.Errors.Add(Error(r, "Ghi chú", string.Empty, "Vui lòng nhập lý do bận."));
                 var key = (user?.UserId ?? 0, slotId, busyDate);
                 if (!seen.Add(key) || existingSet.Contains(key)) result.Errors.Add(Error(r, "Dòng", $"{userName}-{slotId}-{busyDate:yyyy-MM-dd}", "Lịch bận bị trùng."));
-                list.Add(new E.LecturerBusySlot { UserId = user?.UserId ?? 0, SlotId = slotId, BusyDate = busyDate, Note = EmptyToNull(Val(row, "Ghi chú")), CreateAt = DateTime.Now });
+                list.Add(new E.LecturerBusySlot { UserId = user?.UserId ?? 0, SlotId = slotId, BusyDate = busyDate, Note = note ?? string.Empty, CreateAt = DateTime.Now, ApprovalStatus = BusyApprovalStatuses.Approved, ApprovedById = currentUserId, ApprovedAt = DateTime.Now });
             }
+            return list;
+        }
+
+        private async Task<List<E.LecturerPeriodAvailability>> MapPeriodAvailabilities(List<Dictionary<string, string>> rows, ImportResultDto result, int currentUserId, string currentRole, CancellationToken ct)
+        {
+            var users = (await _db.Users.Include(x => x.Role).Include(x => x.Information).ToListAsync(ct)).ToDictionary(x => x.UserName, StringComparer.OrdinalIgnoreCase);
+            var currentFacultyId = await _db.Users.Where(x => x.UserId == currentUserId).Select(x => x.FacultyId).FirstOrDefaultAsync(ct);
+            var years = await _db.AcademyYears.Select(x => new { x.AcademyYearId, x.AcademyYearName }).ToListAsync(ct);
+            var semesters = await _db.Semesters.Select(x => new { x.SemesterId, x.SemesterName, x.AcademyYearId }).ToListAsync(ct);
+            var periods = await _db.ExamPeriods.Select(x => new { x.PeriodId, x.PeriodName, x.SemesterId }).ToListAsync(ct);
+            var seen = new HashSet<(int UserId, int PeriodId)>();
+            var list = new List<E.LecturerPeriodAvailability>();
+
+            foreach (var row in rows)
+            {
+                var r = RowNo(row);
+                var userName = Val(row, "Tên đăng nhập giảng viên").Trim();
+                var lastName = Val(row, "Họ");
+                var firstName = Val(row, "Tên");
+                if (!users.TryGetValue(userName, out var user) || user.Role.RoleName != "Giảng viên") result.Errors.Add(Error(r, "Tên đăng nhập giảng viên", userName, "Không tồn tại hoặc không phải giảng viên."));
+                if ((currentRole == "Thư ký khoa" || currentRole == "Trưởng khoa") && user != null && user.FacultyId != currentFacultyId) result.Errors.Add(Error(r, "Tên đăng nhập giảng viên", userName, "Không thuộc khoa hiện tại."));
+                Required(result, r, "Họ", lastName);
+                Required(result, r, "Tên", firstName);
+                if (user?.Information != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(lastName) && NormalizePersonName(lastName) != NormalizePersonName(user.Information.LastName))
+                        result.Errors.Add(Error(r, "Họ", lastName, $"Không khớp hồ sơ hệ thống ({user.Information.LastName})."));
+                    if (!string.IsNullOrWhiteSpace(firstName) && NormalizePersonName(firstName) != NormalizePersonName(user.Information.FirstName))
+                        result.Errors.Add(Error(r, "Tên", firstName, $"Không khớp hồ sơ hệ thống ({user.Information.FirstName})."));
+
+                    var importedFullName = NormalizePersonName($"{lastName} {firstName}");
+                    var systemFullName = NormalizePersonName($"{user.Information.LastName} {user.Information.FirstName}");
+                    if (!string.IsNullOrWhiteSpace(importedFullName) && importedFullName != systemFullName)
+                        result.Errors.Add(Error(r, "Họ/Tên", $"{lastName} {firstName}", $"Không cùng giảng viên với tên đăng nhập {userName} ({user.Information.LastName} {user.Information.FirstName})."));
+                }
+                else if (user != null)
+                {
+                    result.Errors.Add(Error(r, "Tên đăng nhập giảng viên", userName, "Tài khoản chưa gắn hồ sơ thông tin để đối chiếu họ tên."));
+                }
+
+                var year = ResolveOne(years, x => x.AcademyYearName, Val(row, "Năm học"), result, r, "Năm học");
+                var semester = ResolveSemester(semesters.Where(x => year == null || x.AcademyYearId == year.AcademyYearId), x => x.SemesterName, Val(row, "Học kỳ"), result, r, "Học kỳ");
+                var period = ResolveExamPeriod(periods.Where(x => semester == null || x.SemesterId == semester.SemesterId), x => x.PeriodName, Val(row, "Đợt thi"), result, r, "Đợt thi");
+                var key = (user?.UserId ?? 0, period?.PeriodId ?? 0);
+                if (!seen.Add(key)) result.Errors.Add(Error(r, "Dòng", $"{userName}-{period?.PeriodName}", "Giảng viên bị trùng trong danh sách khả thi."));
+
+                list.Add(new E.LecturerPeriodAvailability
+                {
+                    UserId = user?.UserId ?? 0,
+                    PeriodId = period?.PeriodId ?? 0,
+                    Note = EmptyToNull(Val(row, "Ghi chú")),
+                    Source = "Import",
+                    CreatedById = currentUserId,
+                    CreatedAt = DateTime.Now
+                });
+            }
+
             return list;
         }
 
@@ -577,10 +650,57 @@ namespace ExamInvigilationManagement.Application.Services
                 case "course-offering": return await UpsertCourseOfferingsAsync(entities.Cast<E.CourseOffering>(), ct);
                 case "exam-schedule": return await UpsertExamSchedulesAsync(entities.Cast<E.ExamSchedule>(), ct);
                 case "lecturer-busy-slot": _db.LecturerBusySlots.AddRange(entities.Cast<E.LecturerBusySlot>()); return entities.Count;
+                case "lecturer-period-availability": return await UpsertPeriodAvailabilitiesAsync(entities.Cast<E.LecturerPeriodAvailability>(), ct);
                 case "exam-invigilator": _db.ExamInvigilators.AddRange(entities.Cast<E.ExamInvigilator>()); return entities.Count;
             }
 
             return 0;
+        }
+
+        private async Task<int> UpsertPeriodAvailabilitiesAsync(IEnumerable<E.LecturerPeriodAvailability> items, CancellationToken ct)
+        {
+            var incoming = items.Where(x => x.UserId > 0 && x.PeriodId > 0).ToList();
+            if (incoming.Count == 0) return 0;
+
+            var userIds = incoming.Select(x => x.UserId).Distinct().ToList();
+            var periodIds = incoming.Select(x => x.PeriodId).Distinct().ToList();
+            var facultyIds = await _db.Users
+                .Where(x => userIds.Contains(x.UserId) && x.FacultyId.HasValue)
+                .Select(x => x.FacultyId!.Value)
+                .Distinct()
+                .ToListAsync(ct);
+            var incomingKeys = incoming.Select(x => (x.UserId, x.PeriodId)).ToHashSet();
+
+            var existing = await _db.LecturerPeriodAvailabilities
+                .Where(x => periodIds.Contains(x.PeriodId) && x.User.FacultyId.HasValue && facultyIds.Contains(x.User.FacultyId.Value))
+                .ToListAsync(ct);
+            var existingMap = existing.ToDictionary(x => (x.UserId, x.PeriodId));
+            var changed = 0;
+
+            foreach (var stale in existing.Where(x => !incomingKeys.Contains((x.UserId, x.PeriodId))).ToList())
+            {
+                _db.LecturerPeriodAvailabilities.Remove(stale);
+                changed++;
+            }
+
+            foreach (var item in incoming)
+            {
+                if (existingMap.TryGetValue((item.UserId, item.PeriodId), out var current))
+                {
+                    current.Note = item.Note;
+                    current.Source = item.Source;
+                    current.CreatedById = item.CreatedById;
+                    current.CreatedAt = DateTime.Now;
+                    changed++;
+                }
+                else
+                {
+                    _db.LecturerPeriodAvailabilities.Add(item);
+                    changed++;
+                }
+            }
+
+            return changed;
         }
 
         private async Task<int> UpsertSubjectsAsync(IEnumerable<E.Subject> subjects, CancellationToken ct)
@@ -765,14 +885,15 @@ namespace ExamInvigilationManagement.Application.Services
                 var excelRows = sheetData.Elements<Row>().ToList();
                 if (excelRows.Count < 2) return rows;
 
-                var expectedHeaders = GetTemplateColumns(module).Select(x => x.Header).ToHashSet(StringComparer.OrdinalIgnoreCase);
+                var templateColumns = GetTemplateColumns(module);
+                var requiredHeaders = templateColumns.Where(x => x.Required).Select(x => x.Header).ToHashSet(StringComparer.OrdinalIgnoreCase);
                 var headerRow = excelRows.FirstOrDefault(row =>
                 {
                     var rowHeaders = row.Elements<Cell>()
                         .Select(c => GetCellValue(workbookPart, c).Trim())
                         .Where(x => !string.IsNullOrWhiteSpace(x))
                         .ToHashSet(StringComparer.OrdinalIgnoreCase);
-                    return expectedHeaders.Count > 0 && expectedHeaders.All(rowHeaders.Contains);
+                    return requiredHeaders.Count > 0 && requiredHeaders.All(rowHeaders.Contains);
                 });
 
                 if (headerRow == null && module is "subject" or "course-offering" or "exam-schedule")
@@ -781,16 +902,26 @@ namespace ExamInvigilationManagement.Application.Services
                 headerRow ??= excelRows[0];
 
                 var headerRowIndex = headerRow.RowIndex?.Value ?? 1;
-                var headers = headerRow.Elements<Cell>().Select(c => GetCellValue(workbookPart, c).Trim()).ToList();
-                var dataStartIndex = headerRowIndex + 3;
-                foreach (var row in excelRows.Where(x => (x.RowIndex?.Value ?? 0) >= dataStartIndex))
+                var headersByColumn = headerRow.Elements<Cell>()
+                    .Select(c => new { Column = GetColumnName(c.CellReference?.Value), Header = GetCellValue(workbookPart, c).Trim() })
+                    .Where(x => !string.IsNullOrWhiteSpace(x.Column) && !string.IsNullOrWhiteSpace(x.Header))
+                    .ToDictionary(x => x.Column!, x => x.Header, StringComparer.OrdinalIgnoreCase);
+                foreach (var row in excelRows.Where(x => (x.RowIndex?.Value ?? 0) > headerRowIndex))
                 {
+                    var currentRowIndex = row.RowIndex?.Value ?? 0;
+                    if (headerRowIndex == 6 && (currentRowIndex == 7 || currentRowIndex == 8))
+                        continue;
+
                     var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["__RowNumber"] = row.RowIndex?.Value.ToString() ?? "0" };
-                    var cells = row.Elements<Cell>().ToList();
-                    for (var i = 0; i < headers.Count; i++)
+                    foreach (var cell in row.Elements<Cell>())
                     {
-                        dict[headers[i]] = GetCellValue(workbookPart, cells.FirstOrDefault(c => GetColumnName(c.CellReference?.Value) == GetExcelColumnName(i + 1)));
+                        var column = GetColumnName(cell.CellReference?.Value);
+                        if (column != null && headersByColumn.TryGetValue(column, out var header))
+                            dict[header] = GetCellValue(workbookPart, cell);
                     }
+                    foreach (var header in headersByColumn.Values)
+                        dict.TryAdd(header, string.Empty);
+                    if (IsTemplateHelperRow(dict, templateColumns)) continue;
                     if (dict.Where(x => x.Key != "__RowNumber").Any(x => !string.IsNullOrWhiteSpace(x.Value))) rows.Add(dict);
                 }
             }
@@ -890,6 +1021,21 @@ namespace ExamInvigilationManagement.Application.Services
             return row.Elements<Cell>()
                 .Where(c => !string.IsNullOrWhiteSpace(c.CellReference?.Value))
                 .ToDictionary(c => GetColumnName(c.CellReference!.Value) ?? string.Empty, c => GetCellValue(workbookPart, c), StringComparer.OrdinalIgnoreCase);
+        }
+
+        private static bool IsTemplateHelperRow(Dictionary<string, string> row, List<ImportColumnDto> columns)
+        {
+            var values = columns
+                .Select(c => Val(row, c.Header))
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList();
+
+            if (values.Count == 0) return true;
+
+            var exampleValues = columns.Select(x => x.Example ?? string.Empty).Where(x => !string.IsNullOrWhiteSpace(x)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var descriptionValues = columns.Select(x => x.Description ?? string.Empty).Where(x => !string.IsNullOrWhiteSpace(x)).ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            return values.All(x => exampleValues.Contains(x)) || values.All(x => descriptionValues.Contains(x));
         }
 
         private static bool HeaderMatches(string? actual, string expected) => NormalizeHeader(actual) == NormalizeHeader(expected);
@@ -1197,6 +1343,26 @@ namespace ExamInvigilationManagement.Application.Services
             return null;
         }
 
+        private static T? ResolveSemester<T>(IEnumerable<T> source, Func<T, string?> selector, string raw, ImportResultDto result, int row, string column) where T : class
+        {
+            if (!Required(result, row, column, raw)) return null;
+
+            var list = source.ToList();
+            var normalized = NormalizeLookup(raw);
+            var matches = list.Where(x => NormalizeLookup(selector(x)) == normalized).ToList();
+            if (matches.Count == 1) return matches[0];
+
+            var canonical = NormalizeSemesterName(raw);
+            if (!string.IsNullOrWhiteSpace(canonical))
+            {
+                var canonicalMatches = list.Where(x => NormalizeSemesterName(selector(x)) == canonical).ToList();
+                if (canonicalMatches.Count == 1) return canonicalMatches[0];
+            }
+
+            result.Errors.Add(Error(row, column, raw, matches.Count == 0 ? "Không tìm thấy dữ liệu khớp trong hệ thống." : "Tên bị trùng trong hệ thống hoặc trong phạm vi cha, cần kiểm tra lại dữ liệu."));
+            return null;
+        }
+
         private static T? ResolveExamPeriod<T>(IEnumerable<T> source, Func<T, string?> selector, string raw, ImportResultDto result, int row, string column) where T : class
         {
             if (!Required(result, row, column, raw)) return null;
@@ -1255,6 +1421,33 @@ namespace ExamInvigilationManagement.Application.Services
             var normalized = NormalizeLookup(value);
             return System.Text.RegularExpressions.Regex.Replace(normalized, @"^(khoa|trung tâm|trung tam|trường|truong)\s+", string.Empty, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
         }
+
+        private static string NormalizeSemesterName(string? value)
+        {
+            var normalized = NormalizeLookup(value);
+            if (string.IsNullOrWhiteSpace(normalized)) return string.Empty;
+
+            normalized = normalized
+                .Replace("hoc ky", "hk")
+                .Replace("hoc ki", "hk")
+                .Replace("học kỳ", "hk")
+                .Replace("học kì", "hk")
+                .Replace("ky", "hk")
+                .Replace("ki", "hk");
+            normalized = System.Text.RegularExpressions.Regex.Replace(normalized, @"\s+", string.Empty);
+
+            return normalized switch
+            {
+                "1" or "hk1" or "hki" => "hk1",
+                "2" or "hk2" or "hkii" => "hk2",
+                "3" or "hk3" or "he" or "hè" => "hk3",
+                _ => normalized
+            };
+        }
+
+        private static string NormalizePersonName(string? value)
+            => NormalizeLookup(value).Replace(" ", string.Empty);
+
         private static string NormalizeLookup(string? value)
         {
             var normalized = (value ?? string.Empty).Trim().ToLowerInvariant().Normalize(NormalizationForm.FormD);

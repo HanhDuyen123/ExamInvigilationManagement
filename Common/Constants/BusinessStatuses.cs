@@ -143,4 +143,15 @@ namespace ExamInvigilationManagement.Common.Constants
             };
         }
     }
+
+    public static class BusyApprovalStatuses
+    {
+        public const string Pending = "Chờ duyệt";
+        public const string Approved = "Đã duyệt";
+        public const string Rejected = "Từ chối duyệt";
+
+        public static bool IsFinal(string? status)
+            => string.Equals(status, Approved, StringComparison.OrdinalIgnoreCase)
+               || string.Equals(status, Rejected, StringComparison.OrdinalIgnoreCase);
+    }
 }

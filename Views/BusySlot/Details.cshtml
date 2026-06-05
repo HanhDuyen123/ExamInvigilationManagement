@@ -22,13 +22,20 @@
             <div class="detail-item"><span>Đợt thi</span><strong>@(Model.ExamPeriodName ?? "-")</strong></div>
             <div class="detail-item"><span>Buổi thi</span><strong>@(Model.ExamSessionName ?? "-")</strong></div>
             <div class="detail-item"><span>Ca thi</span><strong>@(Model.ExamSlotName ?? "-")</strong></div>
-            <div class="detail-item"><span>Ngày bận</span><strong>@Model.BusyDate.ToString("dd/MM/yyyy")</strong></div>
-            <div class="detail-item wide"><span>Ghi chú</span><strong>@(string.IsNullOrWhiteSpace(Model.Note) ? "-" : Model.Note)</strong></div>
+            <div class="detail-item"><span>Ngày bận</span><strong>@Model.BusyDateDisplay</strong></div>
+            <div class="detail-item"><span>Trạng thái duyệt</span><strong>@Model.ApprovalStatus</strong></div>
+            <div class="detail-item"><span>Người duyệt</span><strong>@(Model.ApprovedByName ?? "-")</strong></div>
+            <div class="detail-item"><span>Thời điểm duyệt</span><strong>@(Model.ApprovedAt?.ToString("dd/MM/yyyy HH:mm") ?? "-")</strong></div>
+            <div class="detail-item wide"><span>Lý do bận</span><strong>@(string.IsNullOrWhiteSpace(Model.Note) ? "-" : Model.Note)</strong></div>
+            @if (!string.IsNullOrWhiteSpace(Model.RejectionReason))
+            {
+                <div class="detail-item wide"><span>Lý do từ chối</span><strong>@Model.RejectionReason</strong></div>
+            }
         </div>
 
         <div class="form-actions d-flex justify-content-end gap-2">
             <a asp-action="Index" class="btn btn-outline-secondary rounded-3 px-4">Quay lại</a>
-            @if (User.IsInRole("Giảng viên"))
+            @if (User.IsInRole("Giảng viên") && !Model.IsFinal && !Model.BusyWholePeriod)
             {
                 <a asp-action="Edit" asp-route-id="@Model.Id" class="btn-submit text-decoration-none"><i class="bi bi-pencil-square"></i> Cập nhật</a>
             }

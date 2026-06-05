@@ -68,6 +68,10 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<LecturerBusySlot> LecturerBusySlots { get; set; }
 
+    public virtual DbSet<LecturerBusyPeriod> LecturerBusyPeriods { get; set; }
+
+    public virtual DbSet<LecturerPeriodAvailability> LecturerPeriodAvailabilities { get; set; }
+
     public virtual DbSet<Notification> Notifications { get; set; }
 
     public virtual DbSet<OutboxMessage> OutboxMessages { get; set; }
@@ -315,6 +319,11 @@ public partial class ApplicationDbContext : DbContext
             entity.HasKey(e => e.BusySlotId).HasName("PK__Lecturer__70A1FD1C18B4EFCB");
 
             entity.Property(e => e.CreateAt).HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.ApprovalStatus).HasDefaultValue("Chờ duyệt");
+
+            entity.HasIndex(e => e.ApprovalStatus).HasDatabaseName("IX_LecturerBusySlot_ApprovalStatus");
+
+            entity.HasOne(d => d.ApprovedBy).WithMany(p => p.ApprovedLecturerBusySlots).HasConstraintName("FK_LecturerBusySlot_ApprovedBy");
 
             entity.HasOne(d => d.Slot).WithMany(p => p.LecturerBusySlots)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -323,6 +332,40 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.LecturerBusySlots)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_BusySlot_User");
+        });
+
+        modelBuilder.Entity<LecturerBusyPeriod>(entity =>
+        {
+            entity.HasKey(e => e.BusyPeriodId).HasName("PK_LecturerBusyPeriod");
+            entity.Property(e => e.CreateAt).HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.ApprovalStatus).HasDefaultValue("Chờ duyệt");
+            entity.HasIndex(e => e.ApprovalStatus).HasDatabaseName("IX_LecturerBusyPeriod_ApprovalStatus");
+
+            entity.HasOne(d => d.ApprovedBy).WithMany(p => p.ApprovedLecturerBusyPeriods).HasConstraintName("FK_LecturerBusyPeriod_ApprovedBy");
+            entity.HasOne(d => d.Period).WithMany(p => p.LecturerBusyPeriods)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_LecturerBusyPeriod_Period");
+            entity.HasOne(d => d.User).WithMany(p => p.LecturerBusyPeriods)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_LecturerBusyPeriod_User");
+        });
+
+        modelBuilder.Entity<LecturerPeriodAvailability>(entity =>
+        {
+            entity.HasKey(e => e.AvailabilityId).HasName("PK_LecturerPeriodAvailability");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.Source).HasDefaultValue("Manual");
+            entity.HasIndex(e => e.PeriodId).HasDatabaseName("IX_LecturerPeriodAvailability_PeriodId");
+
+            entity.HasOne(d => d.CreatedBy).WithMany(p => p.CreatedLecturerPeriodAvailabilities)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_LecturerPeriodAvailability_CreatedBy");
+            entity.HasOne(d => d.Period).WithMany(p => p.LecturerPeriodAvailabilities)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_LecturerPeriodAvailability_Period");
+            entity.HasOne(d => d.User).WithMany(p => p.LecturerPeriodAvailabilities)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_LecturerPeriodAvailability_User");
         });
 
         modelBuilder.Entity<Notification>(entity =>

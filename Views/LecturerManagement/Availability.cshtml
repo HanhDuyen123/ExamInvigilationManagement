@@ -1,0 +1,96 @@
+@{
+    ViewData["Title"] = "Giảng viên khả thi theo đợt";
+    var showFacultyFilter = ViewBag.ShowFacultyFilter as bool? ?? false;
+}
+
+<div class="role-page">
+    <div class="role-header">
+        <div>
+            <h3 class="title-gradient">Giảng viên khả thi theo đợt</h3>
+            <p class="subtitle">Danh sách whitelist giảng viên có thể tham gia coi thi trong từng đợt thi.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-create" href="@Url.Action("Index", "BulkImport", new { module = "lecturer-period-availability" })">
+                <i class="bi bi-upload"></i> Import danh sách
+            </a>
+            <a class="btn-back" href="@(User.IsInRole("Thư ký khoa") ? Url.Action("Index", "ExamSchedule", new { area = "" }) : Url.Action("Index", "LecturerManagement"))">
+                <i class="bi bi-arrow-left"></i> Quay lại
+            </a>
+        </div>
+    </div>
+
+    <div class="filter-glass mb-3">
+        <div class="role-filter-compact">
+            <div class="role-filter-main">
+                <div class="search-field search-field-wide">
+                    <label class="form-label mb-1">Tìm kiếm</label>
+                    <input id="keyword" class="input-modern" placeholder="Mã, tên giảng viên..." />
+                </div>
+                @if (showFacultyFilter)
+                {
+                    <div class="lookup-modern position-relative search-field">
+                        <label class="form-label mb-1">Khoa</label>
+                        <input id="facultyInput" class="input-modern" placeholder="Chọn khoa..." autocomplete="off" />
+                        <div id="facultyDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                        <input type="hidden" id="facultyId" />
+                    </div>
+                }
+                <div class="lookup-modern position-relative search-field">
+                    <label class="form-label mb-1">Năm học</label>
+                    <input id="yearInput" class="input-modern" placeholder="Chọn năm học..." autocomplete="off" />
+                    <div id="yearDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                    <input type="hidden" id="yearId" />
+                </div>
+                <div class="lookup-modern position-relative search-field">
+                    <label class="form-label mb-1">Học kỳ</label>
+                    <input id="semesterInput" class="input-modern" placeholder="Chọn học kỳ..." autocomplete="off" />
+                    <div id="semesterDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                    <input type="hidden" id="semesterId" />
+                </div>
+                <div class="lookup-modern position-relative search-field">
+                    <label class="form-label mb-1">Đợt thi</label>
+                    <input id="periodInput" class="input-modern" placeholder="Chọn đợt thi..." autocomplete="off" />
+                    <div id="periodDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
+                    <input type="hidden" id="periodId" />
+                </div>
+                <div class="search-field search-page-size">
+                    <label class="form-label mb-1">Số dòng</label>
+                    <select id="pageSize" class="select-modern"><option value="10">10</option><option value="20">20</option><option value="50">50</option></select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-modern"><div id="availabilityTable" class="table-inner"></div></div>
+</div>
+
+@section Scripts {
+    <script src="~/js/admin_crud.js" asp-append-version="true"></script>
+    <script src="~/js/admin_lookup.js" asp-append-version="true"></script>
+    <script>
+        $(function () {
+            CrudPage.init({
+                api: '@Url.Action("GetAvailabilityList", "LecturerManagement")',
+                tableId: '#availabilityTable',
+                searchBox: '#keyword',
+                pageSize: '#pageSize',
+                filterSelector: '.crud-filter',
+                extraData: function () {
+                    return {
+                        facultyId: $('#facultyId').val() || null,
+                        academyYearId: $('#yearId').val() || null,
+                        semesterId: $('#semesterId').val() || null,
+                        periodId: $('#periodId').val() || null
+                    };
+                }
+            });
+
+            if (@showFacultyFilter.ToString().ToLower() && $('#facultyInput').length) {
+                AdminLookup.create({ key: 'availability-faculty', input: '#facultyInput', hidden: '#facultyId', menu: '#facultyDropdown', url: '@Url.Action("SearchFaculties", "LecturerManagement")', valueField: 'id', textField: 'name', onSelect: function () { CrudPage.loadData(1); }, onClear: function () { CrudPage.loadData(1); } });
+            }
+            AdminLookup.create({ key: 'availability-year', input: '#yearInput', hidden: '#yearId', menu: '#yearDropdown', url: '@Url.Action("AcademyYears", "Lookup")', valueField: 'id', textField: 'name', onSelect: function () { AdminLookup.get('availability-semester')?.clear(); AdminLookup.get('availability-period')?.clear(); CrudPage.loadData(1); }, onClear: function () { CrudPage.loadData(1); } });
+            AdminLookup.create({ key: 'availability-semester', input: '#semesterInput', hidden: '#semesterId', menu: '#semesterDropdown', url: '@Url.Action("Semesters", "Lookup")', queryParam: 'keyword', extraParams: function () { return { academyYearId: $('#yearId').val() }; }, valueField: 'id', textField: 'name', beforeSearch: function () { return $('#yearId').val() ? true : 'Vui lòng chọn năm học'; }, onSelect: function () { AdminLookup.get('availability-period')?.clear(); CrudPage.loadData(1); }, onClear: function () { CrudPage.loadData(1); } });
+            AdminLookup.create({ key: 'availability-period', input: '#periodInput', hidden: '#periodId', menu: '#periodDropdown', url: '@Url.Action("Periods", "Lookup")', queryParam: 'keyword', extraParams: function () { return { semesterId: $('#semesterId').val() }; }, valueField: 'id', textField: 'name', beforeSearch: function () { return $('#semesterId').val() ? true : 'Vui lòng chọn học kỳ'; }, onSelect: function () { CrudPage.loadData(1); }, onClear: function () { CrudPage.loadData(1); } });
+        });
+    </script>
+}

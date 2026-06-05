@@ -72,6 +72,21 @@ public partial class User
     [InverseProperty("User")]
     public virtual ICollection<LecturerBusySlot> LecturerBusySlots { get; set; } = new List<LecturerBusySlot>();
 
+    [InverseProperty("ApprovedBy")]
+    public virtual ICollection<LecturerBusySlot> ApprovedLecturerBusySlots { get; set; } = new List<LecturerBusySlot>();
+
+    [InverseProperty("User")]
+    public virtual ICollection<LecturerBusyPeriod> LecturerBusyPeriods { get; set; } = new List<LecturerBusyPeriod>();
+
+    [InverseProperty("ApprovedBy")]
+    public virtual ICollection<LecturerBusyPeriod> ApprovedLecturerBusyPeriods { get; set; } = new List<LecturerBusyPeriod>();
+
+    [InverseProperty("User")]
+    public virtual ICollection<LecturerPeriodAvailability> LecturerPeriodAvailabilities { get; set; } = new List<LecturerPeriodAvailability>();
+
+    [InverseProperty("CreatedBy")]
+    public virtual ICollection<LecturerPeriodAvailability> CreatedLecturerPeriodAvailabilities { get; set; } = new List<LecturerPeriodAvailability>();
+
     [InverseProperty("CreatedByNavigation")]
     public virtual ICollection<Notification> NotificationCreatedByNavigations { get; set; } = new List<Notification>();
 

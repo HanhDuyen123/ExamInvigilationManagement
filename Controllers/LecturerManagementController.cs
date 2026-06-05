@@ -8,24 +8,29 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ExamInvigilationManagement.Controllers
 {
-    [Authorize(Roles = "Admin,Trưởng khoa")]
+    [Authorize(Roles = "Admin,Trưởng khoa,Thư ký khoa")]
     public class LecturerManagementController : BaseRoleController
     {
         private readonly IFacultyService _facultyService;
         private readonly IPositionService _positionService;
+        private readonly ILecturerBusySlotService _busySlotService;
 
         public LecturerManagementController(
             IAdminUserService userService,
             IFacultyService facultyService,
-            IPositionService positionService) : base(userService)
+            IPositionService positionService,
+            ILecturerBusySlotService busySlotService) : base(userService)
         {
             _facultyService = facultyService;
             _positionService = positionService;
+            _busySlotService = busySlotService;
         }
 
+        [Authorize(Roles = "Admin,Trưởng khoa")]
         public IActionResult Index()
         {
             ViewBag.ShowFacultyFilter = User.IsInRole("Admin");
+            ViewBag.AvailabilityUrl = Url.Action(nameof(Availability), "LecturerManagement");
             var model = new CrudIndexViewModel
             {
                 Title = "Quản lý giảng viên",
@@ -38,6 +43,7 @@ namespace ExamInvigilationManagement.Controllers
             return View(model);
         }
 
+        [Authorize(Roles = "Admin,Trưởng khoa")]
         public async Task<IActionResult> GetList(string? keyword, int? facultyId, string? status, int page = 1, int pageSize = 5)
         {
             bool? isActive = status switch
@@ -53,6 +59,30 @@ namespace ExamInvigilationManagement.Controllers
         }
 
         [HttpGet]
+        public IActionResult Availability()
+        {
+            ViewBag.ShowFacultyFilter = User.IsInRole("Admin");
+            return View();
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetAvailabilityList(string? keyword, int? facultyId, int? academyYearId, int? semesterId, int? periodId, int page = 1, int pageSize = 10)
+        {
+            var scopeFacultyId = await GetFacultyScopeAsync();
+            var result = await _busySlotService.GetAvailabilityPagedAsync(new Application.DTOs.LecturerBusySlot.LecturerPeriodAvailabilitySearchDto
+            {
+                Keyword = keyword,
+                FacultyId = scopeFacultyId ?? facultyId,
+                AcademyYearId = academyYearId,
+                SemesterId = semesterId,
+                PeriodId = periodId
+            }, page, pageSize);
+
+            return PartialView("_LecturerAvailabilityTable", result);
+        }
+
+        [HttpGet]
+        [Authorize(Roles = "Admin,Trưởng khoa")]
         public IActionResult Create()
         {
             var dto = new LecturerManagementDto
@@ -66,6 +96,7 @@ namespace ExamInvigilationManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Trưởng khoa")]
         public async Task<IActionResult> Create(LecturerManagementDto dto)
         {
             if (User.IsInRole("Trưởng khoa"))
@@ -88,6 +119,7 @@ namespace ExamInvigilationManagement.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin,Trưởng khoa")]
         public async Task<IActionResult> Edit(int id)
         {
             var data = await _userService.GetLecturerByIdAsync(id, await GetFacultyScopeAsync());
@@ -102,6 +134,7 @@ namespace ExamInvigilationManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Trưởng khoa")]
         public async Task<IActionResult> Edit(LecturerManagementDto dto)
         {
             if (User.IsInRole("Trưởng khoa"))
@@ -125,6 +158,7 @@ namespace ExamInvigilationManagement.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Admin,Trưởng khoa")]
         public async Task<IActionResult> Delete(int id)
         {
             var lecturer = await _userService.GetLecturerByIdAsync(id, await GetFacultyScopeAsync());

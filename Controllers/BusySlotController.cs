@@ -24,6 +24,8 @@ namespace ExamInvigilationManagement.Controllers
         {
             ViewBag.ShowUserFilter = !User.IsInRole("Giảng viên");
             ViewBag.ShowActionColumn = User.IsInRole("Giảng viên");
+            ViewBag.ShowApprovalActions = User.IsInRole("Trưởng khoa");
+            ViewBag.ShowBusyBulkApprovalToolbar = User.IsInRole("Trưởng khoa");
 
             var vm = new CrudIndexViewModel
             {
@@ -89,15 +91,17 @@ namespace ExamInvigilationManagement.Controllers
             int? examPeriodId,
             int? examSessionId,
             int? examSlotId,
+            string? approvalStatus,
             DateOnly? fromDate,
             DateOnly? toDate,
             int page = 1,
-            int pageSize = 5)
+            int pageSize = 20)
         {
             ViewBag.ShowActionColumn = User.IsInRole("Giảng viên");
+            ViewBag.ShowApprovalActions = User.IsInRole("Trưởng khoa");
             var filter = await BuildScopeFilter(
                 keyword, userId, facultyId, academyYearId, semesterId,
-                examPeriodId, examSessionId, examSlotId, fromDate, toDate);
+                examPeriodId, examSessionId, examSlotId, approvalStatus, fromDate, toDate);
 
             var result = await _service.GetPagedAsync(filter, page, pageSize);
             return PartialView("_BusySlotTable", result);
@@ -124,6 +128,14 @@ namespace ExamInvigilationManagement.Controllers
             try
             {
                 var count = await _service.CreateManyAsync(dto);
+                try
+                {
+                    await _service.NotifyBusyRegistrationAsync(dto, count, HttpContext.RequestAborted);
+                }
+                catch
+                {
+                    // Đăng ký đã lưu thành công; lỗi notification không được làm hỏng luồng chính.
+                }
                 TempData.SetNotification("success", $"Đăng ký lịch bận thành công cho {count} ca.");
                 return RedirectToAction(nameof(Index));
             }
@@ -186,6 +198,99 @@ namespace ExamInvigilationManagement.Controllers
             }
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Trưởng khoa")]
+        public async Task<IActionResult> BulkApprove(List<int> selectedIds)
+        {
+            var result = await HandleBulkApprovalAsync(selectedIds, true, null);
+            TempData.SetNotification(result.SuccessCount > 0 ? "success" : "error", result.Message);
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Trưởng khoa")]
+        public async Task<IActionResult> BulkReject(List<int> selectedIds, string reason)
+        {
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                TempData.SetNotification("error", "Vui lòng nhập lý do từ chối.");
+                return RedirectToAction(nameof(Index));
+            }
+
+            var result = await HandleBulkApprovalAsync(selectedIds, false, reason.Trim());
+            TempData.SetNotification(result.SuccessCount > 0 ? "success" : "error", result.Message);
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Trưởng khoa")]
+        public async Task<IActionResult> Approve(int id)
+        {
+            var current = await _service.GetByIdAsync(id);
+            if (current == null) return NotFound();
+            if (!await CanViewAsync(current)) return Forbid();
+
+            await _service.ApproveAsync(id, GetCurrentUserId() ?? 0);
+            TempData.SetNotification("success", "Đã duyệt lịch bận.");
+            return RedirectToAction(nameof(Index));
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [Authorize(Roles = "Trưởng khoa")]
+        public async Task<IActionResult> Reject(int id, string reason)
+        {
+            var current = await _service.GetByIdAsync(id);
+            if (current == null) return NotFound();
+            if (!await CanViewAsync(current)) return Forbid();
+
+            try
+            {
+                await _service.RejectAsync(id, GetCurrentUserId() ?? 0, reason);
+                TempData.SetNotification("success", "Đã từ chối lịch bận.");
+            }
+            catch (Exception ex)
+            {
+                TempData.SetNotification("error", ex.Message);
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        private async Task<(int SuccessCount, string Message)> HandleBulkApprovalAsync(List<int>? selectedIds, bool approve, string? reason)
+        {
+            var ids = (selectedIds ?? new List<int>()).Distinct().ToList();
+            if (ids.Count == 0) return (0, "Vui lòng chọn ít nhất một lịch bận.");
+
+            var success = 0;
+            var skipped = 0;
+            var approverId = GetCurrentUserId() ?? 0;
+
+            foreach (var id in ids)
+            {
+                var current = await _service.GetByIdAsync(id);
+                if (current == null || !await CanViewAsync(current) || current.ApprovalStatus != "Chờ duyệt")
+                {
+                    skipped++;
+                    continue;
+                }
+
+                if (approve) await _service.ApproveAsync(id, approverId);
+                else await _service.RejectAsync(id, approverId, reason ?? string.Empty);
+                success++;
+            }
+
+            if (success == 0) return (0, "Không có lịch bận hợp lệ để xử lý.");
+
+            var action = approve ? "duyệt" : "từ chối";
+            var message = $"Đã {action} {success} lịch bận.";
+            if (skipped > 0) message += $" Bỏ qua {skipped} lịch không hợp lệ hoặc không còn chờ duyệt.";
+            return (success, message);
+        }
+
         public async Task<IActionResult> Details(int id)
         {
             var data = await _service.GetByIdAsync(id);
@@ -204,6 +309,7 @@ namespace ExamInvigilationManagement.Controllers
             int? examPeriodId,
             int? examSessionId,
             int? examSlotId,
+            string? approvalStatus,
             DateOnly? fromDate,
             DateOnly? toDate)
         {
@@ -217,6 +323,7 @@ namespace ExamInvigilationManagement.Controllers
                 ExamPeriodId = examPeriodId,
                 ExamSessionId = examSessionId,
                 ExamSlotId = examSlotId,
+                ApprovalStatus = approvalStatus,
                 FromDate = fromDate,
                 ToDate = toDate
             };

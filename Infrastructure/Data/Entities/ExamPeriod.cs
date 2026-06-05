@@ -23,6 +23,12 @@ public partial class ExamPeriod
     [InverseProperty("Period")]
     public virtual ICollection<ExamSession> ExamSessions { get; set; } = new List<ExamSession>();
 
+    [InverseProperty("Period")]
+    public virtual ICollection<LecturerBusyPeriod> LecturerBusyPeriods { get; set; } = new List<LecturerBusyPeriod>();
+
+    [InverseProperty("Period")]
+    public virtual ICollection<LecturerPeriodAvailability> LecturerPeriodAvailabilities { get; set; } = new List<LecturerPeriodAvailability>();
+
     [ForeignKey("SemesterId")]
     [InverseProperty("ExamPeriods")]
     public virtual Semester Semester { get; set; } = null!;

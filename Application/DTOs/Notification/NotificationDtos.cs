@@ -10,6 +10,7 @@ namespace ExamInvigilationManagement.Application.DTOs.Notification
         public const string ManualAssignment = "ManualAssignment";
         public const string InvigilatorResponse = "InvigilatorResponse";
         public const string InvigilatorSubstitution = "InvigilatorSubstitution";
+        public const string LecturerBusyRegistration = "LecturerBusyRegistration";
         public const string SchedulePublished = "SchedulePublished";
         public const string System = "System";
 
@@ -20,6 +21,7 @@ namespace ExamInvigilationManagement.Application.DTOs.Notification
             new() { Value = ManualAssignment, Label = "Phân công giám thị" },
             new() { Value = InvigilatorResponse, Label = "Phản hồi giám thị" },
             new() { Value = InvigilatorSubstitution, Label = "Đề xuất thay thế" },
+            new() { Value = LecturerBusyRegistration, Label = "Đăng ký lịch bận" },
             new() { Value = SchedulePublished, Label = "Gửi lịch thi" },
             new() { Value = System, Label = "Thông báo chung" }
         };

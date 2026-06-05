@@ -56,6 +56,23 @@ namespace ExamInvigilationManagement.Application.Services
                     cancellationToken))
                 .ToList();
 
+            var whitelistedLecturerIds = await _repository.GetPeriodAvailableLecturerIdsAsync(
+                request.PeriodId!.Value,
+                facultyId.Value,
+                lecturers.Select(x => x.UserId),
+                cancellationToken);
+
+            if (whitelistedLecturerIds.Count > 0 || await _repository.HasPeriodAvailabilityListAsync(request.PeriodId.Value, facultyId.Value, cancellationToken))
+                lecturers = lecturers.Where(x => whitelistedLecturerIds.Contains(x.UserId)).ToList();
+
+            var busyWholePeriodLecturerIds = await _repository.GetApprovedBusyPeriodLecturerIdsAsync(
+                request.PeriodId!.Value,
+                lecturers.Select(x => x.UserId),
+                cancellationToken);
+
+            if (busyWholePeriodLecturerIds.Count > 0)
+                lecturers = lecturers.Where(x => !busyWholePeriodLecturerIds.Contains(x.UserId)).ToList();
+
             if (lecturers.Count == 0)
                 throw new InvalidOperationException("Không có giảng viên hợp lệ để phân công.");
 

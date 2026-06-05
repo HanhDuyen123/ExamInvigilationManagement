@@ -644,6 +644,9 @@
 
                         @if (User.IsInRole("Thư ký khoa"))
                         {
+                            <a asp-area="" asp-controller="LecturerManagement" asp-action="Availability" aria-label="Giảng viên khả thi" title="Giảng viên khả thi" data-title="Giảng viên khả thi" class="sidebar-link @(IsActive("LecturerManagement") ? "active" : "")">
+                                <i class="bi bi-person-check"></i><span class="sidebar-text">GV khả thi</span>
+                            </a>
                             <a asp-area="Secretary" asp-controller="AutoAssignment" asp-action="Index" aria-label="Tự động phân công" title="Tự động phân công" data-title="Tự động phân công" class="sidebar-link @(IsActive("AutoAssignment") ? "active" : "")">
                                 <i class="bi bi-magic"></i><span class="sidebar-text">Tự động phân công</span>
                             </a>
@@ -741,6 +744,9 @@
 
                 @if (User.IsInRole("Thư ký khoa"))
                 {
+                    <a asp-area="" asp-controller="LecturerManagement" asp-action="Availability" class="sidebar-link mb-2">
+                        <i class="bi bi-person-check"></i><span>GV khả thi</span>
+                    </a>
                     <a asp-area="Secretary" asp-controller="AutoAssignment" asp-action="Index" class="sidebar-link mb-2">
                         <i class="bi bi-magic"></i><span>Tự động phân công</span>
                     </a>

@@ -131,6 +131,20 @@ namespace ExamInvigilationManagement.Application.Services
         {
             var lecturers = await _repository.GetActiveLecturersAsync(schedule.FacultyId, cancellationToken);
             var lecturerIds = lecturers.Select(x => x.UserId).ToList();
+            var whitelistedLecturerIds = await _repository.GetPeriodAvailableLecturerIdsAsync(schedule.PeriodId, schedule.FacultyId, lecturerIds, cancellationToken);
+            if (whitelistedLecturerIds.Count > 0 || await _repository.HasPeriodAvailabilityListAsync(schedule.PeriodId, schedule.FacultyId, cancellationToken))
+            {
+                lecturers = lecturers.Where(x => whitelistedLecturerIds.Contains(x.UserId)).ToList();
+                lecturerIds = lecturers.Select(x => x.UserId).ToList();
+            }
+
+            var busyWholePeriodIds = await _repository.GetApprovedBusyPeriodLecturerIdsAsync(schedule.PeriodId, lecturerIds, cancellationToken);
+            if (busyWholePeriodIds.Count > 0)
+            {
+                lecturers = lecturers.Where(x => !busyWholePeriodIds.Contains(x.UserId)).ToList();
+                lecturerIds = lecturers.Select(x => x.UserId).ToList();
+            }
+
             var busyIds = await _repository.GetBusyLecturerIdsAsync(lecturerIds, schedule.SlotId, DateOnly.FromDateTime(schedule.ExamDate), cancellationToken);
             var conflictIds = await _repository.GetConflictingLecturerIdsAsync(schedule.ExamScheduleId, schedule.SemesterId, schedule.PeriodId, schedule.SessionId, schedule.SlotId, lecturerIds, cancellationToken);
             var loads = await _repository.GetLecturerLoadsAsync(schedule.SemesterId, schedule.FacultyId, cancellationToken);

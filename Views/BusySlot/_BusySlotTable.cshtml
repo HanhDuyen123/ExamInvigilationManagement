@@ -5,10 +5,15 @@
 @{
     int stt = (Model.Page - 1) * Model.PageSize + 1;
     var canEdit = ViewBag.ShowActionColumn as bool? ?? false;
+    var canApprove = ViewBag.ShowApprovalActions as bool? ?? false;
 }
 
 <table class="table modern-table schedule-table-compact busy-slot-table-compact">
     <colgroup>
+        @if (canApprove)
+        {
+            <col style="width:3%;" />
+        }
         <col style="width:4%;" />
         <col style="width:16%;" />
         <col style="width:10%;" />
@@ -17,11 +22,16 @@
         <col style="width:8%;" />
         <col style="width:10%;" />
         <col style="width:10%;" />
-        <col style="width:16%;" />
+        <col style="width:10%;" />
+        <col style="width:8%;" />
         <col style="width:8%;" />
     </colgroup>
     <thead>
         <tr>
+            @if (canApprove)
+            {
+                <th><input type="checkbox" id="busySelectAll" class="form-check-input" /></th>
+            }
             <th>STT</th>
             <th>Giảng viên</th>
             <th>Năm học</th>
@@ -30,6 +40,7 @@
             <th>Buổi thi</th>
             <th>Ca thi</th>
             <th>Ngày bận</th>
+            <th>Trạng thái</th>
             <th>Ghi chú</th>
             <th>Thao tác</th>
         </tr>
@@ -39,7 +50,17 @@
         @foreach (var item in Model.Items)
         {
             var busySlotName = $"lịch bận ngày {item.BusyDate:dd/MM/yyyy} - {item.ExamSessionName} - {item.ExamSlotName}";
+            var canSelectForBulk = item.ApprovalStatus == "Chờ duyệt";
             <tr>
+                @if (canApprove)
+                {
+                    <td>
+                        <input type="checkbox"
+                               class="form-check-input busy-select-row"
+                               value="@item.Id"
+                               disabled="@(!canSelectForBulk)" />
+                    </td>
+                }
                 <td>@stt</td>
                 <td class="cell-wrap ui-col-person">@item.UserName</td>
                 <td class="cell-nowrap">@item.AcademyYearName</td>
@@ -47,7 +68,10 @@
                 <td class="cell-nowrap">@item.ExamPeriodName</td>
                 <td class="cell-nowrap">@item.ExamSessionName</td>
                 <td class="cell-wrap">@item.ExamSlotName</td>
-                <td class="cell-nowrap">@item.BusyDate.ToString("dd/MM/yyyy")</td>
+                <td class="cell-nowrap">@item.BusyDateDisplay</td>
+                <td class="cell-nowrap">
+                    <span class="badge rounded-pill @(item.ApprovalStatus == "Đã duyệt" ? "bg-success" : item.ApprovalStatus == "Từ chối duyệt" ? "bg-danger" : "bg-secondary")">@item.ApprovalStatus</span>
+                </td>
                 <td class="cell-wrap">@(string.IsNullOrWhiteSpace(item.Note) ? "-" : item.Note)</td>
 
                 <td class="col-action">
@@ -56,7 +80,7 @@
                             <i class="bi bi-eye"></i>
                         </a>
 
-                        @if (canEdit)
+                        @if (canEdit && !item.IsFinal && !item.BusyWholePeriod)
                         {
                             <a href="@Url.Action("Edit", "BusySlot", new { id = item.Id })" class="btn-icon edit" title="Cập nhật">
                                 <i class="bi bi-pencil"></i>
@@ -69,6 +93,24 @@
                                 <i class="bi bi-trash"></i>
                             </a>
                         }
+                        @if (canApprove && item.ApprovalStatus == "Chờ duyệt")
+                        {
+                            <form method="post" action="@Url.Action("Approve", "BusySlot")" class="d-inline">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <button type="submit" class="btn-icon success" title="Duyệt">
+                                    <i class="bi bi-check-lg"></i>
+                                </button>
+                            </form>
+                            <form method="post" action="@Url.Action("Reject", "BusySlot")" class="d-inline busy-reject-form">
+                                @Html.AntiForgeryToken()
+                                <input type="hidden" name="id" value="@item.Id" />
+                                <input type="hidden" name="reason" value="" />
+                                <button type="submit" class="btn-icon delete" title="Từ chối">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </form>
+                        }
                     </div>
                 </td>
             </tr>
@@ -76,5 +118,10 @@
         }
     </tbody>
 </table>
+
+@if (!Model.Items.Any())
+{
+    <div class="text-center text-muted py-4">Không có lịch bận phù hợp.</div>
+}
 
 @await Html.PartialAsync("_Pagination", Model)

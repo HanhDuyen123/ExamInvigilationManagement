@@ -37,6 +37,7 @@
                 pageSize: '#pageSize',
                 filterSelector: '.crud-filter',
                 deleteName: '#deleteName',
+                afterLoad: refreshBusySelectionState,
                 extraData: function () {
                     return {
                         userId: $('#userId').length ? $('#userId').val() : null,
@@ -46,6 +47,7 @@
                         examPeriodId: $('#periodId').val() || null,
                         examSessionId: $('#sessionId').val() || null,
                         examSlotId: $('#slotId').val() || null,
+                        approvalStatus: $('#approvalStatus').val() || null,
                         fromDate: $('#fromDate').val() || null,
                         toDate: $('#toDate').val() || null
                     };
@@ -165,6 +167,77 @@
                 onSelect: function () { CrudPage.loadData(1); },
                 onClear: function () { CrudPage.loadData(1); }
             });
+
+            $(document).on('submit', '.busy-reject-form', function (e) {
+                const reason = prompt('Nhập lý do từ chối lịch bận:');
+                if (!reason || !reason.trim()) {
+                    e.preventDefault();
+                    return;
+                }
+                $(this).find('input[name="reason"]').val(reason.trim());
+            });
+
+            function refreshBusySelectionState() {
+                const $rows = $('#crudTable .busy-select-row:not(:disabled)');
+                const total = $rows.length;
+                const checked = $rows.filter(':checked').length;
+                $('#busySelectAll').prop('checked', total > 0 && total === checked);
+                $('#busySelectedCount').text(checked);
+                $('#busyBulkApproveBtn, #busyBulkRejectBtn').prop('disabled', checked === 0);
+            }
+
+            function toggleBusyRowHighlight($row) {
+                $row.closest('tr').toggleClass('table-active', $row.is(':checked'));
+            }
+
+            function selectedBusyIds() {
+                return $('#crudTable .busy-select-row:not(:disabled):checked')
+                    .map(function () { return $(this).val(); })
+                    .get();
+            }
+
+            function submitBusyBulk(actionUrl, reason) {
+                const ids = selectedBusyIds();
+                if (!ids.length) {
+                    AppNotify.show('warning', 'Vui lòng chọn ít nhất một lịch bận.');
+                    return;
+                }
+
+                const token = $('#busyBulkTokenForm input[name="__RequestVerificationToken"]').val() || '';
+                const form = $('<form>', { method: 'post', action: actionUrl });
+                form.append($('<input>', { type: 'hidden', name: '__RequestVerificationToken', value: token }));
+                ids.forEach(function (id) {
+                    form.append($('<input>', { type: 'hidden', name: 'selectedIds', value: id }));
+                });
+                if (reason) form.append($('<input>', { type: 'hidden', name: 'reason', value: reason }));
+                $('body').append(form);
+                form.trigger('submit');
+            }
+
+            $(document).on('change', '#busySelectAll', function () {
+                const checked = $(this).is(':checked');
+                $('#crudTable .busy-select-row:not(:disabled)')
+                    .prop('checked', checked)
+                    .each(function () { toggleBusyRowHighlight($(this)); });
+                refreshBusySelectionState();
+            });
+
+            $(document).on('change', '#crudTable .busy-select-row', function () {
+                toggleBusyRowHighlight($(this));
+                refreshBusySelectionState();
+            });
+
+            $('#busyBulkApproveBtn').on('click', function () {
+                submitBusyBulk('@Url.Action("BulkApprove", "BusySlot")');
+            });
+
+            $('#busyBulkRejectBtn').on('click', function () {
+                const reason = prompt('Nhập lý do từ chối các lịch bận đã chọn:');
+                if (!reason || !reason.trim()) return;
+                submitBusyBulk('@Url.Action("BulkReject", "BusySlot")', reason.trim());
+            });
+
+            refreshBusySelectionState();
         });
     </script>
 

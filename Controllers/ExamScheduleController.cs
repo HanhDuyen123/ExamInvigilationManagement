@@ -75,6 +75,9 @@ namespace ExamInvigilationManagement.Controllers
             ViewBag.CanSendApprovalRequest = User.IsInRole("Thư ký khoa");
             ViewBag.CanSendConfirmationRequest = User.IsInRole("Thư ký khoa");
             ViewBag.CanSendSupportRequest = User.IsInRole("Thư ký khoa");
+            ViewBag.AvailabilityUrl = User.IsInRole("Thư ký khoa")
+                ? Url.Action("Availability", "LecturerManagement", new { area = "" })
+                : null;
 
             var vm = new CrudIndexViewModel
             {

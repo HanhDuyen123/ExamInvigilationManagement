@@ -71,6 +71,7 @@ namespace ExamInvigilationManagement.Controllers
             if (!_service.SupportedModules.Contains(module)) return false;
             if (module == "exam-invigilator") return User.IsInRole("Thư ký khoa");
             if (module == "lecturer-busy-slot") return User.IsInRole("Admin") || User.IsInRole("Thư ký khoa") || User.IsInRole("Giảng viên");
+            if (module == "lecturer-period-availability") return User.IsInRole("Admin") || User.IsInRole("Trưởng khoa") || User.IsInRole("Thư ký khoa");
             if (module == "exam-schedule") return User.IsInRole("Admin");
             return User.IsInRole("Admin");
         }

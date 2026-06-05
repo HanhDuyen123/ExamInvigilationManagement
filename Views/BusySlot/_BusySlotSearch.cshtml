@@ -43,7 +43,7 @@
             <select id="pageSize" class="select-modern">
                 <option value="5">5</option>
                 <option value="10">10</option>
-                <option value="20">20</option>
+                <option value="20" selected>20</option>
             </select>
         </div>
     </div>
@@ -75,6 +75,16 @@
                 <input id="slotInput" class="input-modern" placeholder="Chọn ca thi..." autocomplete="off" />
                 <div id="slotDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
                 <input type="hidden" id="slotId" />
+            </div>
+
+            <div class="search-field">
+                <label class="form-label mb-1">Trạng thái duyệt</label>
+                <select id="approvalStatus" class="select-modern crud-filter">
+                    <option value="">Tất cả</option>
+                    <option value="Chờ duyệt">Chờ duyệt</option>
+                    <option value="Đã duyệt">Đã duyệt</option>
+                    <option value="Từ chối duyệt">Từ chối duyệt</option>
+                </select>
             </div>
         </div>
     </div>

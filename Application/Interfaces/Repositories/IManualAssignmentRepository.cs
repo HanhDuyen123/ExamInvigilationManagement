@@ -48,6 +48,22 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
             DateOnly examDate,
             CancellationToken cancellationToken = default);
 
+        Task<HashSet<int>> GetPeriodAvailableLecturerIdsAsync(
+            int periodId,
+            int facultyId,
+            IEnumerable<int> userIds,
+            CancellationToken cancellationToken = default);
+
+        Task<bool> HasPeriodAvailabilityListAsync(
+            int periodId,
+            int facultyId,
+            CancellationToken cancellationToken = default);
+
+        Task<HashSet<int>> GetApprovedBusyPeriodLecturerIdsAsync(
+            int periodId,
+            IEnumerable<int> userIds,
+            CancellationToken cancellationToken = default);
+
         Task<List<int>> GetConflictingLecturerIdsAsync(
             int scheduleId,
             int slotId,

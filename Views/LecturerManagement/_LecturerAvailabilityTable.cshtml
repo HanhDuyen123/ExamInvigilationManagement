@@ -1,0 +1,47 @@
+@using ExamInvigilationManagement.Application.DTOs.LecturerBusySlot
+@using ExamInvigilationManagement.Common
+@model PagedResult<LecturerPeriodAvailabilityDto>
+
+@{
+    var stt = (Model.Page - 1) * Model.PageSize + 1;
+}
+
+<table class="table modern-table schedule-table-compact">
+    <thead>
+        <tr>
+            <th>STT</th>
+            <th>Mã GV</th>
+            <th>Giảng viên</th>
+            <th>Khoa</th>
+            <th>Năm học</th>
+            <th>Học kỳ</th>
+            <th>Đợt thi</th>
+            <th>Nguồn</th>
+            <th>Ghi chú</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Items)
+        {
+            <tr>
+                <td>@stt</td>
+                <td class="cell-nowrap">@item.UserName</td>
+                <td class="cell-wrap ui-col-person">@item.FullName</td>
+                <td class="cell-wrap">@(item.FacultyName ?? "-")</td>
+                <td class="cell-nowrap">@item.AcademyYearName</td>
+                <td class="cell-nowrap">@item.SemesterName</td>
+                <td class="cell-nowrap">@item.PeriodName</td>
+                <td class="cell-nowrap"><span class="badge rounded-pill bg-primary">@item.Source</span></td>
+                <td class="cell-wrap">@(string.IsNullOrWhiteSpace(item.Note) ? "-" : item.Note)</td>
+            </tr>
+            stt++;
+        }
+    </tbody>
+</table>
+
+@if (!Model.Items.Any())
+{
+    <div class="text-center text-muted py-4">Chưa có giảng viên khả thi phù hợp.</div>
+}
+
+@await Html.PartialAsync("_Pagination", Model)

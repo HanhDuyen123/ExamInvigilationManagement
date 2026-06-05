@@ -88,6 +88,15 @@
                 </a>
             }
 
+            @if (isDean)
+            {
+                <a asp-area="" asp-controller="LecturerManagement" asp-action="Index" class="dash-card">
+                    <div class="card-icon"><i class="bi bi-person-workspace"></i></div>
+                    <div class="card-title">Quản lý giảng viên</div>
+                    <div class="card-desc">Theo dõi hồ sơ, trạng thái tài khoản và phạm vi giảng viên thuộc khoa.</div>
+                </a>
+            }
+
             @if (isSecretary)
             {
                 <a asp-area="Secretary" asp-controller="AutoAssignment" asp-action="Index" class="dash-card">

@@ -45,8 +45,8 @@
     }
 
     <div class="import-flow mb-4">
-        <div class="import-step"><strong>1</strong><span>Tải template</span><small>Dòng 1 là header, dòng 2 là ví dụ, dòng 3 là mô tả.</small></div>
-        <div class="import-step"><strong>2</strong><span>Nhập dữ liệu</span><small>Nhập dữ liệu từ dòng 4. Hệ thống tự bỏ qua dòng ví dụ/mô tả.</small></div>
+        <div class="import-step"><strong>1</strong><span>Tải template</span><small>Dòng 6 là header, dòng 7 là ví dụ, dòng 8 là mô tả.</small></div>
+        <div class="import-step"><strong>2</strong><span>Nhập dữ liệu</span><small>Nhập dữ liệu từ dòng 9. Hệ thống tự bỏ qua dòng ví dụ/mô tả.</small></div>
         <div class="import-step"><strong>3</strong><span>Upload và validate</span><small>Nếu có lỗi, hệ thống không lưu bất kỳ dòng nào.</small></div>
     </div>
 
@@ -115,6 +115,12 @@
     .import-error-table thead th { position:sticky; top:0; z-index:1; background:#f8fafc; color:#475569; font-size:12px; text-transform:uppercase; padding:10px 12px; border-bottom:1px solid #e2e8f0; }
     .import-error-table td { vertical-align:top; padding:10px 12px; border-bottom:1px solid #eef2f7; overflow-wrap:anywhere; }
     .import-error-table code { white-space:normal; color:#b91c1c; background:#fef2f2; border-radius:8px; padding:2px 5px; }
+    html[data-theme="dark"] body.app-shell-body .import-error-panel { background: var(--surface-1) !important; border-color: var(--line-soft) !important; }
+    html[data-theme="dark"] body.app-shell-body .import-error-table { color: var(--text-main) !important; }
+    html[data-theme="dark"] body.app-shell-body .import-error-table thead th { background: var(--surface-3) !important; color: var(--text-muted) !important; border-color: var(--line-soft) !important; }
+    html[data-theme="dark"] body.app-shell-body .import-error-table td { background: var(--surface-1) !important; color: var(--text-main) !important; border-color: var(--line-soft) !important; }
+    html[data-theme="dark"] body.app-shell-body .import-error-table tr:nth-child(even) td { background: var(--surface-2) !important; }
+    html[data-theme="dark"] body.app-shell-body .import-error-table code { color: #fecaca !important; background: rgba(127, 29, 29, .45) !important; border: 1px solid rgba(248, 113, 113, .25); }
 </style>
 
 @if (Model.Result != null)

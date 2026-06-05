@@ -11,5 +11,9 @@ namespace ExamInvigilationManagement.Application.Interfaces.Service
         Task<int> CreateManyAsync(LecturerBusySlotDto dto);
         Task UpdateAsync(LecturerBusySlotDto dto);
         Task DeleteAsync(int id);
+        Task ApproveAsync(int id, int approverId);
+        Task RejectAsync(int id, int approverId, string reason);
+        Task NotifyBusyRegistrationAsync(LecturerBusySlotDto dto, int createdCount, CancellationToken cancellationToken = default);
+        Task<PagedResult<LecturerPeriodAvailabilityDto>> GetAvailabilityPagedAsync(LecturerPeriodAvailabilitySearchDto filter, int page, int pageSize);
     }
 }

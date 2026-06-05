@@ -11,7 +11,11 @@
                 SlotId = entity.SlotId,
                 BusyDate = entity.BusyDate,
                 Note = entity.Note,
-                CreateAt = entity.CreateAt
+                CreateAt = entity.CreateAt,
+                ApprovalStatus = entity.ApprovalStatus,
+                ApprovedById = entity.ApprovedById,
+                ApprovedAt = entity.ApprovedAt,
+                RejectionReason = entity.RejectionReason
             };
         }
 
@@ -24,7 +28,11 @@
                 SlotId = domain.SlotId,
                 BusyDate = domain.BusyDate,
                 Note = domain.Note,
-                CreateAt = domain.CreateAt
+                CreateAt = domain.CreateAt,
+                ApprovalStatus = domain.ApprovalStatus,
+                ApprovedById = domain.ApprovedById,
+                ApprovedAt = domain.ApprovedAt,
+                RejectionReason = domain.RejectionReason
             };
         }
     }

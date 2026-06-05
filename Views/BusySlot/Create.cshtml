@@ -48,11 +48,19 @@
                         Label = "Đợt thi",
                         InputId = "periodInput",
                         HiddenId = "periodId",
-                        HiddenName = "",
+                        HiddenName = "ExamPeriodId",
                         MenuId = "periodDropdown",
                         Placeholder = "Chọn đợt thi...",
                         InputClass = "input-modern"
                     })
+                </div>
+
+                <div class="form-group busy-slot-note-field">
+                    <label class="busy-slot-check busy-period-check" for="busyWholePeriod">
+                        <input asp-for="BusyWholePeriod" type="checkbox" id="busyWholePeriod" />
+                        <span>Bận cả đợt thi này</span>
+                    </label>
+                    <small class="text-muted">Khi chọn tùy chọn này, hệ thống sẽ gửi yêu cầu không khả dụng trong toàn bộ đợt thi.</small>
                 </div>
 
                 <div class="form-group">
@@ -86,8 +94,8 @@
                 </div>
 
                 <div class="form-group busy-slot-note-field">
-                    <label>Ghi chú</label>
-                    <textarea asp-for="Note" class="input-modern"></textarea>
+                    <label>Lý do bận</label>
+                    <textarea asp-for="Note" class="input-modern" required></textarea>
                 </div>
             </div>
 
@@ -162,7 +170,19 @@
                 });
             }
 
-            function syncBusySlotMode() { }
+            function syncBusySlotMode() {
+                const wholePeriod = $('#busyWholePeriod').is(':checked');
+                $('#BusyDate, #sessionInput, #selectPeriodSlots, #selectSessionSlots, #clearSlots').prop('disabled', wholePeriod);
+                $('#BusyDate').toggleClass('bg-light text-muted', wholePeriod);
+                $('#slotCheckboxList input[type="checkbox"]').prop('checked', false).prop('disabled', wholePeriod);
+                if (wholePeriod) {
+                    $('#slotCheckboxList').addClass('text-muted').text('Đã chọn bận cả đợt, không cần chọn ca thi.');
+                } else if ($('#sessionId').val()) {
+                    loadSessionSlots();
+                } else {
+                    renderSlotCheckboxes([]);
+                }
+            }
 
             function loadSlotsBySession(sessionId) {
                 return $.get('@Url.Action("Slots", "Lookup")', { sessionId: sessionId });
@@ -284,9 +304,25 @@
                 $('#slotCheckboxList input[type="checkbox"]').prop('checked', false);
             });
 
+            $('#busyWholePeriod').on('change', syncBusySlotMode);
+
             syncBusySlotMode();
 
             $('#busySlotForm').on('submit', function (e) {
+                if (!$('#Note').val().trim()) {
+                    e.preventDefault();
+                    AppNotify.show('warning', 'Vui lòng nhập lý do bận.');
+                    return;
+                }
+
+                if ($('#busyWholePeriod').is(':checked')) {
+                    if (!$('#periodId').val()) {
+                        e.preventDefault();
+                        AppNotify.show('warning', 'Vui lòng chọn đợt thi.');
+                    }
+                    return;
+                }
+
                 if ($('#slotCheckboxList input[type="checkbox"]:checked').length === 0) {
                     e.preventDefault();
                     $('span[data-valmsg-for="ExamSlotIds"]').text('Vui lòng chọn ít nhất một ca bận.');

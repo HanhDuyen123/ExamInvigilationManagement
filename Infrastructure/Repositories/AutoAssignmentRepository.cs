@@ -1,5 +1,6 @@
 ﻿using ExamInvigilationManagement.Application.DTOs.AutoAssign;
 using ExamInvigilationManagement.Application.Interfaces.Repositories;
+using ExamInvigilationManagement.Common.Constants;
 using ExamInvigilationManagement.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -172,6 +173,58 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 x => countByPersonKey.TryGetValue(x.Value, out var count) ? count : 0);
         }
 
+        public async Task<HashSet<int>> GetPeriodAvailableLecturerIdsAsync(
+            int periodId,
+            int facultyId,
+            IEnumerable<int> userIds,
+            CancellationToken cancellationToken = default)
+        {
+            var ids = userIds.Distinct().ToList();
+            var candidatePersonKeys = await GetPersonKeysByUserIdAsync(ids, cancellationToken);
+            var rows = await _db.LecturerPeriodAvailabilities
+                .AsNoTracking()
+                .Where(x => x.PeriodId == periodId && x.User.FacultyId == facultyId)
+                .Select(x => x.User.InformationId > 0 ? x.User.InformationId : x.UserId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            if (rows.Count == 0) return new HashSet<int>();
+            var allowedPersonKeys = rows.ToHashSet();
+            return candidatePersonKeys.Where(x => allowedPersonKeys.Contains(x.Value)).Select(x => x.Key).ToHashSet();
+        }
+
+        public Task<bool> HasPeriodAvailabilityListAsync(
+            int periodId,
+            int facultyId,
+            CancellationToken cancellationToken = default)
+        {
+            return _db.LecturerPeriodAvailabilities
+                .AsNoTracking()
+                .AnyAsync(x => x.PeriodId == periodId && x.User.FacultyId == facultyId, cancellationToken);
+        }
+
+        public async Task<HashSet<int>> GetApprovedBusyPeriodLecturerIdsAsync(
+            int periodId,
+            IEnumerable<int> userIds,
+            CancellationToken cancellationToken = default)
+        {
+            var ids = userIds.Distinct().ToList();
+            var candidatePersonKeys = await GetPersonKeysByUserIdAsync(ids, cancellationToken);
+            var personKeySet = candidatePersonKeys.Values.ToHashSet();
+            var busyPersonKeys = await _db.LecturerBusyPeriods
+                .AsNoTracking()
+                .Where(x =>
+                    x.PeriodId == periodId &&
+                    x.ApprovalStatus == BusyApprovalStatuses.Approved &&
+                    personKeySet.Contains(x.User.InformationId > 0 ? x.User.InformationId : x.UserId))
+                .Select(x => x.User.InformationId > 0 ? x.User.InformationId : x.UserId)
+                .Distinct()
+                .ToListAsync(cancellationToken);
+
+            var busySet = busyPersonKeys.ToHashSet();
+            return candidatePersonKeys.Where(x => busySet.Contains(x.Value)).Select(x => x.Key).ToHashSet();
+        }
+
         public async Task<Dictionary<string, HashSet<int>>> GetSubjectLecturerMapAsync(
             IEnumerable<string> subjectIds,
             CancellationToken cancellationToken = default)
@@ -236,6 +289,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .AsNoTracking()
                 .Where(x =>
                     personKeySet.Contains(x.User.InformationId > 0 ? x.User.InformationId : x.UserId) &&
+                    x.ApprovalStatus == BusyApprovalStatuses.Approved &&
                     slotIdList.Contains(x.SlotId) &&
                     dateList.Contains(x.BusyDate))
                 .Select(x => new AutoAssignBusySlotDto
