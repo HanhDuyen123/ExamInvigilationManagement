@@ -1,5 +1,9 @@
 @{
     var showUserFilter = ViewBag.ShowUserFilter as bool? ?? false;
+    var initialAcademyYearId = ViewBag.InitialAcademyYearId?.ToString() ?? string.Empty;
+    var initialAcademyYearName = ViewBag.InitialAcademyYearName as string ?? string.Empty;
+    var initialSemesterId = ViewBag.InitialSemesterId?.ToString() ?? string.Empty;
+    var initialSemesterName = ViewBag.InitialSemesterName as string ?? string.Empty;
 }
 
 <div class="role-filter-compact">
@@ -16,16 +20,16 @@
 
         <div class="lookup-modern position-relative search-field">
             <label class="form-label mb-1">Năm học</label>
-            <input id="yearInput" class="input-modern" placeholder="Chọn năm học..." autocomplete="off" />
+            <input id="yearInput" class="input-modern" placeholder="Chọn năm học..." autocomplete="off" value="@initialAcademyYearName" />
             <div id="yearDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
-            <input type="hidden" id="yearId" />
+            <input type="hidden" id="yearId" value="@initialAcademyYearId" />
         </div>
 
         <div class="lookup-modern position-relative search-field">
             <label class="form-label mb-1">Học kỳ</label>
-            <input id="semesterInput" class="input-modern" placeholder="Chọn học kỳ..." autocomplete="off" />
+            <input id="semesterInput" class="input-modern" placeholder="Chọn học kỳ..." autocomplete="off" value="@initialSemesterName" />
             <div id="semesterDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
-            <input type="hidden" id="semesterId" />
+            <input type="hidden" id="semesterId" value="@initialSemesterId" />
         </div>
 
         <div class="search-field">

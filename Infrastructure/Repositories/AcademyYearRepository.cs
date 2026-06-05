@@ -32,6 +32,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                         Id = s.SemesterId,
                         AcademyYearId = s.AcademyYearId,
                         Name = s.SemesterName,
+                        StartDate = s.StartDate,
+                        EndDate = s.EndDate,
                         ExamPeriods = s.ExamPeriods.Select(p => new ExamInvigilationManagement.Domain.Entities.ExamPeriod
                         {
                             Id = p.PeriodId,
@@ -94,6 +96,9 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 {
                     Id = s.SemesterId,
                     Name = s.SemesterName,
+                    AcademyYearId = s.AcademyYearId,
+                    StartDate = s.StartDate,
+                    EndDate = s.EndDate,
                     Periods = s.ExamPeriods.OrderBy(p => p.PeriodName).Select(p => new PeriodDto
                     {
                         Id = p.PeriodId,

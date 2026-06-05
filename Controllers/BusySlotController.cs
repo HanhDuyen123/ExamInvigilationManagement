@@ -11,17 +11,21 @@ namespace ExamInvigilationManagement.Controllers
     public class BusySlotController : BaseRoleController
     {
         private readonly ILecturerBusySlotService _service;
+        private readonly ICurrentAcademicContextService _currentAcademicContextService;
 
         public BusySlotController(
             ILecturerBusySlotService service,
-            IAdminUserService userService
+            IAdminUserService userService,
+            ICurrentAcademicContextService currentAcademicContextService
         ) : base(userService)
         {
             _service = service;
+            _currentAcademicContextService = currentAcademicContextService;
         }
 
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
+            await SetInitialAcademicContextAsync();
             ViewBag.ShowUserFilter = !User.IsInRole("Giảng viên");
             ViewBag.ShowActionColumn = User.IsInRole("Giảng viên");
             ViewBag.ShowApprovalActions = User.IsInRole("Trưởng khoa");
@@ -108,8 +112,9 @@ namespace ExamInvigilationManagement.Controllers
         }
 
         [Authorize(Roles = "Giảng viên")]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
+            await SetInitialAcademicContextAsync();
             return View(new LecturerBusySlotDto
             {
                 BusyDate = DateOnly.FromDateTime(DateTime.Today)
@@ -343,7 +348,45 @@ namespace ExamInvigilationManagement.Controllers
                 filter.UserId = null;
                 filter.FacultyId = null;
             }
+
+            await ApplyDefaultAcademicContextAsync(filter);
             return filter;
+        }
+
+        private async Task ApplyDefaultAcademicContextAsync(LecturerBusySlotSearchDto filter)
+        {
+            if (filter.AcademyYearId.HasValue || filter.SemesterId.HasValue || filter.ExamPeriodId.HasValue || filter.FromDate.HasValue || filter.ToDate.HasValue)
+                return;
+
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
+                return;
+
+            var role = User.IsInRole("Admin") ? "Admin" : User.IsInRole("Giảng viên") ? "Giảng viên" : User.IsInRole("Thư ký khoa") ? "Thư ký khoa" : User.IsInRole("Trưởng khoa") ? "Trưởng khoa" : string.Empty;
+            var context = await _currentAcademicContextService.GetCurrentContextAsync(userId.Value, role, filter.FacultyId);
+            if (context is null)
+                return;
+
+            filter.AcademyYearId = context.AcademyYearId;
+            filter.SemesterId = context.SemesterId;
+            filter.ExamPeriodId = context.PeriodId;
+        }
+
+        private async Task SetInitialAcademicContextAsync()
+        {
+            var userId = GetCurrentUserId();
+            if (!userId.HasValue)
+                return;
+
+            var role = User.IsInRole("Admin") ? "Admin" : User.IsInRole("Giảng viên") ? "Giảng viên" : User.IsInRole("Thư ký khoa") ? "Thư ký khoa" : User.IsInRole("Trưởng khoa") ? "Trưởng khoa" : string.Empty;
+            var facultyId = User.IsInRole("Thư ký khoa") || User.IsInRole("Trưởng khoa") ? await GetCurrentFacultyIdAsync() : null;
+            var context = await _currentAcademicContextService.GetCurrentContextAsync(userId.Value, role, facultyId);
+            ViewBag.InitialAcademyYearId = context?.AcademyYearId;
+            ViewBag.InitialAcademyYearName = context?.AcademyYearName;
+            ViewBag.InitialSemesterId = context?.SemesterId;
+            ViewBag.InitialSemesterName = context?.SemesterName;
+            ViewBag.InitialPeriodId = context?.PeriodId;
+            ViewBag.InitialPeriodName = context?.PeriodName;
         }
 
         private bool CanLecturerEdit(LecturerBusySlotDto dto)

@@ -8,6 +8,18 @@ namespace ExamInvigilationManagement.Application.DTOs.Statistics
         public int? FacultyId { get; set; }
         public DateTime? FromDate { get; set; }
         public DateTime? ToDate { get; set; }
+
+        public bool HasAcademicContext => AcademyYearId.HasValue || SemesterId.HasValue || PeriodId.HasValue || FromDate.HasValue || ToDate.HasValue;
+    }
+
+    public class CurrentAcademicContextDto
+    {
+        public int? AcademyYearId { get; set; }
+        public string? AcademyYearName { get; set; }
+        public int? SemesterId { get; set; }
+        public string? SemesterName { get; set; }
+        public int? PeriodId { get; set; }
+        public string? PeriodName { get; set; }
     }
 
     public class StatisticsDashboardDto
@@ -22,6 +34,7 @@ namespace ExamInvigilationManagement.Application.DTOs.Statistics
         public List<StatisticChartPointDto> RejectionsBySession { get; set; } = new();
         public List<LecturerWorkloadStatisticDto> LecturerWorkloads { get; set; } = new();
         public List<SlotCoverageStatisticDto> SlotCoverage { get; set; } = new();
+        public List<StatisticChartPointDto> LecturerAssignmentsByDay { get; set; } = new();
         public List<LecturerMonthlyStatisticDto> LecturerMonthlyWorkload { get; set; } = new();
     }
 

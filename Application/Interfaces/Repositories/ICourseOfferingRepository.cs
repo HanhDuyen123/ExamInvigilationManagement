@@ -23,5 +23,6 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
 
         Task<bool> SemesterExistsAsync(int semesterId);
         Task<int?> GetSemesterAcademyYearIdAsync(int semesterId);
+        Task<bool> IsSemesterExpiredAsync(int semesterId, DateTime today);
     }
 }

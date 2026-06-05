@@ -519,6 +519,20 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .FirstOrDefaultAsync(cancellationToken) ?? $"Giảng viên #{lecturerUserId}";
         }
 
+        public async Task<bool> IsPeriodInExpiredSemesterAsync(int periodId, DateTime today)
+        {
+            return await _context.ExamPeriods
+                .AsNoTracking()
+                .AnyAsync(x => x.PeriodId == periodId && x.Semester.EndDate.HasValue && x.Semester.EndDate.Value < today.Date);
+        }
+
+        public async Task<bool> AnySlotInExpiredSemesterAsync(List<int> slotIds, DateTime today)
+        {
+            return await _context.ExamSlots
+                .AsNoTracking()
+                .AnyAsync(x => slotIds.Contains(x.SlotId) && x.Session.Period.Semester.EndDate.HasValue && x.Session.Period.Semester.EndDate.Value < today.Date);
+        }
+
         public async Task<bool> ExistsAsync(int userId, int slotId, DateOnly busyDate, int? ignoreId = null)
         {
             return await _context.LecturerBusySlots.AnyAsync(x =>

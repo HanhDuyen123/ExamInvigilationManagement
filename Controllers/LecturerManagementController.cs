@@ -14,16 +14,19 @@ namespace ExamInvigilationManagement.Controllers
         private readonly IFacultyService _facultyService;
         private readonly IPositionService _positionService;
         private readonly ILecturerBusySlotService _busySlotService;
+        private readonly ICurrentAcademicContextService _currentAcademicContextService;
 
         public LecturerManagementController(
             IAdminUserService userService,
             IFacultyService facultyService,
             IPositionService positionService,
-            ILecturerBusySlotService busySlotService) : base(userService)
+            ILecturerBusySlotService busySlotService,
+            ICurrentAcademicContextService currentAcademicContextService) : base(userService)
         {
             _facultyService = facultyService;
             _positionService = positionService;
             _busySlotService = busySlotService;
+            _currentAcademicContextService = currentAcademicContextService;
         }
 
         [Authorize(Roles = "Admin,Trưởng khoa")]
@@ -59,8 +62,9 @@ namespace ExamInvigilationManagement.Controllers
         }
 
         [HttpGet]
-        public IActionResult Availability()
+        public async Task<IActionResult> Availability()
         {
+            await SetInitialAcademicContextAsync();
             ViewBag.ShowFacultyFilter = User.IsInRole("Admin");
             return View();
         }
@@ -69,6 +73,19 @@ namespace ExamInvigilationManagement.Controllers
         public async Task<IActionResult> GetAvailabilityList(string? keyword, int? facultyId, int? academyYearId, int? semesterId, int? periodId, int page = 1, int pageSize = 10)
         {
             var scopeFacultyId = await GetFacultyScopeAsync();
+            if (!academyYearId.HasValue && !semesterId.HasValue && !periodId.HasValue)
+            {
+                var currentUserId = GetCurrentUserId();
+                if (currentUserId.HasValue)
+                {
+                    var role = User.IsInRole("Admin") ? "Admin" : User.IsInRole("Trưởng khoa") ? "Trưởng khoa" : User.IsInRole("Thư ký khoa") ? "Thư ký khoa" : string.Empty;
+                    var context = await _currentAcademicContextService.GetCurrentContextAsync(currentUserId.Value, role, scopeFacultyId ?? facultyId);
+                    academyYearId = context?.AcademyYearId;
+                    semesterId = context?.SemesterId;
+                    periodId = context?.PeriodId;
+                }
+            }
+
             var result = await _busySlotService.GetAvailabilityPagedAsync(new Application.DTOs.LecturerBusySlot.LecturerPeriodAvailabilitySearchDto
             {
                 Keyword = keyword,
@@ -211,6 +228,23 @@ namespace ExamInvigilationManagement.Controllers
         {
             if (!User.IsInRole("Trưởng khoa")) return null;
             return await GetCurrentFacultyIdAsync();
+        }
+
+        private async Task SetInitialAcademicContextAsync()
+        {
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+                return;
+
+            var scopeFacultyId = await GetFacultyScopeAsync();
+            var role = User.IsInRole("Admin") ? "Admin" : User.IsInRole("Trưởng khoa") ? "Trưởng khoa" : User.IsInRole("Thư ký khoa") ? "Thư ký khoa" : string.Empty;
+            var context = await _currentAcademicContextService.GetCurrentContextAsync(currentUserId.Value, role, scopeFacultyId);
+            ViewBag.InitialAcademyYearId = context?.AcademyYearId;
+            ViewBag.InitialAcademyYearName = context?.AcademyYearName;
+            ViewBag.InitialSemesterId = context?.SemesterId;
+            ViewBag.InitialSemesterName = context?.SemesterName;
+            ViewBag.InitialPeriodId = context?.PeriodId;
+            ViewBag.InitialPeriodName = context?.PeriodName;
         }
     }
 }

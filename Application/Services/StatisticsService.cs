@@ -16,19 +16,36 @@ namespace ExamInvigilationManagement.Application.Services
     public class StatisticsService : IStatisticsService
     {
         private readonly IStatisticsRepository _repository;
+        private readonly ICurrentAcademicContextService _currentAcademicContextService;
         private static readonly string[] ChartColors = ["4F46E5", "16A34A", "F59E0B", "EF4444", "06B6D4", "8B5CF6"];
         private static readonly string[] ResponseColors = ["16A34A", "EF4444", "94A3B8"];
 
-        public StatisticsService(IStatisticsRepository repository)
+        public StatisticsService(IStatisticsRepository repository, ICurrentAcademicContextService currentAcademicContextService)
         {
             _repository = repository;
+            _currentAcademicContextService = currentAcademicContextService;
             QuestPDF.Settings.License = LicenseType.Community;
         }
 
         public async Task<StatisticsDashboardDto> GetDashboardAsync(int userId, string roleName, StatisticsFilterDto filter, CancellationToken cancellationToken = default)
         {
             ValidateFilter(filter);
+            await ApplyDefaultAcademicContextAsync(userId, roleName, filter, cancellationToken);
             return await _repository.GetDashboardAsync(userId, roleName, filter, cancellationToken);
+        }
+
+        private async Task ApplyDefaultAcademicContextAsync(int userId, string roleName, StatisticsFilterDto filter, CancellationToken cancellationToken)
+        {
+            if (filter.HasAcademicContext)
+                return;
+
+            var context = await _currentAcademicContextService.GetCurrentContextAsync(userId, roleName, filter.FacultyId, cancellationToken);
+            if (context is null)
+                return;
+
+            filter.AcademyYearId = context.AcademyYearId;
+            filter.SemesterId = context.SemesterId;
+            filter.PeriodId = context.PeriodId;
         }
 
         public byte[] ExportExcel(StatisticsDashboardDto dashboard, string? templatePath = null)

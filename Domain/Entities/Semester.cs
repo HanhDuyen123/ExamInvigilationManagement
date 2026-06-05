@@ -7,6 +7,8 @@ namespace ExamInvigilationManagement.Domain.Entities
         public int Id { get; set; }
         public int AcademyYearId { get; set; }
         public string Name { get; set; } = null!;
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
 
         public AcademyYear AcademyYear { get; set; } = null!;
 

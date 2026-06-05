@@ -300,7 +300,8 @@ namespace ExamInvigilationManagement.Application.Services
         {
             var users = (await _db.Users.Include(x => x.Role).Include(x => x.Information).ToListAsync(ct)).ToDictionary(x => x.UserName, StringComparer.OrdinalIgnoreCase);
             var years = await _db.AcademyYears.Select(x => new { x.AcademyYearId, x.AcademyYearName }).ToListAsync(ct);
-            var semesters = await _db.Semesters.Select(x => new { x.SemesterId, x.SemesterName, x.AcademyYearId }).ToListAsync(ct);
+            var today = DateTime.Today;
+            var semesters = await _db.Semesters.Select(x => new { x.SemesterId, x.SemesterName, x.AcademyYearId, x.EndDate }).ToListAsync(ct);
             var subjects = (await _db.Subjects.Select(x => x.SubjectId).ToListAsync(ct))
                 .Concat(_db.Subjects.Local.Select(x => x.SubjectId))
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
@@ -317,6 +318,8 @@ namespace ExamInvigilationManagement.Application.Services
                 var year = ResolveOne(years, x => x.AcademyYearName, Val(row, "Năm học"), result, r, "Năm học");
                 var semester = ResolveSemester(semesters.Where(x => year == null || x.AcademyYearId == year.AcademyYearId), x => x.SemesterName, Val(row, "Học kỳ"), result, r, "Học kỳ");
                 var semesterId = semester?.SemesterId ?? 0;
+                if (semester?.EndDate.HasValue == true && semester.EndDate.Value.Date < today)
+                    result.Errors.Add(Error(r, "Học kỳ", Val(row, "Học kỳ"), "Không thể import dữ liệu vào học kỳ đã kết thúc."));
                 if (Required(result, r, "Mã môn", subjectId) && !subjects.Contains(subjectId)) result.Errors.Add(Error(r, "Mã môn", subjectId, "Không tồn tại."));
                 if (Required(result, r, "Lớp học phần", className) && className.Length > 30) result.Errors.Add(Error(r, "Lớp học phần", className, "Tối đa 30 ký tự."));
                 if (Required(result, r, "Nhóm", group) && group.Length > 2) result.Errors.Add(Error(r, "Nhóm", group, "Tối đa 2 ký tự."));
@@ -525,7 +528,8 @@ namespace ExamInvigilationManagement.Application.Services
             var users = (await _db.Users.Include(x => x.Role).Include(x => x.Information).ToListAsync(ct)).ToDictionary(x => x.UserName, StringComparer.OrdinalIgnoreCase);
             var currentFacultyId = await _db.Users.Where(x => x.UserId == currentUserId).Select(x => x.FacultyId).FirstOrDefaultAsync(ct);
             var years = await _db.AcademyYears.Select(x => new { x.AcademyYearId, x.AcademyYearName }).ToListAsync(ct);
-            var semesters = await _db.Semesters.Select(x => new { x.SemesterId, x.SemesterName, x.AcademyYearId }).ToListAsync(ct);
+            var today = DateTime.Today;
+            var semesters = await _db.Semesters.Select(x => new { x.SemesterId, x.SemesterName, x.AcademyYearId, x.EndDate }).ToListAsync(ct);
             var periods = await _db.ExamPeriods.Select(x => new { x.PeriodId, x.PeriodName, x.SemesterId }).ToListAsync(ct);
             var sessions = await _db.ExamSessions.Select(x => new { x.SessionId, x.SessionName, x.PeriodId }).ToListAsync(ct);
             var slots = await _db.ExamSlots.Select(x => new { x.SlotId, x.SlotName, x.SessionId }).ToListAsync(ct);
@@ -541,6 +545,8 @@ namespace ExamInvigilationManagement.Application.Services
                 if (currentRole == "Thư ký khoa" && user != null && user.FacultyId != currentFacultyId) result.Errors.Add(Error(r, "Tên đăng nhập giảng viên", userName, "Không thuộc khoa của thư ký hiện tại."));
                 var year = ResolveOne(years, x => x.AcademyYearName, Val(row, "Năm học"), result, r, "Năm học");
                 var semester = ResolveSemester(semesters.Where(x => year == null || x.AcademyYearId == year.AcademyYearId), x => x.SemesterName, Val(row, "Học kỳ"), result, r, "Học kỳ");
+                if (semester?.EndDate.HasValue == true && semester.EndDate.Value.Date < today)
+                    result.Errors.Add(Error(r, "Học kỳ", Val(row, "Học kỳ"), "Không thể import lịch bận vào học kỳ đã kết thúc."));
                 var period = ResolveExamPeriod(periods.Where(x => semester == null || x.SemesterId == semester.SemesterId), x => x.PeriodName, Val(row, "Đợt thi"), result, r, "Đợt thi");
                 var session = ResolveOne(sessions.Where(x => period == null || x.PeriodId == period.PeriodId), x => x.SessionName, Val(row, "Buổi thi"), result, r, "Buổi thi");
                 var slot = ResolveOne(slots.Where(x => session == null || x.SessionId == session.SessionId), x => x.SlotName, Val(row, "Ca thi"), result, r, "Ca thi");

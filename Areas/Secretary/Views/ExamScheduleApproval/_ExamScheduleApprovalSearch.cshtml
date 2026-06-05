@@ -32,6 +32,7 @@
                 MenuId = "yearDropdown",
                 Placeholder = "Chọn năm học...",
                 InputClass = "input-modern",
+                InitialText = ViewBag.InitialAcademyYearName as string ?? "",
                 InitialValue = Model.Search.AcademyYearId?.ToString() ?? ""
             })
         </div>
@@ -46,6 +47,7 @@
                 MenuId = "semesterDropdown",
                 Placeholder = "Chọn học kỳ...",
                 InputClass = "input-modern",
+                InitialText = ViewBag.InitialSemesterName as string ?? "",
                 InitialValue = Model.Search.SemesterId?.ToString() ?? ""
             })
         </div>

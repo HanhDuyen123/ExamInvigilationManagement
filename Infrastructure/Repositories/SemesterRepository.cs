@@ -19,6 +19,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
         public async Task<List<Semester>> GetAllAsync()
         {
             return await _context.Semesters
+                .Include(x => x.AcademyYear)
                 .Select(x => x.ToDomain())
                 .ToListAsync();
         }
@@ -36,12 +37,14 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             await _context.SaveChangesAsync();
         }
 
-        public async Task UpdateAsync(int id, string name)
+        public async Task UpdateAsync(int id, string name, DateTime? startDate, DateTime? endDate)
         {
             var entity = await _context.Semesters.FindAsync(id);
             if (entity == null) return;
 
             entity.SemesterName = name;
+            entity.StartDate = startDate?.Date;
+            entity.EndDate = endDate?.Date;
 
             await _context.SaveChangesAsync();
         }

@@ -167,5 +167,12 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .Select(x => (int?)x.AcademyYearId)
                 .FirstOrDefaultAsync();
         }
+
+        public async Task<bool> IsSemesterExpiredAsync(int semesterId, DateTime today)
+        {
+            return await _context.Semesters
+                .AsNoTracking()
+                .AnyAsync(x => x.SemesterId == semesterId && x.EndDate.HasValue && x.EndDate.Value < today.Date);
+        }
     }
 }

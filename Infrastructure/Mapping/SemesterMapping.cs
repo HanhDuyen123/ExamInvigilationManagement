@@ -8,7 +8,10 @@
             {
                 Id = entity.SemesterId,
                 AcademyYearId = entity.AcademyYearId,
-                Name = entity.SemesterName
+                Name = entity.SemesterName,
+                StartDate = entity.StartDate,
+                EndDate = entity.EndDate,
+                AcademyYear = entity.AcademyYear?.ToDomain()!
             };
         }
 
@@ -18,7 +21,9 @@
             {
                 SemesterId = domain.Id,
                 AcademyYearId = domain.AcademyYearId,
-                SemesterName = domain.Name
+                SemesterName = domain.Name,
+                StartDate = domain.StartDate,
+                EndDate = domain.EndDate
             };
         }
     }

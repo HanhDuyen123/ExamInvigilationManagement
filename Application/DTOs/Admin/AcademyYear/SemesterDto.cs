@@ -8,6 +8,8 @@ namespace ExamInvigilationManagement.Application.DTOs.Admin.AcademyYear
         public int Id { get; set; }
         public int AcademyYearId { get; set; }
         public string Name { get; set; }
+        public DateTime? StartDate { get; set; }
+        public DateTime? EndDate { get; set; }
         public SemesterType? Type =>
     SemesterHelper.ToType(Name);
 

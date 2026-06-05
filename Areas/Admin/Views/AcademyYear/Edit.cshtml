@@ -66,12 +66,19 @@
             {
                 var sem = Model.Semesters.FirstOrDefault(x => x.Type == semType.Type);
                 var expectedPeriods = semType.Type == SemesterType.Summer ? periodsSummer : periodsNormal;
+                var isCurrentSemester = sem?.StartDate.HasValue == true && sem?.EndDate.HasValue == true && DateTime.Today >= sem.StartDate.Value.Date && DateTime.Today <= sem.EndDate.Value.Date;
 
                 <section class="semester-card-edit">
                     <div class="semester-title-row">
                         <div>
                             <div class="node-label">Học kỳ</div>
-                            <div class="node-heading">@semType.Label</div>
+                            <div class="node-heading">
+                                @semType.Label
+                                @if (isCurrentSemester)
+                                {
+                                    <span class="current-semester-badge">Đang diễn ra</span>
+                                }
+                            </div>
                         </div>
 
                         @if (sem != null)
@@ -80,6 +87,8 @@
                                 <input type="hidden" name="Id" value="@sem.Id" />
                                 <input type="hidden" name="academyYearId" value="@Model.Id" />
                                 <input name="Name" value="@sem.Name" class="input-modern compact" />
+                                <input type="date" name="StartDate" value="@sem.StartDate?.ToString("yyyy-MM-dd")" class="input-modern compact semester-date-input" title="Ngày bắt đầu học kỳ" />
+                                <input type="date" name="EndDate" value="@sem.EndDate?.ToString("yyyy-MM-dd")" class="input-modern compact semester-date-input" title="Ngày kết thúc học kỳ" />
                                 <button class="btn-node-icon edit" type="submit" title="Lưu học kỳ">
                                     <i class="bi bi-check-lg"></i>
                                 </button>
@@ -361,6 +370,27 @@
         width: 100%;
     }
 
+    .semester-form {
+        grid-template-columns: minmax(140px, 1fr) minmax(140px, 170px) minmax(140px, 170px) 38px 38px;
+    }
+
+    .semester-date-input {
+        min-width: 0;
+    }
+
+    .current-semester-badge {
+        display: inline-flex;
+        align-items: center;
+        margin-left: 8px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: #dcfce7;
+        color: #15803d;
+        font-size: 11px;
+        font-weight: 800;
+        vertical-align: middle;
+    }
+
     .semester-form input,
     .period-form input,
     .session-form input {
@@ -487,6 +517,10 @@
             grid-template-columns: minmax(0, 1fr) 38px 38px;
         }
 
+        .semester-form {
+            grid-template-columns: minmax(0, 1fr) minmax(120px, 1fr) minmax(120px, 1fr) 38px 38px;
+        }
+
         .slot-row-edit {
             grid-template-columns: minmax(120px, 1fr) minmax(112px, 128px) 38px 38px;
         }
@@ -505,6 +539,15 @@
 
         .node-form {
             grid-template-columns: minmax(0, 1fr) 38px 38px;
+        }
+
+        .semester-form {
+            grid-template-columns: 1fr;
+        }
+
+        .semester-form .btn-node-icon {
+            width: 100%;
+            min-width: 0;
         }
 
         .slot-row-edit {

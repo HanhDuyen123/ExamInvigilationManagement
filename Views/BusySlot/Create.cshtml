@@ -3,6 +3,12 @@
 
 @{
     ViewData["Title"] = "Thêm lịch bận";
+    var initialAcademyYearId = ViewBag.InitialAcademyYearId?.ToString() ?? string.Empty;
+    var initialAcademyYearName = ViewBag.InitialAcademyYearName as string ?? string.Empty;
+    var initialSemesterId = ViewBag.InitialSemesterId?.ToString() ?? string.Empty;
+    var initialSemesterName = ViewBag.InitialSemesterName as string ?? string.Empty;
+    var initialPeriodId = ViewBag.InitialPeriodId?.ToString() ?? string.Empty;
+    var initialPeriodName = ViewBag.InitialPeriodName as string ?? string.Empty;
 }
 
 <form asp-action="Create" method="post" id="busySlotForm">
@@ -25,7 +31,9 @@
                         HiddenName = "",
                         MenuId = "yearDropdown",
                         Placeholder = "Chọn năm học...",
-                        InputClass = "input-modern"
+                        InputClass = "input-modern",
+                        InitialValue = initialAcademyYearId,
+                        InitialText = initialAcademyYearName
                     })
                 </div>
 
@@ -38,7 +46,9 @@
                         HiddenName = "",
                         MenuId = "semesterDropdown",
                         Placeholder = "Chọn học kỳ...",
-                        InputClass = "input-modern"
+                        InputClass = "input-modern",
+                        InitialValue = initialSemesterId,
+                        InitialText = initialSemesterName
                     })
                 </div>
 
@@ -51,7 +61,9 @@
                         HiddenName = "ExamPeriodId",
                         MenuId = "periodDropdown",
                         Placeholder = "Chọn đợt thi...",
-                        InputClass = "input-modern"
+                        InputClass = "input-modern",
+                        InitialValue = Model.ExamPeriodId?.ToString() ?? initialPeriodId,
+                        InitialText = Model.ExamPeriodName ?? initialPeriodName
                     })
                 </div>
 
@@ -206,6 +218,8 @@
                 url: '@Url.Action("AcademyYears", "Lookup")',
                 valueField: 'id',
                 textField: 'name',
+                initialValue: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(initialAcademyYearId)),
+                initialText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(initialAcademyYearName)),
                 onSelect: function () { clearBelow('semester'); renderSlotCheckboxes([]); syncBusySlotMode(); },
                 onClear: function () { renderSlotCheckboxes([]); syncBusySlotMode(); }
             });
@@ -220,6 +234,8 @@
                 extraParams: function () { return { academyYearId: $('#yearId').val() }; },
                 valueField: 'id',
                 textField: 'name',
+                initialValue: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(initialSemesterId)),
+                initialText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(initialSemesterName)),
                 beforeSearch: function () {
                     if (!$('#yearId').val()) {
                         AppNotify.show('warning', 'Vui lòng chọn năm học trước.');
@@ -241,6 +257,8 @@
                 extraParams: function () { return { semesterId: $('#semesterId').val() }; },
                 valueField: 'id',
                 textField: 'name',
+                initialValue: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ExamPeriodId?.ToString() ?? initialPeriodId)),
+                initialText: @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ExamPeriodName ?? initialPeriodName)),
                 beforeSearch: function () { return !!$('#semesterId').val(); },
                 onSelect: function () { clearBelow('session'); renderSlotCheckboxes([]); syncBusySlotMode(); },
                 onClear: function () { renderSlotCheckboxes([]); syncBusySlotMode(); }

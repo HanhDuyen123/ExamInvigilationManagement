@@ -14,21 +14,25 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         private readonly ICourseOfferingService _service;
         private readonly ISubjectService _subjectService;
         private readonly ISemesterService _semesterService;
+        private readonly ICurrentAcademicContextService _currentAcademicContextService;
 
         public CourseOfferingController(
             ICourseOfferingService service,
             ISubjectService subjectService,
             IAdminUserService userService,
-            ISemesterService semesterService) : base(userService)
+            ISemesterService semesterService,
+            ICurrentAcademicContextService currentAcademicContextService) : base(userService)
         {
             _service = service;
             _subjectService = subjectService;
             _semesterService = semesterService;
+            _currentAcademicContextService = currentAcademicContextService;
         }
 
         [HttpGet]
-        public IActionResult Index()
+        public async Task<IActionResult> Index()
         {
+            await SetInitialAcademicContextAsync();
             var model = new CrudIndexViewModel
             {
                 Title = "Học phần mở",
@@ -53,6 +57,18 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
             int page = 1,
             int pageSize = 5)
         {
+            if (!academyYearId.HasValue && !semesterType.HasValue)
+            {
+                var context = await GetCurrentContextAsync();
+                academyYearId = context?.AcademyYearId;
+
+                if (context?.SemesterId.HasValue == true)
+                {
+                    var semester = (await _semesterService.GetAllAsync()).FirstOrDefault(x => x.Id == context.SemesterId.Value);
+                    semesterType = semester?.Type.HasValue == true ? (int)semester.Type.Value : null;
+                }
+            }
+
             var result = await _service.GetPagedAsync(
                 subjectId,
                 userId,
@@ -72,6 +88,13 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
             int? academyYearId,
             int? semesterId)
         {
+            if (!academyYearId.HasValue && !semesterId.HasValue)
+            {
+                var context = await GetCurrentContextAsync();
+                academyYearId = context?.AcademyYearId;
+                semesterId = context?.SemesterId;
+            }
+
             var data = await _service.GetAllAsync();
 
             if (User.IsInRole("Giảng viên"))
@@ -131,9 +154,16 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         }
 
         [HttpGet]
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            return View(new CourseOfferingDto());
+            var context = await GetCurrentContextAsync();
+            return View(new CourseOfferingDto
+            {
+                AcademyYearId = context?.AcademyYearId,
+                AcademicYearName = context?.AcademyYearName,
+                SemesterId = context?.SemesterId,
+                SemesterName = context?.SemesterName
+            });
         }
 
         [HttpPost]
@@ -276,6 +306,28 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
                 s = s.Replace("  ", " ");
 
             return s;
+        }
+
+        private async Task<Application.DTOs.Statistics.CurrentAcademicContextDto?> GetCurrentContextAsync()
+        {
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+                return null;
+
+            return await _currentAcademicContextService.GetCurrentContextAsync(currentUserId.Value, "Admin");
+        }
+
+        private async Task SetInitialAcademicContextAsync()
+        {
+            var context = await GetCurrentContextAsync();
+            ViewBag.InitialAcademyYearId = context?.AcademyYearId;
+            ViewBag.InitialAcademyYearName = context?.AcademyYearName;
+
+            if (context?.SemesterId.HasValue == true)
+            {
+                var semester = (await _semesterService.GetAllAsync()).FirstOrDefault(x => x.Id == context.SemesterId.Value);
+                ViewBag.InitialSemesterType = semester?.Type.HasValue == true ? (int?)semester.Type.Value : null;
+            }
         }
     }
 }

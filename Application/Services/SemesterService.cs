@@ -29,6 +29,8 @@ namespace ExamInvigilationManagement.Application.Services
                 Id = x.Id,
                 Name = x.Name,
                 AcademyYearId = x.AcademyYearId,
+                StartDate = x.StartDate,
+                EndDate = x.EndDate,
                 AcademicYear = x.AcademyYear != null
                     ? x.AcademyYear.Name 
                     : null
@@ -71,7 +73,13 @@ namespace ExamInvigilationManagement.Application.Services
             if (SemesterHelper.ToType(dto.Name) == null)
                 throw new InvalidOperationException("Học kỳ không đúng cấu trúc chuẩn.");
 
-            await _repo.UpdateAsync(dto.Id, dto.Name);
+            if (dto.StartDate.HasValue != dto.EndDate.HasValue)
+                throw new InvalidOperationException("Vui lòng nhập đủ ngày bắt đầu và ngày kết thúc học kỳ.");
+
+            if (dto.StartDate.HasValue && dto.EndDate.HasValue && dto.StartDate.Value.Date > dto.EndDate.Value.Date)
+                throw new InvalidOperationException("Ngày bắt đầu học kỳ phải nhỏ hơn hoặc bằng ngày kết thúc.");
+
+            await _repo.UpdateAsync(dto.Id, dto.Name, dto.StartDate, dto.EndDate);
         }
 
         public async Task DeleteAsync(int id)

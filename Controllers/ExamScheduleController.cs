@@ -31,6 +31,7 @@ namespace ExamInvigilationManagement.Controllers
         private readonly EmailSettings _emailSettings;
         private readonly IWebHostEnvironment _environment;
         private readonly IConfiguration _configuration;
+        private readonly ICurrentAcademicContextService _currentAcademicContextService;
 
         public ExamScheduleController(
             IExamScheduleService service,
@@ -42,7 +43,8 @@ namespace ExamInvigilationManagement.Controllers
             IEmailLogService emailLogService,
             IOptions<EmailSettings> emailOptions,
             IWebHostEnvironment environment,
-            IConfiguration configuration)
+            IConfiguration configuration,
+            ICurrentAcademicContextService currentAcademicContextService)
             : base(userService)
         {
             _service = service;
@@ -54,10 +56,13 @@ namespace ExamInvigilationManagement.Controllers
             _emailSettings = emailOptions.Value;
             _environment = environment;
             _configuration = configuration;
+            _currentAcademicContextService = currentAcademicContextService;
         }
 
-        public IActionResult Index(string? status = null)
+        public async Task<IActionResult> Index(string? status = null)
         {
+            var scope = await BuildScopeAsync();
+            await SetInitialAcademicContextAsync(scope);
             ViewBag.ShowFacultyFilter = User.IsInRole("Admin");
             ViewBag.ShowUserFilter = User.IsInRole("Admin") || User.IsInRole("Thư ký khoa") || User.IsInRole("Trưởng khoa");
             ViewBag.ShowStatusFilter = !User.IsInRole("Giảng viên");
@@ -144,6 +149,8 @@ namespace ExamInvigilationManagement.Controllers
                 CurrentFacultyId = scope.FacultyId
             };
 
+            await ApplyDefaultAcademicContextAsync(filter, scope);
+
             ViewBag.ScheduleActionMode = User.IsInRole("Admin")
                 ? "admin"
                 : User.IsInRole("Thư ký khoa")
@@ -202,6 +209,8 @@ namespace ExamInvigilationManagement.Controllers
                 CurrentUserId = scope.UserId,
                 CurrentFacultyId = scope.FacultyId
             };
+
+            await ApplyDefaultAcademicContextAsync(filter, scope);
 
             var result = await _service.GetPagedAsync(filter, 1, int.MaxValue);
             var templatePath = Path.Combine(_environment.WebRootPath, "templates", "MAU EXPORT LICH PHAN CONG COI THI.xlsx");
@@ -728,6 +737,34 @@ namespace ExamInvigilationManagement.Controllers
             }
 
             return (role, userId, facultyId);
+        }
+
+        private async Task ApplyDefaultAcademicContextAsync(ExamScheduleSearchDto filter, (string Role, int? UserId, int? FacultyId) scope)
+        {
+            if (filter.AcademyYearId.HasValue || filter.SemesterId.HasValue || filter.PeriodId.HasValue || filter.FromDate.HasValue || filter.ToDate.HasValue || !scope.UserId.HasValue)
+                return;
+
+            var context = await _currentAcademicContextService.GetCurrentContextAsync(scope.UserId.Value, scope.Role, filter.FacultyId ?? scope.FacultyId);
+            if (context is null)
+                return;
+
+            filter.AcademyYearId = context.AcademyYearId;
+            filter.SemesterId = context.SemesterId;
+            filter.PeriodId = context.PeriodId;
+        }
+
+        private async Task SetInitialAcademicContextAsync((string Role, int? UserId, int? FacultyId) scope)
+        {
+            if (!scope.UserId.HasValue)
+                return;
+
+            var context = await _currentAcademicContextService.GetCurrentContextAsync(scope.UserId.Value, scope.Role, scope.FacultyId);
+            ViewBag.InitialAcademyYearId = context?.AcademyYearId;
+            ViewBag.InitialAcademyYearName = context?.AcademyYearName;
+            ViewBag.InitialSemesterId = context?.SemesterId;
+            ViewBag.InitialSemesterName = context?.SemesterName;
+            ViewBag.InitialPeriodId = context?.PeriodId;
+            ViewBag.InitialPeriodName = context?.PeriodName;
         }
 
         private string BuildAbsoluteUrl(string path)

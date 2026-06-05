@@ -61,6 +61,8 @@ namespace ExamInvigilationManagement.Application.Services
             if (dto.BusyWholePeriod)
             {
                 if (!dto.ExamPeriodId.HasValue) throw new InvalidOperationException("Thiếu đợt thi.");
+                if (await _repo.IsPeriodInExpiredSemesterAsync(dto.ExamPeriodId.Value, DateTime.Today))
+                    throw new InvalidOperationException("Không thể đăng ký lịch bận cho học kỳ đã kết thúc.");
                 if (await _repo.BusyPeriodExistsAsync(dto.UserId.Value, dto.ExamPeriodId.Value))
                     throw new InvalidOperationException("Bạn đã đăng ký bận cả đợt thi này.");
 
@@ -80,6 +82,9 @@ namespace ExamInvigilationManagement.Application.Services
 
             if (slotIds.Count == 0)
                 throw new InvalidOperationException("Vui lòng chọn ít nhất một ca bận.");
+
+            if (await _repo.AnySlotInExpiredSemesterAsync(slotIds, DateTime.Today))
+                throw new InvalidOperationException("Không thể đăng ký lịch bận cho học kỳ đã kết thúc.");
 
             var entities = new List<LecturerBusySlot>();
             foreach (var slotId in slotIds)

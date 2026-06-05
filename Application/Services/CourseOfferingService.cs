@@ -261,6 +261,9 @@ namespace ExamInvigilationManagement.Application.Services
             if (!semesterExists)
                 throw new InvalidOperationException("Học kỳ đã chọn không tồn tại.");
 
+            if (await _repo.IsSemesterExpiredAsync(dto.SemesterId.Value, DateTime.Today))
+                throw new InvalidOperationException("Không thể thêm hoặc cập nhật học phần mở cho học kỳ đã kết thúc.");
+
             if (dto.AcademyYearId.HasValue)
             {
                 var semesterAcademyYearId = await _repo.GetSemesterAcademyYearIdAsync(dto.SemesterId.Value);

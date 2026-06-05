@@ -20,6 +20,8 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
         Task<PagedResult<LecturerPeriodAvailabilityDto>> GetAvailabilityPagedAsync(LecturerPeriodAvailabilitySearchDto filter, int page, int pageSize);
         Task<List<int>> GetDeanIdsForLecturerAsync(int lecturerUserId, CancellationToken cancellationToken = default);
         Task<string> GetLecturerDisplayNameAsync(int lecturerUserId, CancellationToken cancellationToken = default);
+        Task<bool> IsPeriodInExpiredSemesterAsync(int periodId, DateTime today);
+        Task<bool> AnySlotInExpiredSemesterAsync(List<int> slotIds, DateTime today);
 
         Task<bool> ExistsAsync(
             int userId,

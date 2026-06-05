@@ -78,6 +78,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             var confirmed = assignmentRows.Count(x => x.ResponseStatus == "Xác nhận");
             var rejected = assignmentRows.Count(x => x.ResponseStatus == "Từ chối");
             var pending = assignmentRows.Count(x => string.IsNullOrWhiteSpace(x.ResponseStatus));
+            var completedAssignments = assignmentRows.Count(x => x.ExamDate.Date < DateTime.Today);
+            var remainingAssignments = Math.Max(0, totalAssignments - completedAssignments);
 
             var selectedFacultyName = isAdmin && filter.FacultyId.HasValue
                 ? await _db.Faculties
@@ -98,7 +100,9 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                             ? selectedFacultyName
                             : "Toàn hệ thống",
                 Filter = filter,
-                Metrics = BuildMetrics(totalSchedules, approvedSchedules, fullCoveredSchedules, totalAssignments, confirmed, rejected, pending)
+                Metrics = isLecturer
+                    ? BuildLecturerMetrics(totalAssignments, completedAssignments, remainingAssignments, confirmed, rejected, pending)
+                    : BuildMetrics(totalSchedules, approvedSchedules, fullCoveredSchedules, totalAssignments, confirmed, rejected, pending)
             };
 
             dashboard.ScheduleStatus = scheduleRows
@@ -166,6 +170,18 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
             if (isLecturer)
             {
+                dashboard.LecturerAssignmentsByDay = assignmentRows
+                    .GroupBy(x => x.ExamDate.Date)
+                    .OrderBy(g => g.Key)
+                    .Select(g => new StatisticChartPointDto
+                    {
+                        Label = g.Key.ToString("dd/MM/yyyy"),
+                        Value = g.Count()
+                    })
+                    .Take(14)
+                    .ToList();
+                SetRates(dashboard.LecturerAssignmentsByDay);
+
                 dashboard.LecturerMonthlyWorkload = assignmentRows
                     .GroupBy(x => new { x.ExamDate.Year, x.ExamDate.Month })
                     .Select(g => new LecturerMonthlyStatisticDto
@@ -181,6 +197,17 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             }
 
             return dashboard;
+        }
+
+        private static List<StatisticMetricDto> BuildLecturerMetrics(int totalAssignments, int completedAssignments, int remainingAssignments, int confirmed, int rejected, int pending)
+        {
+            var completionRate = totalAssignments == 0 ? 0 : Math.Round(completedAssignments * 100m / totalAssignments, 1);
+            return new List<StatisticMetricDto>
+            {
+                new() { Label = "Tổng ca được phân công", Value = totalAssignments.ToString("N0"), Hint = "Trong phạm vi lọc hiện tại", Icon = "bi-calendar-check", Tone = "primary" },
+                new() { Label = "Ca đã coi", Value = completedAssignments.ToString("N0"), Hint = $"Tỷ lệ hoàn thành: {completionRate}%", Icon = "bi-check2-circle", Tone = "success" },
+                new() { Label = "Ca còn lại", Value = remainingAssignments.ToString("N0"), Hint = $"Phản hồi: {confirmed:N0} xác nhận, {pending:N0} chưa phản hồi, {rejected:N0} từ chối", Icon = "bi-hourglass-split", Tone = "warning" }
+            };
         }
 
         private static IQueryable<Data.Entities.ExamSchedule> ApplyScheduleFilter(IQueryable<Data.Entities.ExamSchedule> query, StatisticsFilterDto filter)

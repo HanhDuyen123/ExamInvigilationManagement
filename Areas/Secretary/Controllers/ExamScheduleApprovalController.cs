@@ -13,13 +13,16 @@ namespace ExamInvigilationManagement.Areas.Secretary.Controllers
     {
         private readonly IExamScheduleApprovalService _approvalService;
         private readonly IAdminUserService _userService;
+        private readonly ICurrentAcademicContextService _currentAcademicContextService;
 
         public ExamScheduleApprovalController(
             IExamScheduleApprovalService approvalService,
-            IAdminUserService userService)
+            IAdminUserService userService,
+            ICurrentAcademicContextService currentAcademicContextService)
         {
             _approvalService = approvalService;
             _userService = userService;
+            _currentAcademicContextService = currentAcademicContextService;
         }
 
         [HttpGet]
@@ -33,6 +36,8 @@ namespace ExamInvigilationManagement.Areas.Secretary.Controllers
             if (userId is null)
                 return Unauthorized();
 
+            await ApplyDefaultAcademicContextAsync(search, userId.Value, cancellationToken);
+            await SetInitialAcademicContextTextAsync(search, userId.Value, cancellationToken);
             var pageModel = await _approvalService.GetIndexAsync(search, userId.Value, page, pageSize, cancellationToken);
             return View(pageModel);
         }
@@ -48,6 +53,7 @@ namespace ExamInvigilationManagement.Areas.Secretary.Controllers
             if (userId is null)
                 return Unauthorized();
 
+            await ApplyDefaultAcademicContextAsync(search, userId.Value, cancellationToken);
             var pageModel = await _approvalService.GetIndexAsync(search, userId.Value, page, pageSize, cancellationToken);
             return PartialView("_ExamScheduleApprovalTable", pageModel.PagedItems);
         }
@@ -150,6 +156,36 @@ namespace ExamInvigilationManagement.Areas.Secretary.Controllers
         {
             var id = User.FindFirstValue(ClaimTypes.NameIdentifier);
             return int.TryParse(id, out var userId) ? userId : null;
+        }
+
+        private async Task ApplyDefaultAcademicContextAsync(ExamScheduleApprovalSearchDto search, int userId, CancellationToken cancellationToken)
+        {
+            if (search.AcademyYearId.HasValue || search.SemesterId.HasValue || search.PeriodId.HasValue)
+                return;
+
+            var role = User.IsInRole("Trưởng khoa") ? "Trưởng khoa" : User.IsInRole("Thư ký khoa") ? "Thư ký khoa" : string.Empty;
+            var context = await _currentAcademicContextService.GetCurrentContextAsync(userId, role, null, cancellationToken);
+            if (context is null)
+                return;
+
+            search.AcademyYearId = context.AcademyYearId;
+            search.SemesterId = context.SemesterId;
+            search.PeriodId = context.PeriodId;
+        }
+
+        private async Task SetInitialAcademicContextTextAsync(ExamScheduleApprovalSearchDto search, int userId, CancellationToken cancellationToken)
+        {
+            if (!search.AcademyYearId.HasValue && !search.SemesterId.HasValue && !search.PeriodId.HasValue)
+                return;
+
+            var role = User.IsInRole("Trưởng khoa") ? "Trưởng khoa" : User.IsInRole("Thư ký khoa") ? "Thư ký khoa" : string.Empty;
+            var context = await _currentAcademicContextService.GetCurrentContextAsync(userId, role, null, cancellationToken);
+            if (context is null)
+                return;
+
+            ViewBag.InitialAcademyYearName = context.AcademyYearId == search.AcademyYearId ? context.AcademyYearName : null;
+            ViewBag.InitialSemesterName = context.SemesterId == search.SemesterId ? context.SemesterName : null;
+            ViewBag.InitialPeriodName = context.PeriodId == search.PeriodId ? context.PeriodName : null;
         }
     }
 }

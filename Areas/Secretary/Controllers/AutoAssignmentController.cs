@@ -13,20 +13,34 @@ namespace ExamInvigilationManagement.Areas.Secretary.Controllers
         private readonly IAutoAssignmentService _autoAssignmentService;
         private readonly ISemesterService _semesterService;
         private readonly IPeriodService _periodService;
+        private readonly ICurrentAcademicContextService _currentAcademicContextService;
 
         public AutoAssignmentController(
             IAutoAssignmentService autoAssignmentService,
             ISemesterService semesterService,
-            IPeriodService periodService)
+            IPeriodService periodService,
+            ICurrentAcademicContextService currentAcademicContextService)
         {
             _autoAssignmentService = autoAssignmentService;
             _semesterService = semesterService;
             _periodService = periodService;
+            _currentAcademicContextService = currentAcademicContextService;
         }
 
         [HttpGet]
         public async Task<IActionResult> Index(int? semesterId, int? periodId)
         {
+            if (!semesterId.HasValue && !periodId.HasValue)
+            {
+                var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+                if (int.TryParse(userIdClaim, out var userId))
+                {
+                    var context = await _currentAcademicContextService.GetCurrentContextAsync(userId, "Thư ký khoa");
+                    semesterId = context?.SemesterId;
+                    periodId = context?.PeriodId;
+                }
+            }
+
             if (semesterId.HasValue && semesterId.Value > 0)
             {
                 var semester = (await _semesterService.GetAllAsync()).FirstOrDefault(x => x.Id == semesterId.Value);

@@ -18,6 +18,12 @@ public partial class Semester
     [StringLength(10)]
     public string SemesterName { get; set; } = null!;
 
+    [Column(TypeName = "date")]
+    public DateTime? StartDate { get; set; }
+
+    [Column(TypeName = "date")]
+    public DateTime? EndDate { get; set; }
+
     [ForeignKey("AcademyYearId")]
     [InverseProperty("Semesters")]
     public virtual AcademyYear AcademyYear { get; set; } = null!;

@@ -1,4 +1,10 @@
-﻿<div class="d-flex flex-wrap align-items-center gap-3">
+﻿@{
+    var initialAcademyYearId = ViewBag.InitialAcademyYearId?.ToString() ?? string.Empty;
+    var initialAcademyYearName = ViewBag.InitialAcademyYearName as string ?? string.Empty;
+    var initialSemesterType = ViewBag.InitialSemesterType?.ToString() ?? string.Empty;
+}
+
+<div class="d-flex flex-wrap align-items-center gap-3">
 
     <div class="lookup-modern" style="width:260px;">
         <input id="subjectInput" class="input-modern search-input" placeholder="Môn học..." />
@@ -13,17 +19,17 @@
     </div>
 
     <div class="lookup-modern" style="width:220px;">
-        <input id="yearInput" class="input-modern search-input" placeholder="Năm học..." autocomplete="off" />
+        <input id="yearInput" class="input-modern search-input" placeholder="Năm học..." autocomplete="off" value="@initialAcademyYearName" />
         <div id="yearDropdown" class="dropdown-menu autocomplete-menu w-100"></div>
-        <input type="hidden" id="academyYearId" />
+        <input type="hidden" id="academyYearId" value="@initialAcademyYearId" />
     </div>
 
     <div>
         <select id="semesterType" class="select-modern crud-filter">
             <option value="">-- Học kỳ --</option>
-            <option value="1">HK1</option>
-            <option value="2">HK2</option>
-            <option value="3">HK Hè</option>
+            <option value="1" selected="@(initialSemesterType == "1")">HK1</option>
+            <option value="2" selected="@(initialSemesterType == "2")">HK2</option>
+            <option value="3" selected="@(initialSemesterType == "3")">HK Hè</option>
         </select>
     </div>
 

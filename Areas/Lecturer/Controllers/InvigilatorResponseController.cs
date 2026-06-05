@@ -11,17 +11,36 @@ namespace ExamInvigilationManagement.Areas.Lecturer.Controllers
     public class InvigilatorResponseController : Controller
     {
         private readonly IInvigilatorResponseService _service;
+        private readonly ICurrentAcademicContextService _currentAcademicContextService;
 
-        public InvigilatorResponseController(IInvigilatorResponseService service)
+        public InvigilatorResponseController(IInvigilatorResponseService service, ICurrentAcademicContextService currentAcademicContextService)
         {
             _service = service;
+            _currentAcademicContextService = currentAcademicContextService;
         }
 
-        public IActionResult Index(string? status = null)
+        public async Task<IActionResult> Index(string? status = null, CancellationToken cancellationToken = default)
         {
+            var userId = GetCurrentUserId();
+            var context = userId.HasValue
+                ? await _currentAcademicContextService.GetCurrentContextAsync(userId.Value, "Giảng viên", null, cancellationToken)
+                : null;
+
             ViewData["Title"] = "Xác nhận lịch coi thi";
             ViewBag.InitialStatus = status ?? string.Empty;
-            return View(new InvigilatorAssignmentIndexDto());
+            ViewBag.InitialAcademyYearName = context?.AcademyYearName;
+            ViewBag.InitialSemesterName = context?.SemesterName;
+            ViewBag.InitialPeriodName = context?.PeriodName;
+            return View(new InvigilatorAssignmentIndexDto
+            {
+                Search = new InvigilatorAssignmentSearchDto
+                {
+                    AcademyYearId = context?.AcademyYearId,
+                    SemesterId = context?.SemesterId,
+                    PeriodId = context?.PeriodId,
+                    Status = status
+                }
+            });
         }
 
         [HttpGet]
@@ -35,6 +54,8 @@ namespace ExamInvigilationManagement.Areas.Lecturer.Controllers
         {
             var userId = GetCurrentUserId();
             if (!userId.HasValue) return Unauthorized();
+
+            await ApplyDefaultAcademicContextAsync(userId.Value, search, cancellationToken);
 
             if (string.Equals(viewMode, "calendar", StringComparison.OrdinalIgnoreCase))
             {
@@ -65,6 +86,20 @@ namespace ExamInvigilationManagement.Areas.Lecturer.Controllers
         {
             var raw = User.FindFirstValue(ClaimTypes.NameIdentifier);
             return int.TryParse(raw, out var id) ? id : null;
+        }
+
+        private async Task ApplyDefaultAcademicContextAsync(int userId, InvigilatorAssignmentSearchDto search, CancellationToken cancellationToken)
+        {
+            if (search.AcademyYearId.HasValue || search.SemesterId.HasValue || search.PeriodId.HasValue || search.FromDate.HasValue || search.ToDate.HasValue)
+                return;
+
+            var context = await _currentAcademicContextService.GetCurrentContextAsync(userId, "Giảng viên", null, cancellationToken);
+            if (context is null)
+                return;
+
+            search.AcademyYearId = context.AcademyYearId;
+            search.SemesterId = context.SemesterId;
+            search.PeriodId = context.PeriodId;
         }
     }
 }
