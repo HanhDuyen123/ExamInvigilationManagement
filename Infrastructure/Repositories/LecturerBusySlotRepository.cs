@@ -533,6 +533,52 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .AnyAsync(x => slotIds.Contains(x.SlotId) && x.Session.Period.Semester.EndDate.HasValue && x.Session.Period.Semester.EndDate.Value < today.Date);
         }
 
+        public async Task<bool> HasEffectiveAssignmentForLecturerPeriodAsync(int lecturerUserId, int periodId)
+        {
+            var facultyId = await _context.Users
+                .AsNoTracking()
+                .Where(x => x.UserId == lecturerUserId)
+                .Select(x => x.FacultyId)
+                .FirstOrDefaultAsync();
+
+            if (!facultyId.HasValue) return false;
+
+            return await HasEffectiveAssignmentForFacultyPeriodAsync(facultyId.Value, periodId);
+        }
+
+        public async Task<bool> HasEffectiveAssignmentForLecturerSlotAsync(int lecturerUserId, int slotId)
+        {
+            var data = await _context.Users
+                .AsNoTracking()
+                .Where(x => x.UserId == lecturerUserId)
+                .Select(x => new { x.FacultyId })
+                .FirstOrDefaultAsync();
+
+            if (data?.FacultyId == null) return false;
+
+            var periodId = await _context.ExamSlots
+                .AsNoTracking()
+                .Where(x => x.SlotId == slotId)
+                .Select(x => (int?)x.Session.PeriodId)
+                .FirstOrDefaultAsync();
+
+            return periodId.HasValue && await HasEffectiveAssignmentForFacultyPeriodAsync(data.FacultyId.Value, periodId.Value);
+        }
+
+        private Task<bool> HasEffectiveAssignmentForFacultyPeriodAsync(int facultyId, int periodId)
+        {
+            return _context.ExamInvigilators
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.ExamSchedule.PeriodId == periodId &&
+                    x.Status != ExamInvigilatorStatuses.Rejected &&
+                    x.Status != ExamInvigilatorStatuses.RejectedCode &&
+                    x.Status != ExamInvigilatorStatuses.Cancelled &&
+                    x.Status != ExamInvigilatorStatuses.CancelledCode &&
+                    (x.Assignee.FacultyId == facultyId ||
+                     (x.NewAssigneeId.HasValue && x.NewAssignee != null && x.NewAssignee.FacultyId == facultyId)));
+        }
+
         public async Task<bool> ExistsAsync(int userId, int slotId, DateOnly busyDate, int? ignoreId = null)
         {
             return await _context.LecturerBusySlots.AnyAsync(x =>

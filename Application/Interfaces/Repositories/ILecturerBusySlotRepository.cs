@@ -22,6 +22,8 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
         Task<string> GetLecturerDisplayNameAsync(int lecturerUserId, CancellationToken cancellationToken = default);
         Task<bool> IsPeriodInExpiredSemesterAsync(int periodId, DateTime today);
         Task<bool> AnySlotInExpiredSemesterAsync(List<int> slotIds, DateTime today);
+        Task<bool> HasEffectiveAssignmentForLecturerPeriodAsync(int lecturerUserId, int periodId);
+        Task<bool> HasEffectiveAssignmentForLecturerSlotAsync(int lecturerUserId, int slotId);
 
         Task<bool> ExistsAsync(
             int userId,

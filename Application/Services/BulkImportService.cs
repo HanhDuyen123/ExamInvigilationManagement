@@ -535,6 +535,28 @@ namespace ExamInvigilationManagement.Application.Services
             var slots = await _db.ExamSlots.Select(x => new { x.SlotId, x.SlotName, x.SessionId }).ToListAsync(ct);
             var existing = await _db.LecturerBusySlots.Select(x => new { x.UserId, x.SlotId, x.BusyDate }).ToListAsync(ct);
             var existingSet = existing.Select(x => (x.UserId, x.SlotId, x.BusyDate)).ToHashSet();
+            var assignmentRows = await _db.ExamInvigilators
+                .AsNoTracking()
+                .Where(x =>
+                    x.Status != ExamInvigilatorStatuses.Rejected &&
+                    x.Status != ExamInvigilatorStatuses.RejectedCode &&
+                    x.Status != ExamInvigilatorStatuses.Cancelled &&
+                    x.Status != ExamInvigilatorStatuses.CancelledCode)
+                .Select(x => new
+                {
+                    x.ExamSchedule.PeriodId,
+                    AssigneeFacultyId = x.Assignee.FacultyId,
+                    NewAssigneeFacultyId = x.NewAssignee == null ? null : x.NewAssignee.FacultyId
+                })
+                .ToListAsync(ct);
+            var lockedFacultyPeriods = new HashSet<(int FacultyId, int PeriodId)>();
+            foreach (var assignment in assignmentRows)
+            {
+                if (assignment.AssigneeFacultyId.HasValue)
+                    lockedFacultyPeriods.Add((assignment.AssigneeFacultyId.Value, assignment.PeriodId));
+                if (assignment.NewAssigneeFacultyId.HasValue)
+                    lockedFacultyPeriods.Add((assignment.NewAssigneeFacultyId.Value, assignment.PeriodId));
+            }
             var seen = new HashSet<(int UserId, int SlotId, DateOnly Date)>();
             var list = new List<E.LecturerBusySlot>();
             foreach (var row in rows)
@@ -548,6 +570,8 @@ namespace ExamInvigilationManagement.Application.Services
                 if (semester?.EndDate.HasValue == true && semester.EndDate.Value.Date < today)
                     result.Errors.Add(Error(r, "Học kỳ", Val(row, "Học kỳ"), "Không thể import lịch bận vào học kỳ đã kết thúc."));
                 var period = ResolveExamPeriod(periods.Where(x => semester == null || x.SemesterId == semester.SemesterId), x => x.PeriodName, Val(row, "Đợt thi"), result, r, "Đợt thi");
+                if (user?.FacultyId.HasValue == true && period != null && lockedFacultyPeriods.Contains((user.FacultyId.Value, period.PeriodId)))
+                    result.Errors.Add(Error(r, "Đợt thi", period.PeriodName, "Đợt thi của khoa đã bắt đầu phân công giám thị, không thể import lịch bận."));
                 var session = ResolveOne(sessions.Where(x => period == null || x.PeriodId == period.PeriodId), x => x.SessionName, Val(row, "Buổi thi"), result, r, "Buổi thi");
                 var slot = ResolveOne(slots.Where(x => session == null || x.SessionId == session.SessionId), x => x.SlotName, Val(row, "Ca thi"), result, r, "Ca thi");
                 var slotId = slot?.SlotId ?? 0;

@@ -39,6 +39,8 @@ namespace ExamInvigilationManagement.Application.Services
             if (exists)
                 throw new InvalidOperationException("Bạn đã đăng ký lịch bận cho ca này trong ngày này.");
 
+            await EnsureAssignmentNotStartedForSlotAsync(dto.UserId.Value, dto.ExamSlotId.Value);
+
             var entity = new LecturerBusySlot
             {
                 UserId = dto.UserId!.Value,
@@ -65,6 +67,7 @@ namespace ExamInvigilationManagement.Application.Services
                     throw new InvalidOperationException("Không thể đăng ký lịch bận cho học kỳ đã kết thúc.");
                 if (await _repo.BusyPeriodExistsAsync(dto.UserId.Value, dto.ExamPeriodId.Value))
                     throw new InvalidOperationException("Bạn đã đăng ký bận cả đợt thi này.");
+                await EnsureAssignmentNotStartedForPeriodAsync(dto.UserId.Value, dto.ExamPeriodId.Value);
 
                 await _repo.AddBusyPeriodAsync(dto.UserId.Value, dto.ExamPeriodId.Value, dto.Note.Trim());
                 return 1;
@@ -85,6 +88,9 @@ namespace ExamInvigilationManagement.Application.Services
 
             if (await _repo.AnySlotInExpiredSemesterAsync(slotIds, DateTime.Today))
                 throw new InvalidOperationException("Không thể đăng ký lịch bận cho học kỳ đã kết thúc.");
+
+            foreach (var slotId in slotIds)
+                await EnsureAssignmentNotStartedForSlotAsync(dto.UserId.Value, slotId);
 
             var entities = new List<LecturerBusySlot>();
             foreach (var slotId in slotIds)
@@ -127,6 +133,8 @@ namespace ExamInvigilationManagement.Application.Services
 
             if (exists)
                 throw new InvalidOperationException("Bạn đã đăng ký lịch bận cho ca này trong ngày này.");
+
+            await EnsureAssignmentNotStartedForSlotAsync(dto.UserId.Value, dto.ExamSlotId.Value);
 
             var entity = new LecturerBusySlot
             {
@@ -196,6 +204,18 @@ namespace ExamInvigilationManagement.Application.Services
             if (!dto.ExamSlotId.HasValue) throw new InvalidOperationException("Thiếu ca thi.");
             if (dto.BusyDate == default) throw new InvalidOperationException("Thiếu ngày bận.");
             if (string.IsNullOrWhiteSpace(dto.Note)) throw new InvalidOperationException("Vui lòng nhập lý do đăng ký lịch bận.");
+        }
+
+        private async Task EnsureAssignmentNotStartedForSlotAsync(int lecturerUserId, int slotId)
+        {
+            if (await _repo.HasEffectiveAssignmentForLecturerSlotAsync(lecturerUserId, slotId))
+                throw new InvalidOperationException("Đợt thi của khoa đã bắt đầu phân công giám thị, không thể đăng ký hoặc cập nhật lịch bận.");
+        }
+
+        private async Task EnsureAssignmentNotStartedForPeriodAsync(int lecturerUserId, int periodId)
+        {
+            if (await _repo.HasEffectiveAssignmentForLecturerPeriodAsync(lecturerUserId, periodId))
+                throw new InvalidOperationException("Đợt thi của khoa đã bắt đầu phân công giám thị, không thể đăng ký hoặc cập nhật lịch bận.");
         }
     }
 }
