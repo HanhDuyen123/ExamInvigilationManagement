@@ -49,7 +49,7 @@
 
             CrudPage.init({
                 api: '@Url.Action("GetList", "ExamSchedule")',
-                deleteUrl: @User.IsInRole("Admin").ToString().ToLower() ? '@Url.Action("Delete", "ExamSchedule")/' : '',
+                deleteUrl: @User.IsInRole("Admin").ToString().ToLower() ? '@Url.Action("Delete", "ExamSchedule")' : '',
                 tableId: '#crudTable',
                 pageSize: '#pageSize',
                 filterSelector: '.crud-filter',

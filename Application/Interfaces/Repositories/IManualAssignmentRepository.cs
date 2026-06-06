@@ -25,6 +25,8 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
             int facultyId,
             string subjectId,
             int ownerUserId,
+            int periodId,
+            bool includeExternalSupportLecturers,
             CancellationToken cancellationToken = default);
 
         Task<Dictionary<int, int>> GetLecturerLoadsAsync(

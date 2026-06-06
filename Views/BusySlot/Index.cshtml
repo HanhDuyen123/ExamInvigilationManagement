@@ -32,7 +32,7 @@
 
             CrudPage.init({
                 api: '@Url.Action("GetList", "BusySlot")',
-                deleteUrl: @User.IsInRole("Giảng viên").ToString().ToLower() ? '@Url.Action("Delete", "BusySlot")/' : '',
+                deleteUrl: @User.IsInRole("Giảng viên").ToString().ToLower() ? '@Url.Action("Delete", "BusySlot")' : '',
                 tableId: '#crudTable',
                 pageSize: '#pageSize',
                 filterSelector: '.crud-filter',

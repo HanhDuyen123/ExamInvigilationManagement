@@ -27,5 +27,6 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
         Task<ExamScheduleValidationContextDto?> GetOfferingContextAsync(int offeringId);
         Task<ExamScheduleValidationContextDto?> GetSlotContextAsync(int slotId);
         Task MarkApprovalRequestedAsync(IEnumerable<int> scheduleIds, IEnumerable<int> approverIds, int? requestedById = null, int? facultyId = null, string? note = null, CancellationToken cancellationToken = default);
+        Task MarkSupportRequestedAsync(IEnumerable<int> scheduleIds, int requestedById, CancellationToken cancellationToken = default);
     }
 }

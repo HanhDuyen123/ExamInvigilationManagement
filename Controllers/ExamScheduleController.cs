@@ -512,6 +512,7 @@ namespace ExamInvigilationManagement.Controllers
                     replyTo);
 
                 await _emailLogService.LogAsync(result.CurrentUserId!.Value, recipient.Trim(), "Sent", null, "InvigilatorSupportRequest");
+                await _service.MarkSupportRequestedAsync(result.Schedules.Select(x => x.Id), result.CurrentUserId.Value);
             }
             catch (Exception ex)
             {

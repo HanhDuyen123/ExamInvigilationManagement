@@ -3,6 +3,7 @@
 @{
     ViewData["Title"] = "Đề xuất người thay thế";
     var schedule = Model.Schedule;
+    var selectableLecturers = Model.LecturerOptions.Where(x => x.CanSelect).ToList();
 }
 
 <div class="form-page wide substitution-compact-page">
@@ -30,7 +31,7 @@
                 <label class="form-label">Tìm giảng viên</label>
                 <input id="lecturerSearch" class="input-modern" placeholder="Nhập mã hoặc họ tên giảng viên..." />
             </div>
-            <div class="text-muted small">Người bận, trùng lịch hoặc chính người đã từ chối sẽ không thể chọn.</div>
+            <div class="text-muted small">Chỉ hiển thị giảng viên khả dụng cho lịch này.</div>
         </div>
 
         <form asp-action="Create" method="post">
@@ -38,27 +39,33 @@
             <input type="hidden" name="ExamInvigilatorId" value="@schedule.ExamInvigilatorId" />
             <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
-            <div class="lecturer-select-table-wrap">
-                <table class="table modern-table lecturer-select-table">
-                    <thead><tr><th>Chọn</th><th>Giảng viên</th><th>Khả dụng</th><th>Tải hiện tại</th><th>Gợi ý</th></tr></thead>
-                    <tbody id="lecturerOptions">
-                    @foreach (var lecturer in Model.LecturerOptions)
-                    {
-                        var disabled = !lecturer.CanSelect;
-                        <tr class="lecturer-option @(disabled ? "disabled" : "")" data-text="@($"{lecturer.UserName} {lecturer.FullName}".ToLower())">
-                            <td><input type="radio" name="SubstituteUserId" value="@lecturer.UserId" disabled="@(disabled ? "disabled" : null)" /></td>
-                            <td><strong>@lecturer.FullName</strong><br /><span class="text-muted small">@lecturer.UserName</span></td>
-                            <td><span class="badge rounded-pill @(lecturer.CanSelect ? "bg-success" : "bg-danger")">@lecturer.AvailabilityLabel</span></td>
-                            <td>@lecturer.WorkloadLabel</td>
-                            <td>@lecturer.RecommendationLabel</td>
-                        </tr>
-                    }
-                    </tbody>
-                </table>
-            </div>
+            @if (selectableLecturers.Any())
+            {
+                <div class="lecturer-select-table-wrap">
+                    <table class="table modern-table lecturer-select-table">
+                        <thead><tr><th>Chọn</th><th>Giảng viên</th><th>Khả dụng</th><th>Tải hiện tại</th><th>Gợi ý</th></tr></thead>
+                        <tbody id="lecturerOptions">
+                        @foreach (var lecturer in selectableLecturers)
+                        {
+                            <tr class="lecturer-option" data-text="@($"{lecturer.UserName} {lecturer.FullName}".ToLower())">
+                                <td><input type="radio" name="SubstituteUserId" value="@lecturer.UserId" /></td>
+                                <td><strong>@lecturer.FullName</strong><br /><span class="text-muted small">@lecturer.UserName</span></td>
+                                <td><span class="badge rounded-pill bg-success">@lecturer.AvailabilityLabel</span></td>
+                                <td>@lecturer.WorkloadLabel</td>
+                                <td>@lecturer.RecommendationLabel</td>
+                            </tr>
+                        }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="empty-state border rounded-3 p-4 text-center text-muted bg-light">Không có giảng viên khả dụng.</div>
+            }
 
             <div class="form-actions mt-3">
-                <button type="submit" class="btn-submit"><i class="bi bi-send-check"></i> Gửi đề xuất</button>
+                <button type="submit" class="btn-submit" @(selectableLecturers.Any() ? "" : "disabled")><i class="bi bi-send-check"></i> Gửi đề xuất</button>
             </div>
         </form>
     </div>

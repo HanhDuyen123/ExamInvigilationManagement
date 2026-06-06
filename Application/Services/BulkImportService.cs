@@ -135,7 +135,7 @@ namespace ExamInvigilationManagement.Application.Services
                 Col("ExamScheduleId", "Mã lịch thi", true, "ExamScheduleId đã tồn tại.", "1"),
                 Col("AssigneeUserName", "Tên đăng nhập giám thị", true, "Tài khoản giảng viên cùng khoa.", "gv001"),
                 Col("PositionNo", "Vị trí", true, "Chỉ nhận 1 hoặc 2.", "1"),
-                Col("Status", "Trạng thái", false, "Mặc định Chưa gửi xác nhận.", "Chưa gửi xác nhận")
+                Col("Status", "Trạng thái", false, "Mặc định Chờ xác nhận.", "Chờ xác nhận")
             ],
             _ => []
         };
@@ -564,7 +564,6 @@ namespace ExamInvigilationManagement.Application.Services
         private async Task<List<E.LecturerPeriodAvailability>> MapPeriodAvailabilities(List<Dictionary<string, string>> rows, ImportResultDto result, int currentUserId, string currentRole, CancellationToken ct)
         {
             var users = (await _db.Users.Include(x => x.Role).Include(x => x.Information).ToListAsync(ct)).ToDictionary(x => x.UserName, StringComparer.OrdinalIgnoreCase);
-            var currentFacultyId = await _db.Users.Where(x => x.UserId == currentUserId).Select(x => x.FacultyId).FirstOrDefaultAsync(ct);
             var years = await _db.AcademyYears.Select(x => new { x.AcademyYearId, x.AcademyYearName }).ToListAsync(ct);
             var semesters = await _db.Semesters.Select(x => new { x.SemesterId, x.SemesterName, x.AcademyYearId }).ToListAsync(ct);
             var periods = await _db.ExamPeriods.Select(x => new { x.PeriodId, x.PeriodName, x.SemesterId }).ToListAsync(ct);
@@ -578,7 +577,6 @@ namespace ExamInvigilationManagement.Application.Services
                 var lastName = Val(row, "Họ");
                 var firstName = Val(row, "Tên");
                 if (!users.TryGetValue(userName, out var user) || user.Role.RoleName != "Giảng viên") result.Errors.Add(Error(r, "Tên đăng nhập giảng viên", userName, "Không tồn tại hoặc không phải giảng viên."));
-                if ((currentRole == "Thư ký khoa" || currentRole == "Trưởng khoa") && user != null && user.FacultyId != currentFacultyId) result.Errors.Add(Error(r, "Tên đăng nhập giảng viên", userName, "Không thuộc khoa hiện tại."));
                 Required(result, r, "Họ", lastName);
                 Required(result, r, "Tên", firstName);
                 if (user?.Information != null)
@@ -623,6 +621,11 @@ namespace ExamInvigilationManagement.Application.Services
             var currentFacultyId = await _db.Users.Where(x => x.UserId == currentUserId).Select(x => x.FacultyId).FirstOrDefaultAsync(ct);
             var users = (await _db.Users.Include(x => x.Role).ToListAsync(ct)).ToDictionary(x => x.UserName, StringComparer.OrdinalIgnoreCase);
             var schedules = await _db.ExamSchedules.Include(x => x.Offering).ToDictionaryAsync(x => x.ExamScheduleId, ct);
+            var supportAvailability = await _db.LecturerPeriodAvailabilities
+                .AsNoTracking()
+                .Select(x => new { x.UserId, x.PeriodId })
+                .ToListAsync(ct);
+            var supportAvailabilitySet = supportAvailability.Select(x => (x.UserId, x.PeriodId)).ToHashSet();
             var existing = await _db.ExamInvigilators.Select(x => new { x.ExamScheduleId, x.PositionNo, x.AssigneeId }).ToListAsync(ct);
             var occupiedPositions = existing.Select(x => (x.ExamScheduleId, x.PositionNo)).ToHashSet();
             var assignedUsers = existing.Select(x => (x.ExamScheduleId, x.AssigneeId)).ToHashSet();
@@ -631,16 +634,18 @@ namespace ExamInvigilationManagement.Application.Services
             foreach (var row in rows)
             {
                 var r = RowNo(row);
-                if (!TryInt(row, "Mã lịch thi", result, r, out var scheduleId) || !schedules.TryGetValue(scheduleId, out var schedule)) result.Errors.Add(Error(r, "Mã lịch thi", Val(row, "Mã lịch thi"), "Không tồn tại."));
+                E.ExamSchedule? schedule = null;
+                if (!TryInt(row, "Mã lịch thi", result, r, out var scheduleId) || !schedules.TryGetValue(scheduleId, out schedule)) result.Errors.Add(Error(r, "Mã lịch thi", Val(row, "Mã lịch thi"), "Không tồn tại."));
                 else if (schedule.Offering.UserId == currentUserId) { }
                 var userName = Val(row, "Tên đăng nhập giám thị").Trim();
                 if (!users.TryGetValue(userName, out var user) || user.Role.RoleName != "Giảng viên") result.Errors.Add(Error(r, "Tên đăng nhập giám thị", userName, "Không tồn tại hoặc không phải giảng viên."));
-                if (user != null && user.FacultyId != currentFacultyId) result.Errors.Add(Error(r, "Tên đăng nhập giám thị", userName, "Không thuộc khoa của thư ký hiện tại."));
+                if (user != null && schedule != null && user.FacultyId != currentFacultyId && (!schedule.SupportRequestedAt.HasValue || !supportAvailabilitySet.Contains((user.UserId, schedule.PeriodId))))
+                    result.Errors.Add(Error(r, "Tên đăng nhập giám thị", userName, "Giảng viên khác khoa chỉ được phân công sau khi lịch đã gửi hỗ trợ CBCT và giảng viên có trong danh sách khả dụng đã import."));
                 if (!TryByte(row, "Vị trí", result, r, out var pos) || pos is < 1 or > 2) result.Errors.Add(Error(r, "Vị trí", Val(row, "Vị trí"), "Chỉ nhận 1 hoặc 2."));
                 if (!seenPos.Add((scheduleId, pos)) || occupiedPositions.Contains((scheduleId, pos))) result.Errors.Add(Error(r, "Vị trí", pos.ToString(), "Vị trí giám thị của lịch thi đã có người hoặc bị trùng trong file."));
                 if (user != null && assignedUsers.Contains((scheduleId, user.UserId))) result.Errors.Add(Error(r, "Tên đăng nhập giám thị", userName, "Giảng viên đã được phân công ở lịch này."));
                 var status = Val(row, "Trạng thái").Trim();
-                if (string.IsNullOrWhiteSpace(status)) status = "Chưa gửi xác nhận";
+                if (string.IsNullOrWhiteSpace(status)) status = ExamInvigilatorStatuses.PendingConfirmation;
                 if (!ValidInvigilatorStatuses.Contains(status)) result.Errors.Add(Error(r, "Trạng thái", status, "Không hợp lệ."));
                 list.Add(new E.ExamInvigilator { ExamScheduleId = scheduleId, AssigneeId = user?.UserId ?? 0, AssignerId = currentUserId, PositionNo = pos, Status = status, CreateAt = DateTime.Now });
             }

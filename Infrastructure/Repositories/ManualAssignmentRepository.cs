@@ -1,4 +1,5 @@
-﻿using ExamInvigilationManagement.Application.DTOs.ManualAssignment;
+﻿using System.Text.Json;
+using ExamInvigilationManagement.Application.DTOs.ManualAssignment;
 using ExamInvigilationManagement.Application.Interfaces.Repositories;
 using ExamInvigilationManagement.Common.Constants;
 using ExamInvigilationManagement.Infrastructure.Data;
@@ -62,9 +63,11 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     GroupNumber = x.Offering.GroupNumber,
                     ExamFormatDisplay = x.ExamFormat != null ? x.ExamFormat.Code + " - " + x.ExamFormat.Name : string.Empty,
                     ExamDate = x.ExamDate,
+                    SupportRequestedAt = x.SupportRequestedAt,
                     Status = x.Status,
                     CurrentInvigilatorCount = x.ExamInvigilators.Count(i =>
                         i.Status != InvigilatorResponseStatuses.Rejected &&
+                        i.Status != ExamInvigilatorStatuses.Cancelled &&
                         (i.InvigilatorResponses
                             .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
                             .OrderByDescending(r => r.ResponseAt)
@@ -122,7 +125,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
         {
             var assignmentLogs = await _db.ExamInvigilators
                 .AsNoTracking()
-                .Where(x => x.ExamScheduleId == scheduleId)
+                .Where(x => x.ExamScheduleId == scheduleId && x.Status != ExamInvigilatorStatuses.Cancelled)
                 .Select(x => new ManualAssignmentActivityLogDto
                 {
                     OccurredAt = x.CreateAt,
@@ -165,18 +168,72 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 })
                 .ToListAsync(cancellationToken);
 
+            var historyRows = await _db.AssignmentChangeHistories
+                .AsNoTracking()
+                .Where(x => x.ExamScheduleId == scheduleId)
+                .OrderByDescending(x => x.CreatedAt)
+                .ToListAsync(cancellationToken);
+
+            var historyUserIds = historyRows
+                .SelectMany(x => new[] { x.OldAssigneeId, x.NewAssigneeId })
+                .Where(x => x.HasValue)
+                .Select(x => x!.Value)
+                .Distinct()
+                .ToList();
+
+            var historyUsers = await _db.Users
+                .AsNoTracking()
+                .Where(x => historyUserIds.Contains(x.UserId))
+                .Select(x => new
+                {
+                    x.UserId,
+                    FullName = x.Information != null ? x.Information.LastName + " " + x.Information.FirstName : x.UserName
+                })
+                .ToDictionaryAsync(x => x.UserId, x => x.FullName, cancellationToken);
+
+            var historyLogs = historyRows.Select(x => new ManualAssignmentActivityLogDto
+            {
+                OccurredAt = x.CreatedAt,
+                Type = x.ChangeType.Equals("Remove", StringComparison.OrdinalIgnoreCase) ? "remove" : x.ChangeType.Equals("Replace", StringComparison.OrdinalIgnoreCase) ? "replace" : "assign",
+                Title = x.ChangeType.Equals("Remove", StringComparison.OrdinalIgnoreCase)
+                    ? "Bỏ phân công giám thị"
+                    : x.ChangeType.Equals("Replace", StringComparison.OrdinalIgnoreCase)
+                        ? "Đổi giám thị"
+                        : "Phân công giám thị",
+                Description = BuildAssignmentHistoryDescription(x, historyUsers)
+            }).ToList();
+
             return assignmentLogs
                 .Concat(responseLogs)
                 .Concat(substitutionLogs)
+                .Concat(historyLogs)
                 .Where(x => x.OccurredAt.HasValue)
                 .OrderByDescending(x => x.OccurredAt)
                 .ToList();
+        }
+
+        private static string BuildAssignmentHistoryDescription(
+            Data.Entities.AssignmentChangeHistory history,
+            IReadOnlyDictionary<int, string> users)
+        {
+            var position = history.PositionNo.HasValue ? $" vị trí GT {history.PositionNo}" : string.Empty;
+            var oldName = history.OldAssigneeId.HasValue && users.TryGetValue(history.OldAssigneeId.Value, out var oldUser) ? oldUser : "-";
+            var newName = history.NewAssigneeId.HasValue && users.TryGetValue(history.NewAssigneeId.Value, out var newUser) ? newUser : "-";
+
+            return history.ChangeType switch
+            {
+                "Remove" => $"Bỏ phân công{position}: {oldName}.",
+                "Replace" => $"Đổi{position}: {oldName} -> {newName}.",
+                _ => $"Phân công{position}: {newName}."
+            };
         }
 
         public async Task<List<ManualAssignmentLecturerOptionDto>> GetActiveLecturersAsync(
             int facultyId,
             string subjectId,
             int ownerUserId,
+            int periodId,
+            bool includeExternalSupportLecturers,
             CancellationToken cancellationToken = default)
         {
             var ownerInformationId = await _db.Users
@@ -199,6 +256,15 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .Distinct()
                 .ToListAsync(cancellationToken);
 
+            var externalSupportUserIds = includeExternalSupportLecturers
+                ? await _db.LecturerPeriodAvailabilities
+                    .AsNoTracking()
+                    .Where(x => x.PeriodId == periodId && x.User.IsActive && x.User.Role.RoleName == "Giảng viên" && x.User.FacultyId != facultyId)
+                    .Select(x => x.UserId)
+                    .Distinct()
+                    .ToListAsync(cancellationToken)
+                : new List<int>();
+
             var rows = await _db.Users
                 .AsNoTracking()
                 .Where(x =>
@@ -207,7 +273,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                      x.UserId == ownerUserId ||
                      (ownerInformationId > 0 && x.InformationId == ownerInformationId) ||
                      subjectLecturerIds.Contains(x.UserId) ||
-                     subjectLecturerPersonKeys.Contains(x.InformationId > 0 ? x.InformationId : x.UserId)) &&
+                     subjectLecturerPersonKeys.Contains(x.InformationId > 0 ? x.InformationId : x.UserId) ||
+                     externalSupportUserIds.Contains(x.UserId)) &&
                     x.Role.RoleName != "Admin")
                 .Select(x => new ManualAssignmentLecturerOptionDto
                 {
@@ -218,7 +285,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     FacultyId = x.FacultyId,
                     FacultyName = x.Faculty != null ? x.Faculty.FacultyName : string.Empty,
                     RoleName = x.Role.RoleName,
-                    IsLecturerRole = x.Role.RoleName == "Giảng viên"
+                    IsLecturerRole = x.Role.RoleName == "Giảng viên",
+                    IsExternalSupport = x.FacultyId != facultyId && externalSupportUserIds.Contains(x.UserId)
                 })
                 .ToListAsync(cancellationToken);
 
@@ -247,7 +315,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     x.ExamSchedule.SemesterId == semesterId &&
                     x.Assignee.IsActive &&
                     personKeySet.Contains((x.NewAssignee != null && x.NewAssignee.InformationId > 0) ? x.NewAssignee.InformationId : (x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId)) &&
-                    x.Status != "Từ chối" &&
+                    x.Status != InvigilatorResponseStatuses.Rejected &&
+                    x.Status != ExamInvigilatorStatuses.Cancelled &&
                     (x.InvigilatorResponses
                         .Where(r => r.UserId == (x.NewAssigneeId ?? x.AssigneeId))
                         .OrderByDescending(r => r.ResponseAt)
@@ -287,7 +356,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     x.ExamSchedule.SemesterId == semesterId &&
                     personKeySet.Contains((x.NewAssignee != null && x.NewAssignee.InformationId > 0) ? x.NewAssignee.InformationId : (x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId)) &&
                     x.ExamSchedule.ExamDate == examDate &&
-                    x.Status != "Từ chối" &&
+                    x.Status != InvigilatorResponseStatuses.Rejected &&
+                    x.Status != ExamInvigilatorStatuses.Cancelled &&
                     (x.InvigilatorResponses
                         .Where(r => r.UserId == (x.NewAssigneeId ?? x.AssigneeId))
                         .OrderByDescending(r => r.ResponseAt)
@@ -419,7 +489,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     x.ExamScheduleId != scheduleId &&
                     x.ExamSchedule.SlotId == slotId &&
                     x.ExamSchedule.ExamDate == examDate &&
-                    x.Status != "Từ chối" &&
+                    x.Status != InvigilatorResponseStatuses.Rejected &&
+                    x.Status != ExamInvigilatorStatuses.Cancelled &&
                     (x.InvigilatorResponses
                         .Where(r => r.UserId == (x.NewAssigneeId ?? x.AssigneeId))
                         .OrderByDescending(r => r.ResponseAt)
@@ -434,7 +505,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     x.ExamScheduleId != scheduleId &&
                     x.ExamSchedule.SlotId == slotId &&
                     x.ExamSchedule.ExamDate == examDate &&
-                    x.Status != "Từ chối" &&
+                    x.Status != InvigilatorResponseStatuses.Rejected &&
+                    x.Status != ExamInvigilatorStatuses.Cancelled &&
                     (x.InvigilatorResponses
                         .Where(r => r.UserId == (x.NewAssigneeId ?? x.AssigneeId))
                         .OrderByDescending(r => r.ResponseAt)
@@ -470,6 +542,13 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     .Where(x => x.ExamScheduleId == plan.ExamScheduleId)
                     .ToListAsync(cancellationToken);
 
+                var oldScheduleStatus = schedule.Status;
+                var correlationId = Guid.NewGuid();
+                var actorUserId = plan.NewInvigilators.Select(x => (int?)x.AssignerId)
+                    .Concat(plan.ReplaceInvigilators.Select(x => (int?)x.AssignerId))
+                    .Concat(plan.RemoveInvigilators.Select(x => (int?)x.AssignerId))
+                    .FirstOrDefault(x => x.HasValue);
+
                 var selectedUserIds = plan.NewInvigilators.Select(x => x.AssigneeId)
                     .Concat(plan.ReplaceInvigilators.Select(x => x.NewAssigneeId))
                     .Distinct()
@@ -477,12 +556,12 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 var selectedPersonKeys = await GetPersonKeysByUserIdAsync(selectedUserIds, cancellationToken);
                 var existingPersonKeys = await _db.ExamInvigilators
                     .AsNoTracking()
-                    .Where(x => x.ExamScheduleId == plan.ExamScheduleId)
+                    .Where(x => x.ExamScheduleId == plan.ExamScheduleId && x.Status != ExamInvigilatorStatuses.Cancelled)
                     .Select(x => (x.NewAssignee != null && x.NewAssignee.InformationId > 0) ? x.NewAssignee.InformationId : (x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId))
                     .ToListAsync(cancellationToken);
                 var existingPersonKeySet = existingPersonKeys.ToHashSet();
 
-                if (existing.Count >= 2 && plan.NewInvigilators.Any())
+                if (existing.Count(x => x.Status != ExamInvigilatorStatuses.Cancelled) >= 2 && plan.NewInvigilators.Any())
                     throw new InvalidOperationException("Lịch thi này đã đủ 2 giám thị, không thể phân công thêm.");
 
                 foreach (var item in plan.NewInvigilators)
@@ -490,7 +569,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     if (selectedPersonKeys.TryGetValue(item.AssigneeId, out var personKey) && existingPersonKeySet.Contains(personKey))
                         throw new InvalidOperationException("Một giảng viên đã được phân công cho lịch thi này.");
 
-                    _db.ExamInvigilators.Add(new Data.Entities.ExamInvigilator
+                    var entity = new Data.Entities.ExamInvigilator
                     {
                         AssigneeId = item.AssigneeId,
                         AssignerId = item.AssignerId,
@@ -499,7 +578,9 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                         Status = item.Status,
                         CreateAt = item.CreateAt,
                         UpdateAt = item.UpdateAt
-                    });
+                    };
+                    _db.ExamInvigilators.Add(entity);
+                    AddAssignmentAudit(plan.ExamScheduleId, null, item.AssigneeId, item.PositionNo, "Create", item.AssignerId, correlationId, null, entity);
                     if (personKey > 0)
                         existingPersonKeySet.Add(personKey);
                 }
@@ -513,16 +594,50 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     if (selectedPersonKeys.TryGetValue(item.NewAssigneeId, out var personKey) && existingPersonKeySet.Contains(personKey))
                         throw new InvalidOperationException("Một giảng viên đã được phân công cho lịch thi này.");
 
-                    existingItem.NewAssigneeId = item.NewAssigneeId;
+                    var oldAssigneeId = existingItem.NewAssigneeId ?? existingItem.AssigneeId;
+                    existingItem.AssigneeId = item.NewAssigneeId;
+                    existingItem.NewAssigneeId = null;
                     existingItem.AssignerId = item.AssignerId;
                     existingItem.Status = ExamInvigilatorStatuses.PendingConfirmation;
                     existingItem.ConfirmationSentAt = null;
                     existingItem.UpdateAt = item.UpdateAt;
+                    AddAssignmentAudit(plan.ExamScheduleId, oldAssigneeId, item.NewAssigneeId, existingItem.PositionNo, "Replace", item.AssignerId, correlationId, null, existingItem);
                     if (personKey > 0)
                         existingPersonKeySet.Add(personKey);
                 }
 
+                foreach (var item in plan.RemoveInvigilators)
+                {
+                    var existingItem = existing.FirstOrDefault(x => x.ExamInvigilatorId == item.ExamInvigilatorId);
+                    if (existingItem is null)
+                        throw new InvalidOperationException("Không tìm thấy vị trí giám thị cần bỏ phân công.");
+
+                    var oldAssigneeId = existingItem.NewAssigneeId ?? existingItem.AssigneeId;
+                    existingItem.NewAssigneeId = null;
+                    existingItem.Status = ExamInvigilatorStatuses.Cancelled;
+                    existingItem.ConfirmationSentAt = null;
+                    existingItem.UpdateAt = item.UpdateAt;
+                    AddAssignmentAudit(plan.ExamScheduleId, oldAssigneeId, null, existingItem.PositionNo, "Remove", item.AssignerId, correlationId, null, existingItem);
+                }
+
                 schedule.Status = plan.StatusAfter;
+                if (!string.Equals(oldScheduleStatus, schedule.Status, StringComparison.OrdinalIgnoreCase))
+                {
+                    _db.AuditLogs.Add(new Data.Entities.AuditLog
+                    {
+                        EventType = "ManualAssignmentStatusChanged",
+                        EntityName = "ExamSchedule",
+                        EntityId = schedule.ExamScheduleId.ToString(),
+                        Action = "Update",
+                        ActorUserId = actorUserId,
+                        OldValues = JsonSerializer.Serialize(new { Status = oldScheduleStatus }),
+                        NewValues = JsonSerializer.Serialize(new { Status = schedule.Status }),
+                        Note = "Trạng thái lịch thi được cập nhật sau khi chỉnh sửa phân công thủ công.",
+                        CorrelationId = correlationId,
+                        CreatedAt = DateTime.Now,
+                        Source = "ManualAssignment"
+                    });
+                }
 
                 await _db.SaveChangesAsync(cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
@@ -532,6 +647,48 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 await transaction.RollbackAsync(cancellationToken);
                 throw;
             }
+        }
+
+        private void AddAssignmentAudit(
+            int scheduleId,
+            int? oldAssigneeId,
+            int? newAssigneeId,
+            byte positionNo,
+            string changeType,
+            int actorUserId,
+            Guid correlationId,
+            string? reason,
+            Data.Entities.ExamInvigilator assignment)
+        {
+            var now = DateTime.Now;
+            _db.AssignmentChangeHistories.Add(new Data.Entities.AssignmentChangeHistory
+            {
+                ExamInvigilatorId = assignment.ExamInvigilatorId == 0 ? null : assignment.ExamInvigilatorId,
+                ExamScheduleId = scheduleId,
+                OldAssigneeId = oldAssigneeId,
+                NewAssigneeId = newAssigneeId,
+                PositionNo = positionNo,
+                ChangeType = changeType,
+                Reason = reason,
+                ActorUserId = actorUserId,
+                CreatedAt = now,
+                CorrelationId = correlationId
+            });
+
+            _db.AuditLogs.Add(new Data.Entities.AuditLog
+            {
+                EventType = "ManualAssignmentChanged",
+                EntityName = "ExamInvigilator",
+                EntityId = assignment.ExamInvigilatorId == 0 ? null : assignment.ExamInvigilatorId.ToString(),
+                Action = changeType,
+                ActorUserId = actorUserId,
+                OldValues = JsonSerializer.Serialize(new { AssigneeId = oldAssigneeId, PositionNo = positionNo }),
+                NewValues = JsonSerializer.Serialize(new { AssigneeId = newAssigneeId, PositionNo = positionNo, Status = assignment.Status }),
+                Note = reason,
+                CorrelationId = correlationId,
+                CreatedAt = now,
+                Source = "ManualAssignment"
+            });
         }
 
         private async Task<Dictionary<int, int>> GetPersonKeysByUserIdAsync(

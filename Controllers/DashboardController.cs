@@ -80,14 +80,14 @@ namespace ExamInvigilationManagement.Controllers
                 .FirstOrDefaultAsync(cancellationToken);
 
             var pendingQuery = _db.ExamInvigilators.Where(x =>
-                (x.AssigneeId == userId || (currentInformationId.HasValue && x.Assignee.InformationId == currentInformationId.Value)) &&
+                x.Status != ExamInvigilatorStatuses.Cancelled &&
+                ((x.NewAssigneeId ?? x.AssigneeId) == userId || (currentInformationId.HasValue && (x.NewAssignee != null ? x.NewAssignee.InformationId : x.Assignee.InformationId) == currentInformationId.Value)) &&
                 x.ExamSchedule.Status == ExamScheduleStatuses.Approved &&
-                x.ConfirmationSentAt.HasValue &&
                 !x.InvigilatorResponses.Any(r => r.UserId == userId || (currentInformationId.HasValue && r.User.InformationId == currentInformationId.Value)));
 
             var overdue = await pendingQuery.CountAsync(x => x.ExamSchedule.ExamDate.Date <= today.AddDays(3), cancellationToken);
             model.WorkItems.Add(new() { Title = "Chưa phản hồi", Description = "Lịch coi thi cần xác nhận hoặc từ chối.", Count = await pendingQuery.CountAsync(cancellationToken), Url = Url.Action("Index", "InvigilatorResponse", new { area = "Lecturer", status = "Chưa phản hồi" }) ?? "#", Icon = "bi-check2-square", Tone = overdue > 0 ? "danger" : "warning", BadgeText = overdue > 0 ? $"{overdue} lịch sát ngày thi" : null });
-            model.WorkItems.Add(new() { Title = "Cần đề xuất thay thế", Description = "Lịch đã từ chối nhưng chưa có đề xuất.", Count = await _db.ExamInvigilators.CountAsync(x => x.AssigneeId == userId && x.InvigilatorResponses.Any(r => r.UserId == userId && r.Status == InvigilatorResponseStatuses.Rejected) && !x.InvigilatorSubstitutions.Any(s => s.UserId == userId), cancellationToken), Url = Url.Action("Index", "InvigilatorResponse", new { area = "Lecturer", status = InvigilatorResponseStatuses.Rejected }) ?? "#", Icon = "bi-arrow-left-right", Tone = "danger" });
+            model.WorkItems.Add(new() { Title = "Cần đề xuất thay thế", Description = "Lịch đã từ chối nhưng chưa có đề xuất.", Count = await _db.ExamInvigilators.CountAsync(x => x.Status != ExamInvigilatorStatuses.Cancelled && (x.NewAssigneeId ?? x.AssigneeId) == userId && x.InvigilatorResponses.Any(r => r.UserId == userId && r.Status == InvigilatorResponseStatuses.Rejected) && !x.InvigilatorSubstitutions.Any(s => s.UserId == userId), cancellationToken), Url = Url.Action("Index", "InvigilatorResponse", new { area = "Lecturer", status = InvigilatorResponseStatuses.Rejected }) ?? "#", Icon = "bi-arrow-left-right", Tone = "danger" });
         }
     }
 }

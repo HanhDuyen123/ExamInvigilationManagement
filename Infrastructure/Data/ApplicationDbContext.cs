@@ -237,6 +237,9 @@ public partial class ApplicationDbContext : DbContext
             entity.HasOne(d => d.Slot).WithMany(p => p.ExamSchedules)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ExamSchedule_Slot");
+
+            entity.HasOne(d => d.SupportRequestedBy).WithMany()
+                .HasConstraintName("FK_ExamSchedule_SupportRequestedBy");
         });
 
         modelBuilder.Entity<ExamScheduleApproval>(entity =>

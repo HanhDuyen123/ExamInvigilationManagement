@@ -1,6 +1,7 @@
 ﻿using ExamInvigilationManagement.Application.DTOs.AutoAssign;
 using ExamInvigilationManagement.Application.Interfaces.Repositories;
 using ExamInvigilationManagement.Application.Interfaces.Service;
+using ExamInvigilationManagement.Common.Constants;
 using Google.OrTools.Sat;
 
 namespace ExamInvigilationManagement.Application.Services
@@ -613,7 +614,7 @@ namespace ExamInvigilationManagement.Application.Services
                 AssignerId = assignerId,
                 ExamScheduleId = schedule.ExamScheduleId,
                 PositionNo = positionNo,
-                Status = "Chưa gửi xác nhận",
+                Status = ExamInvigilatorStatuses.PendingConfirmation,
                 CreateAt = DateTime.Now,
                 UpdateAt = DateTime.Now
             });

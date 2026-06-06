@@ -69,6 +69,8 @@ namespace ExamInvigilationManagement.Application.DTOs.ExamSchedule
         public int ApprovalCount { get; set; }
         public int InvigilatorCount { get; set; }
         public bool IsLockedForScheduleEdit { get; set; }
+        public DateTime? SupportRequestedAt { get; set; }
+        public int? SupportRequestedById { get; set; }
 
         // hỗ trợ UI tạo nhiều phòng
         public int RoomCount { get; set; } = 1;

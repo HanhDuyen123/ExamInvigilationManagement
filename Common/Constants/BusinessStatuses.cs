@@ -47,11 +47,13 @@ namespace ExamInvigilationManagement.Common.Constants
         public const string PendingConfirmationCode = "PendingConfirmation";
         public const string ConfirmedCode = "Confirmed";
         public const string RejectedCode = "Rejected";
+        public const string CancelledCode = "Cancelled";
 
         public const string NotSent = "Chưa gửi xác nhận";
         public const string PendingConfirmation = "Chờ xác nhận";
         public const string Confirmed = "Xác nhận";
         public const string Rejected = "Từ chối";
+        public const string Cancelled = "Đã hủy";
 
         public static string ToCode(string? status)
         {
@@ -61,6 +63,7 @@ namespace ExamInvigilationManagement.Common.Constants
                 "pendingconfirmation" or "chờ xác nhận" => PendingConfirmationCode,
                 "confirmed" or "xác nhận" => ConfirmedCode,
                 "rejected" or "từ chối" => RejectedCode,
+                "cancelled" or "canceled" or "đã hủy" => CancelledCode,
                 _ => status ?? string.Empty
             };
         }
@@ -73,9 +76,16 @@ namespace ExamInvigilationManagement.Common.Constants
                 PendingConfirmationCode => PendingConfirmation,
                 ConfirmedCode => Confirmed,
                 RejectedCode => Rejected,
+                CancelledCode => Cancelled,
                 _ => codeOrDisplay ?? string.Empty
             };
         }
+
+        public static bool IsActiveAssignment(string? status)
+            => !string.Equals(status, Rejected, StringComparison.OrdinalIgnoreCase)
+               && !string.Equals(status, RejectedCode, StringComparison.OrdinalIgnoreCase)
+               && !string.Equals(status, Cancelled, StringComparison.OrdinalIgnoreCase)
+               && !string.Equals(status, CancelledCode, StringComparison.OrdinalIgnoreCase);
     }
 
     public static class InvigilatorResponseStatuses

@@ -32,10 +32,11 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
             var query = _db.ExamInvigilators
                 .AsNoTracking()
+                .Where(x => x.Status != ExamInvigilatorStatuses.Cancelled)
                 .Where(x => (x.NewAssigneeId ?? x.AssigneeId) == userId ||
                     (userInformationId.HasValue && ((x.NewAssignee != null ? x.NewAssignee.InformationId : x.Assignee.InformationId) == userInformationId.Value)))
                 .Where(x =>
-                    (x.ExamSchedule.Status == ExamScheduleStatuses.Approved && x.ConfirmationSentAt.HasValue) ||
+                    x.ExamSchedule.Status == ExamScheduleStatuses.Approved ||
                     x.InvigilatorResponses.Any(r =>
                         (r.UserId == userId || (userInformationId.HasValue && r.User.InformationId == userInformationId.Value)) &&
                         r.Status == InvigilatorResponseStatuses.Rejected))
@@ -117,8 +118,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 SlotName = x.Schedule.Slot.SlotName,
                 TimeStart = x.Schedule.Slot.TimeStart,
                 ExamDate = x.Schedule.ExamDate,
-                Lecturer1Name = x.Schedule.ExamInvigilators.Where(i => i.PositionNo == 1).Select(i => i.NewAssignee != null ? i.NewAssignee.Information.LastName + " " + i.NewAssignee.Information.FirstName : i.Assignee.Information.LastName + " " + i.Assignee.Information.FirstName).FirstOrDefault(),
-                Lecturer2Name = x.Schedule.ExamInvigilators.Where(i => i.PositionNo == 2).Select(i => i.NewAssignee != null ? i.NewAssignee.Information.LastName + " " + i.NewAssignee.Information.FirstName : i.Assignee.Information.LastName + " " + i.Assignee.Information.FirstName).FirstOrDefault(),
+                Lecturer1Name = x.Schedule.ExamInvigilators.Where(i => i.PositionNo == 1 && i.Status != ExamInvigilatorStatuses.Cancelled).Select(i => i.NewAssignee != null ? i.NewAssignee.Information.LastName + " " + i.NewAssignee.Information.FirstName : i.Assignee.Information.LastName + " " + i.Assignee.Information.FirstName).FirstOrDefault(),
+                Lecturer2Name = x.Schedule.ExamInvigilators.Where(i => i.PositionNo == 2 && i.Status != ExamInvigilatorStatuses.Cancelled).Select(i => i.NewAssignee != null ? i.NewAssignee.Information.LastName + " " + i.NewAssignee.Information.FirstName : i.Assignee.Information.LastName + " " + i.Assignee.Information.FirstName).FirstOrDefault(),
                 ResponseStatus = x.LatestResponse == null ? "Chưa phản hồi" : x.LatestResponse.Status,
                 ResponseNote = x.LatestResponse == null ? null : x.LatestResponse.Note,
                 HasSubstitutionProposal = x.LatestSubstitution != null,
@@ -182,10 +183,11 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
         {
             var query = _db.ExamInvigilators
                 .AsNoTracking()
+                .Where(x => x.Status != ExamInvigilatorStatuses.Cancelled)
                 .Where(x => (x.NewAssigneeId ?? x.AssigneeId) == userId ||
                     (userInformationId.HasValue && ((x.NewAssignee != null ? x.NewAssignee.InformationId : x.Assignee.InformationId) == userInformationId.Value)))
                 .Where(x =>
-                    (x.ExamSchedule.Status == ExamScheduleStatuses.Approved && x.ConfirmationSentAt.HasValue) ||
+                    x.ExamSchedule.Status == ExamScheduleStatuses.Approved ||
                     x.InvigilatorResponses.Any(r =>
                         (r.UserId == userId || (userInformationId.HasValue && r.User.InformationId == userInformationId.Value)) &&
                         r.Status == InvigilatorResponseStatuses.Rejected))
@@ -272,8 +274,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 SlotName = x.Schedule.Slot.SlotName,
                 TimeStart = x.Schedule.Slot.TimeStart,
                 ExamDate = x.Schedule.ExamDate,
-                Lecturer1Name = x.Schedule.ExamInvigilators.Where(i => i.PositionNo == 1).Select(i => i.NewAssignee != null ? i.NewAssignee.Information.LastName + " " + i.NewAssignee.Information.FirstName : i.Assignee.Information.LastName + " " + i.Assignee.Information.FirstName).FirstOrDefault(),
-                Lecturer2Name = x.Schedule.ExamInvigilators.Where(i => i.PositionNo == 2).Select(i => i.NewAssignee != null ? i.NewAssignee.Information.LastName + " " + i.NewAssignee.Information.FirstName : i.Assignee.Information.LastName + " " + i.Assignee.Information.FirstName).FirstOrDefault(),
+                Lecturer1Name = x.Schedule.ExamInvigilators.Where(i => i.PositionNo == 1 && i.Status != ExamInvigilatorStatuses.Cancelled).Select(i => i.NewAssignee != null ? i.NewAssignee.Information.LastName + " " + i.NewAssignee.Information.FirstName : i.Assignee.Information.LastName + " " + i.Assignee.Information.FirstName).FirstOrDefault(),
+                Lecturer2Name = x.Schedule.ExamInvigilators.Where(i => i.PositionNo == 2 && i.Status != ExamInvigilatorStatuses.Cancelled).Select(i => i.NewAssignee != null ? i.NewAssignee.Information.LastName + " " + i.NewAssignee.Information.FirstName : i.Assignee.Information.LastName + " " + i.Assignee.Information.FirstName).FirstOrDefault(),
                 ResponseStatus = x.LatestResponse == null ? "Chưa phản hồi" : x.LatestResponse.Status,
                 ResponseNote = x.LatestResponse == null ? null : x.LatestResponse.Note,
                 HasSubstitutionProposal = x.LatestSubstitution != null,
@@ -466,7 +468,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     SlotName = x.Slot.SlotName,
                     TimeStart = x.Slot.TimeStart,
                     Lecturers = x.ExamInvigilators
-                    .Where(i => i.Status != InvigilatorResponseStatuses.Rejected || i.NewAssigneeId.HasValue)
+                    .Where(i => i.Status != InvigilatorResponseStatuses.Rejected && i.Status != ExamInvigilatorStatuses.Cancelled)
                     .Select(i => new InvigilatorConfirmationLecturerDto
                     {
                         UserId = i.NewAssignee != null ? i.NewAssignee.UserId : i.Assignee.UserId,

@@ -150,6 +150,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     personKeySet.Contains((x.NewAssignee != null && x.NewAssignee.InformationId > 0) ? x.NewAssignee.InformationId : (x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId)) &&
                     x.Assignee.IsActive &&
                     x.Status != "Từ chối" &&
+                    x.Status != ExamInvigilatorStatuses.Cancelled &&
                     (x.InvigilatorResponses
                         .Where(r => r.UserId == (x.NewAssigneeId ?? x.AssigneeId))
                         .OrderByDescending(r => r.ResponseAt)

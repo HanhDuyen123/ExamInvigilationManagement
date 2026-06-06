@@ -36,6 +36,8 @@
 
         public DateTime ExamDate { get; set; }
         public string Status { get; set; } = string.Empty;
+        public DateTime? SupportRequestedAt { get; set; }
+        public bool IsSupportRequested => SupportRequestedAt.HasValue;
 
         public int CurrentInvigilatorCount { get; set; }
         public int MissingCount { get; set; }

@@ -1,4 +1,5 @@
-﻿using ExamInvigilationManagement.Application.DTOs.ExamSchedule;
+﻿using System.Text.Json;
+using ExamInvigilationManagement.Application.DTOs.ExamSchedule;
 using ExamInvigilationManagement.Application.Interfaces.Repositories;
 using ExamInvigilationManagement.Common;
 using ExamInvigilationManagement.Common.Constants;
@@ -157,9 +158,12 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     RoomId = x.RoomId,
                     ExamDate = x.ExamDate,
                     Status = x.Status,
+                    SupportRequestedAt = x.SupportRequestedAt,
+                    SupportRequestedById = x.SupportRequestedById,
                     ApprovalCount = x.ExamScheduleApprovals.Count(a => a.Status == ExamScheduleStatuses.PendingApproval),
                     InvigilatorCount = x.ExamInvigilators.Count(i =>
                         i.Status != InvigilatorResponseStatuses.Rejected &&
+                        i.Status != ExamInvigilatorStatuses.Cancelled &&
                         (i.InvigilatorResponses
                             .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
                             .OrderByDescending(r => r.ResponseAt)
@@ -212,6 +216,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                         .Where(i =>
                             i.PositionNo == 1 &&
                             i.Status != InvigilatorResponseStatuses.Rejected &&
+                            i.Status != ExamInvigilatorStatuses.Cancelled &&
                             (i.InvigilatorResponses
                                 .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
                                 .OrderByDescending(r => r.ResponseAt)
@@ -226,6 +231,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                         .Where(i =>
                             i.PositionNo == 1 &&
                             i.Status != InvigilatorResponseStatuses.Rejected &&
+                            i.Status != ExamInvigilatorStatuses.Cancelled &&
                             (i.InvigilatorResponses
                                 .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
                                 .OrderByDescending(r => r.ResponseAt)
@@ -238,6 +244,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                         .Where(i =>
                             i.PositionNo == 1 &&
                             i.Status != InvigilatorResponseStatuses.Rejected &&
+                            i.Status != ExamInvigilatorStatuses.Cancelled &&
                             (i.InvigilatorResponses
                                 .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
                                 .OrderByDescending(r => r.ResponseAt)
@@ -252,6 +259,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                         .Where(i =>
                             i.PositionNo == 2 &&
                             i.Status != InvigilatorResponseStatuses.Rejected &&
+                            i.Status != ExamInvigilatorStatuses.Cancelled &&
                             (i.InvigilatorResponses
                                 .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
                                 .OrderByDescending(r => r.ResponseAt)
@@ -266,6 +274,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                         .Where(i =>
                             i.PositionNo == 2 &&
                             i.Status != InvigilatorResponseStatuses.Rejected &&
+                            i.Status != ExamInvigilatorStatuses.Cancelled &&
                             (i.InvigilatorResponses
                                 .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
                                 .OrderByDescending(r => r.ResponseAt)
@@ -278,6 +287,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                         .Where(i =>
                             i.PositionNo == 2 &&
                             i.Status != InvigilatorResponseStatuses.Rejected &&
+                            i.Status != ExamInvigilatorStatuses.Cancelled &&
                             (i.InvigilatorResponses
                                 .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
                                 .OrderByDescending(r => r.ResponseAt)
@@ -358,9 +368,12 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 RoomId = x.RoomId,
                 ExamDate = x.ExamDate,
                 Status = x.Status,
+                SupportRequestedAt = x.SupportRequestedAt,
+                SupportRequestedById = x.SupportRequestedById,
                 ApprovalCount = x.ExamScheduleApprovals.Count(a => a.Status == ExamScheduleStatuses.PendingApproval),
                 InvigilatorCount = x.ExamInvigilators.Count(i =>
                     i.Status != InvigilatorResponseStatuses.Rejected &&
+                    i.Status != ExamInvigilatorStatuses.Cancelled &&
                     (i.InvigilatorResponses
                         .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
                         .OrderByDescending(r => r.ResponseAt)
@@ -419,6 +432,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     .Where(i =>
                         i.PositionNo == 1 &&
                         i.Status != InvigilatorResponseStatuses.Rejected &&
+                        i.Status != ExamInvigilatorStatuses.Cancelled &&
                         (i.InvigilatorResponses
                             .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
                             .OrderByDescending(r => r.ResponseAt)
@@ -433,6 +447,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     .Where(i =>
                         i.PositionNo == 1 &&
                         i.Status != InvigilatorResponseStatuses.Rejected &&
+                        i.Status != ExamInvigilatorStatuses.Cancelled &&
                         (i.InvigilatorResponses
                             .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
                             .OrderByDescending(r => r.ResponseAt)
@@ -445,6 +460,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     .Where(i =>
                         i.PositionNo == 1 &&
                         i.Status != InvigilatorResponseStatuses.Rejected &&
+                        i.Status != ExamInvigilatorStatuses.Cancelled &&
                         (i.InvigilatorResponses
                             .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
                             .OrderByDescending(r => r.ResponseAt)
@@ -459,6 +475,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     .Where(i =>
                         i.PositionNo == 2 &&
                         i.Status != InvigilatorResponseStatuses.Rejected &&
+                        i.Status != ExamInvigilatorStatuses.Cancelled &&
                         (i.InvigilatorResponses
                             .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
                             .OrderByDescending(r => r.ResponseAt)
@@ -473,6 +490,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     .Where(i =>
                         i.PositionNo == 2 &&
                         i.Status != InvigilatorResponseStatuses.Rejected &&
+                        i.Status != ExamInvigilatorStatuses.Cancelled &&
                         (i.InvigilatorResponses
                             .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
                             .OrderByDescending(r => r.ResponseAt)
@@ -485,6 +503,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     .Where(i =>
                         i.PositionNo == 2 &&
                         i.Status != InvigilatorResponseStatuses.Rejected &&
+                        i.Status != ExamInvigilatorStatuses.Cancelled &&
                         (i.InvigilatorResponses
                             .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
                             .OrderByDescending(r => r.ResponseAt)
@@ -820,6 +839,43 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 throw;
             }
         }
+
+        public async Task MarkSupportRequestedAsync(IEnumerable<int> scheduleIds, int requestedById, CancellationToken cancellationToken = default)
+        {
+            var ids = scheduleIds.Where(x => x > 0).Distinct().ToList();
+            if (!ids.Any()) return;
+
+            var now = DateTime.Now;
+            var correlationId = Guid.NewGuid();
+            var schedules = await _context.ExamSchedules
+                .Where(x => ids.Contains(x.ExamScheduleId))
+                .ToListAsync(cancellationToken);
+
+            foreach (var schedule in schedules)
+            {
+                var oldValues = new { schedule.SupportRequestedAt, schedule.SupportRequestedById };
+                schedule.SupportRequestedAt = now;
+                schedule.SupportRequestedById = requestedById;
+
+                _context.AuditLogs.Add(new Data.Entities.AuditLog
+                {
+                    EventType = "InvigilatorSupportRequested",
+                    EntityName = "ExamSchedule",
+                    EntityId = schedule.ExamScheduleId.ToString(),
+                    Action = "Update",
+                    ActorUserId = requestedById,
+                    OldValues = JsonSerializer.Serialize(oldValues),
+                    NewValues = JsonSerializer.Serialize(new { schedule.SupportRequestedAt, schedule.SupportRequestedById }),
+                    Note = "Đánh dấu lịch thi đã gửi đề nghị hỗ trợ CBCT để mở phân công giảng viên hỗ trợ trong whitelist khả dụng.",
+                    CorrelationId = correlationId,
+                    CreatedAt = now,
+                    Source = nameof(ExamScheduleRepository)
+                });
+            }
+
+            await _context.SaveChangesAsync(cancellationToken);
+        }
+
         private static string? GetUserFullName(dynamic? user)
         {
             if (user == null) return null;

@@ -165,6 +165,9 @@ namespace ExamInvigilationManagement.Application.Services
         public Task MarkApprovalRequestedAsync(IEnumerable<int> scheduleIds, IEnumerable<int> approverIds, int? requestedById = null, int? facultyId = null, string? note = null, CancellationToken cancellationToken = default)
             => _repo.MarkApprovalRequestedAsync(scheduleIds, approverIds, requestedById, facultyId, note, cancellationToken);
 
+        public Task MarkSupportRequestedAsync(IEnumerable<int> scheduleIds, int requestedById, CancellationToken cancellationToken = default)
+            => _repo.MarkSupportRequestedAsync(scheduleIds, requestedById, cancellationToken);
+
         private static void ValidateDto(ExamScheduleDto dto)
         {
             if (dto == null) throw new ArgumentNullException(nameof(dto));

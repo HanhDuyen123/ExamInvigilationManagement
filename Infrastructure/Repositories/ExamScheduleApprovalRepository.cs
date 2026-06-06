@@ -127,6 +127,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
                     InvigilatorCount = x.ExamInvigilators.Count(i =>
                         i.Status != InvigilatorResponseStatuses.Rejected &&
+                        i.Status != ExamInvigilatorStatuses.Cancelled &&
                         (i.InvigilatorResponses
                             .Where(r => r.UserId == (i.NewAssigneeId ?? i.AssigneeId))
                             .OrderByDescending(r => r.ResponseAt)
@@ -142,7 +143,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
             var invigilators = await _db.ExamInvigilators
                 .AsNoTracking()
-                .Where(x => scheduleIds.Contains(x.ExamScheduleId))
+                .Where(x => scheduleIds.Contains(x.ExamScheduleId) && x.Status != ExamInvigilatorStatuses.Cancelled)
                 .Select(x => new
                 {
                     x.ExamScheduleId,

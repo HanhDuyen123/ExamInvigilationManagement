@@ -35,6 +35,11 @@ public partial class ExamSchedule
     [StringLength(20)]
     public string Status { get; set; } = null!;
 
+    [Column(TypeName = "datetime")]
+    public DateTime? SupportRequestedAt { get; set; }
+
+    public int? SupportRequestedById { get; set; }
+
     [ForeignKey("AcademyYearId")]
     [InverseProperty("ExamSchedules")]
     public virtual AcademyYear AcademyYear { get; set; } = null!;
@@ -72,4 +77,7 @@ public partial class ExamSchedule
     [ForeignKey("SlotId")]
     [InverseProperty("ExamSchedules")]
     public virtual ExamSlot Slot { get; set; } = null!;
+
+    [ForeignKey("SupportRequestedById")]
+    public virtual User? SupportRequestedBy { get; set; }
 }

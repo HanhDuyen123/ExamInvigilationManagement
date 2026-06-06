@@ -113,9 +113,6 @@ namespace ExamInvigilationManagement.Application.Services
             if (items.Any(x => !string.Equals(x.ScheduleStatus, ExamScheduleStatusHelper.Approved, StringComparison.OrdinalIgnoreCase)))
                 return Fail("Chỉ có thể phản hồi các lịch thi đã được duyệt.");
 
-            if (items.Any(x => !x.ConfirmationSentAt.HasValue))
-                return Fail("Chỉ có thể phản hồi sau khi Thư ký khoa gửi yêu cầu xác nhận.");
-
             var note = request.Note?.Trim();
             await _repository.UpsertResponsesAsync(userId, ids, status!, note, cancellationToken);
             await NotifySecretariesAsync(userId, items, status!, note, cancellationToken);

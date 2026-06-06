@@ -6,6 +6,7 @@
         public string StatusAfter { get; set; } = string.Empty;
         public List<ManualAssignmentInvigilatorCreateDto> NewInvigilators { get; set; } = new();
         public List<ManualAssignmentInvigilatorReplaceDto> ReplaceInvigilators { get; set; } = new();
+        public List<ManualAssignmentInvigilatorRemoveDto> RemoveInvigilators { get; set; } = new();
     }
 
     public class ManualAssignmentInvigilatorCreateDto
@@ -23,6 +24,13 @@
     {
         public int ExamInvigilatorId { get; set; }
         public int NewAssigneeId { get; set; }
+        public int AssignerId { get; set; }
+        public DateTime UpdateAt { get; set; } = DateTime.Now;
+    }
+
+    public class ManualAssignmentInvigilatorRemoveDto
+    {
+        public int ExamInvigilatorId { get; set; }
         public int AssignerId { get; set; }
         public DateTime UpdateAt { get; set; } = DateTime.Now;
     }
