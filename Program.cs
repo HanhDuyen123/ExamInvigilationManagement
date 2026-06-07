@@ -66,6 +66,8 @@ builder.Services.AddScoped<ICourseOfferingRepository, CourseOfferingRepository>(
 builder.Services.AddScoped<ICourseOfferingService, CourseOfferingService>();
 builder.Services.AddScoped<IAutoAssignmentService, AutoAssignmentService>();
 builder.Services.AddScoped<IAutoAssignmentRepository, AutoAssignmentRepository>();
+builder.Services.AddScoped<IAutoAssignmentPolicyService, AutoAssignmentPolicyService>();
+builder.Services.AddScoped<IAutoAssignmentPolicyRepository, AutoAssignmentPolicyRepository>();
 builder.Services.AddScoped<ILecturerBusySlotService, LecturerBusySlotService>();
 builder.Services.AddScoped<ILecturerBusySlotRepository, LecturerBusySlotRepository>();
 builder.Services.AddScoped<IExamScheduleService, ExamScheduleService>();

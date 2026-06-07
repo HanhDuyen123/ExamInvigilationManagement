@@ -1,0 +1,430 @@
+@model ExamInvigilationManagement.Application.DTOs.AutoAssign.AutoAssignmentPolicyEditDto
+
+@{
+    ViewData["Title"] = "Cấu hình phân công tự động";
+}
+
+<div class="role-page auto-policy-page">
+    <div class="role-header mb-4">
+        <div>
+            <h3 class="title-gradient">Cấu hình phân công tự động</h3>
+            <div class="subtitle">Điều chỉnh các tham số an toàn để thuật toán phù hợp hơn với quy định vận hành của khoa</div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a asp-area="Secretary" asp-controller="AutoAssignment" asp-action="Index" class="btn btn-create">
+                <i class="bi bi-magic"></i>
+                <span>Chạy phân công</span>
+            </a>
+            <a asp-area="" asp-controller="ExamSchedule" asp-action="Index" class="btn btn-outline-primary rounded-3">
+                <i class="bi bi-calendar-week"></i>
+                <span>Lịch thi</span>
+            </a>
+        </div>
+    </div>
+
+    <form asp-area="Secretary" asp-controller="AutoAssignmentPolicy" asp-action="Update" method="post" class="auto-policy-layout">
+        @Html.AntiForgeryToken()
+        <input type="hidden" asp-for="PolicyId" />
+        <input type="hidden" asp-for="FacultyId" />
+        <input type="hidden" asp-for="IsDatabasePolicy" />
+        <input type="hidden" asp-for="SolverTimeLimitSeconds" />
+
+        <div class="form-card auto-policy-card">
+            <div asp-validation-summary="All" class="alert alert-danger auto-policy-full auto-policy-validation"></div>
+
+            <div class="auto-policy-section auto-policy-full">
+                <div class="section-icon"><i class="bi bi-sliders"></i></div>
+                <div>
+                    <h5>Tham số vận hành</h5>
+                    <p>Các giá trị này được áp dụng cho chính sách mặc định của khoa khi chạy phân công tự động. Thời gian chạy thuật toán do hệ thống tự điều phối.</p>
+                </div>
+            </div>
+
+            <div class="form-group auto-policy-full">
+                <label class="form-label">Tên chính sách</label>
+                <input asp-for="PolicyName" class="input-modern" />
+                <span asp-validation-for="PolicyName" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Số giám thị mỗi lịch</label>
+                <input asp-for="RequiredInvigilatorsPerSchedule" type="number" min="1" max="10" class="input-modern" />
+                <span asp-validation-for="RequiredInvigilatorsPerSchedule" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Tối đa lịch cùng slot</label>
+                <input asp-for="MaxAssignmentsPerSlot" type="number" min="1" max="1" class="input-modern" readonly />
+                <span asp-validation-for="MaxAssignmentsPerSlot" class="text-danger"></span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Tối đa ca trong ngày</label>
+                <input asp-for="MaxAssignmentsPerDay" type="number" min="1" max="5" class="input-modern" placeholder="Để trống nếu không giới hạn" />
+                <span asp-validation-for="MaxAssignmentsPerDay" class="text-danger"></span>
+            </div>
+
+            <div class="form-group auto-policy-full">
+                <label class="form-label">Tối đa ca trong đợt</label>
+                <input asp-for="MaxAssignmentsPerPeriod" type="number" min="1" max="200" class="input-modern" placeholder="Để trống nếu chỉ cân bằng theo tải" />
+                <span asp-validation-for="MaxAssignmentsPerPeriod" class="text-danger"></span>
+            </div>
+
+            <div class="auto-policy-toggles auto-policy-full">
+                <label class="policy-switch">
+                    <input asp-for="RequirePeriodAvailabilityIfExists" />
+                    <span></span>
+                    <strong>Ưu tiên danh sách giảng viên khả dụng theo đợt</strong>
+                    <em>Nếu khoa đã lập whitelist cho đợt thi, thuật toán chỉ dùng người trong danh sách đó.</em>
+                </label>
+
+                <label class="policy-switch">
+                    <input asp-for="AllowFacultyMemberAsFallback" />
+                    <span></span>
+                    <strong>Cho phép dùng vai trò trong khoa làm dự phòng</strong>
+                    <em>Áp dụng khi thiếu giảng viên phù hợp, ví dụ tài khoản trưởng khoa/thư ký khoa.</em>
+                </label>
+
+                <label class="policy-switch is-muted">
+                    <input asp-for="AllowCrossFaculty" />
+                    <span></span>
+                    <strong>Cho phép mở rộng ngoài khoa</strong>
+                    <em>Bước này chỉ lưu cấu hình nền; danh sách hỗ trợ ngoài khoa sẽ được khóa validation ở bước sau.</em>
+                </label>
+            </div>
+        </div>
+
+        <div class="form-card auto-policy-card">
+            <div class="auto-policy-section auto-policy-full">
+                <div class="section-icon"><i class="bi bi-diagram-3"></i></div>
+                <div>
+                    <h5>Tiêu chí ưu tiên</h5>
+                    <p>Bật/tắt và điều chỉnh trọng số. Trọng số cao hơn nghĩa là tiêu chí có ảnh hưởng mạnh hơn khi tối ưu.</p>
+                </div>
+            </div>
+
+            <div class="auto-rule-list auto-policy-full">
+                @for (var i = 0; i < Model.Rules.Count; i++)
+                {
+                    <div class="auto-rule-item">
+                        <input type="hidden" asp-for="Rules[i].RuleCode" />
+                        <input type="hidden" asp-for="Rules[i].RuleName" />
+                        <input type="hidden" asp-for="Rules[i].RuleType" />
+                        <input type="hidden" asp-for="Rules[i].IsRequired" />
+                        <input type="hidden" asp-for="Rules[i].Description" />
+
+                        <div class="rule-main">
+                            <div class="rule-toggle-cell">
+                                @if (Model.Rules[i].IsRequired)
+                                {
+                                    <input type="hidden" asp-for="Rules[i].IsEnabled" value="true" />
+                                    <span class="rule-required-badge">Bắt buộc</span>
+                                }
+                                else
+                                {
+                                    <label class="rule-check" title="Bật/tắt tiêu chí này khi thuật toán tối ưu">
+                                        <input asp-for="Rules[i].IsEnabled" />
+                                        <span></span>
+                                    </label>
+                                    <span class="rule-toggle-label">Bật/Tắt</span>
+                                }
+                            </div>
+                            <div>
+                                <strong>@Model.Rules[i].RuleName</strong>
+                                <p>@Model.Rules[i].Description</p>
+                                <small>@Model.Rules[i].RuleCode · @Model.Rules[i].RuleType</small>
+                            </div>
+                        </div>
+
+                        <div class="rule-controls">
+                            <label>Thứ tự</label>
+                            <input asp-for="Rules[i].PriorityOrder" type="number" class="input-modern rule-order" />
+                            <label>Trọng số</label>
+                            <input asp-for="Rules[i].Weight" type="number" class="input-modern rule-weight" />
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <div class="auto-policy-note auto-policy-full">
+                <i class="bi bi-shield-check"></i>
+                <span>Hệ thống vẫn giữ các ràng buộc an toàn: không gán người bận, không gán trùng người trong cùng lịch, không xử lý lịch đã duyệt hoặc từ chối duyệt.</span>
+            </div>
+
+            <div class="auto-policy-section auto-policy-full format-section">
+                <div class="section-icon"><i class="bi bi-ui-checks-grid"></i></div>
+                <div>
+                    <h5>Hình thức thi</h5>
+                    <p>Chọn cách xử lý phân công theo từng hình thức thi. Mặc định là phân công đầy đủ.</p>
+                </div>
+            </div>
+
+            <div class="format-policy-list auto-policy-full">
+                @for (var i = 0; i < Model.ExamFormatPolicies.Count; i++)
+                {
+                    <div class="format-policy-item">
+                        <input type="hidden" asp-for="ExamFormatPolicies[i].ExamFormatId" />
+                        <input type="hidden" asp-for="ExamFormatPolicies[i].Code" />
+                        <input type="hidden" asp-for="ExamFormatPolicies[i].Name" />
+                        <div>
+                            <strong>@Model.ExamFormatPolicies[i].Code</strong>
+                            <span>@Model.ExamFormatPolicies[i].Name</span>
+                        </div>
+                        <select asp-for="ExamFormatPolicies[i].AssignmentMode" class="input-modern format-mode-select">
+                            <option value="Full">Phân công đầy đủ</option>
+                            <option value="OwnerOnly">Chỉ giữ/gán giảng viên owner</option>
+                            <option value="Skip">Bỏ qua phân công</option>
+                        </select>
+                    </div>
+                }
+            </div>
+
+            <div class="auto-policy-actions auto-policy-full">
+                <button type="submit" class="btn-submit">
+                    <i class="bi bi-save2"></i>
+                    Lưu chính sách
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<style>
+    .auto-policy-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 520px) minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+    }
+
+    .auto-policy-card {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 15px 16px;
+    }
+
+    .auto-policy-full { grid-column: 1 / -1; }
+    .auto-policy-validation.validation-summary-valid { display: none; }
+
+    .auto-policy-section {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .auto-policy-section .section-icon {
+        width: 42px;
+        height: 42px;
+        display: grid;
+        place-items: center;
+        border-radius: 14px;
+        color: var(--app-primary);
+        background: var(--surface-3);
+    }
+
+    .auto-policy-section h5 { margin: 0 0 2px; font-weight: 900; color: var(--text-strong); }
+    .auto-policy-section p { margin: 0; color: var(--text-muted); }
+
+    .auto-policy-toggles,
+    .auto-rule-list {
+        display: grid;
+        gap: 12px;
+    }
+
+    .policy-switch {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 4px 12px;
+        align-items: start;
+        padding: 13px 14px;
+        border-radius: 16px;
+        background: var(--surface-3);
+        border: 1px solid var(--line-soft);
+        cursor: pointer;
+    }
+
+    .policy-switch input { display: none; }
+    .policy-switch span,
+    .rule-check span {
+        width: 42px;
+        height: 24px;
+        border-radius: 999px;
+        background: var(--line-soft);
+        position: relative;
+        transition: .18s ease;
+    }
+
+    .policy-switch span::after,
+    .rule-check span::after {
+        content: "";
+        position: absolute;
+        width: 18px;
+        height: 18px;
+        top: 3px;
+        left: 3px;
+        border-radius: 50%;
+        background: #fff;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, .18);
+        transition: .18s ease;
+    }
+
+    .policy-switch input:checked + span,
+    .rule-check input:checked + span { background: linear-gradient(135deg, var(--app-primary), var(--app-primary-2)); }
+
+    .policy-switch input:checked + span::after,
+    .rule-check input:checked + span::after { transform: translateX(18px); }
+
+    .policy-switch strong { color: var(--text-strong); font-weight: 900; }
+    .policy-switch em { grid-column: 2; color: var(--text-muted); font-style: normal; font-size: 13px; }
+    .policy-switch.is-muted { opacity: .88; }
+
+    .auto-rule-item {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 14px;
+        align-items: center;
+        padding: 14px;
+        border-radius: 18px;
+        background: var(--surface-1);
+        border: 1px solid var(--line-soft);
+        box-shadow: var(--card-shadow);
+    }
+
+    .rule-main {
+        display: grid;
+        grid-template-columns: 64px minmax(0, 1fr);
+        gap: 12px;
+        align-items: flex-start;
+        min-width: 0;
+    }
+
+    .rule-toggle-cell {
+        display: grid;
+        justify-items: center;
+        gap: 5px;
+        min-width: 58px;
+    }
+
+    .rule-check {
+        display: block;
+        width: 42px;
+        height: 24px;
+        margin: 0;
+    }
+
+    .rule-check input { display: none; }
+    .rule-check span { display: block; }
+
+    .rule-toggle-label,
+    .rule-required-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 20px;
+        padding: 2px 6px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 900;
+        line-height: 1;
+        white-space: nowrap;
+    }
+
+    .rule-toggle-label {
+        color: var(--text-muted);
+        background: var(--surface-3);
+        border: 1px solid var(--line-soft);
+    }
+
+    .rule-required-badge {
+        color: #fff;
+        background: linear-gradient(135deg, var(--app-primary), var(--app-primary-2));
+    }
+
+    .rule-main strong { display: block; color: var(--text-strong); font-weight: 900; }
+    .rule-main p { margin: 2px 0 4px; color: var(--text-muted); font-size: 13px; }
+    .rule-main small { color: var(--app-primary); font-weight: 800; font-size: 11px; }
+
+    .rule-controls {
+        display: grid;
+        grid-template-columns: auto 76px auto 110px;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .rule-controls label {
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .rule-order,
+    .rule-weight { padding: 8px 10px; }
+
+    .auto-policy-note {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+        padding: 12px 14px;
+        border-radius: 14px;
+        color: var(--text-main);
+        background: var(--surface-3);
+        border: 1px solid var(--line-soft);
+    }
+
+    .auto-policy-note i { color: var(--app-primary); }
+
+    .format-section { margin-top: 4px; }
+
+    .format-policy-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .format-policy-item {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+        gap: 12px;
+        align-items: center;
+        padding: 12px 14px;
+        border-radius: 16px;
+        background: var(--surface-1);
+        border: 1px solid var(--line-soft);
+    }
+
+    .format-policy-item strong {
+        display: block;
+        color: var(--text-strong);
+        font-weight: 900;
+    }
+
+    .format-policy-item span {
+        display: block;
+        color: var(--text-muted);
+        font-size: 13px;
+    }
+
+    .format-mode-select { padding: 9px 10px; }
+
+    .auto-policy-actions {
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    @@media (max-width: 1100px) {
+        .auto-policy-layout { grid-template-columns: 1fr; }
+    }
+
+    @@media (max-width: 720px) {
+        .auto-policy-card { grid-template-columns: 1fr; }
+        .auto-rule-item { grid-template-columns: 1fr; }
+        .rule-main { grid-template-columns: 58px minmax(0, 1fr); }
+        .rule-controls { grid-template-columns: auto 1fr; }
+        .format-policy-item { grid-template-columns: 1fr; }
+        .auto-policy-actions .btn-submit { width: 100%; justify-content: center; }
+    }
+</style>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

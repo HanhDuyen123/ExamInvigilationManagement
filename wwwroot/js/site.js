@@ -33,3 +33,71 @@
 
     window.AppEnhanceActionButtons = enhanceActionButtons;
 })();
+
+(function () {
+    const defaultMessage = 'Hệ thống đang thực hiện, vui lòng chờ trong giây lát.';
+
+    function getOverlay() {
+        return document.getElementById('appLoadingOverlay');
+    }
+
+    function setMessage(message) {
+        const target = document.getElementById('appLoadingMessage');
+        if (target) target.textContent = message || defaultMessage;
+    }
+
+    function show(message) {
+        const overlay = getOverlay();
+        if (!overlay) return;
+
+        setMessage(message);
+        overlay.classList.add('show');
+        overlay.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('app-loading-active');
+    }
+
+    function hide() {
+        const overlay = getOverlay();
+        if (!overlay) return;
+
+        overlay.classList.remove('show');
+        overlay.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('app-loading-active');
+    }
+
+    function bindLoadingForms() {
+        document.querySelectorAll('form[data-loading-message]').forEach(function (form) {
+            if (form.dataset.loadingBound === '1') return;
+            form.dataset.loadingBound = '1';
+
+            form.addEventListener('submit', function (event) {
+                if (form.dataset.submitting === '1') return;
+
+                const validator = window.jQuery && window.jQuery.fn && window.jQuery.fn.valid
+                    ? window.jQuery(form).valid()
+                    : true;
+                if (!validator) return;
+
+                form.dataset.submitting = '1';
+                const submitter = event.submitter || form.querySelector('[type="submit"]');
+                if (submitter) {
+                    submitter.disabled = true;
+                    submitter.classList.add('disabled');
+                }
+                show(form.getAttribute('data-loading-message'));
+            });
+        });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', bindLoadingForms);
+    } else {
+        bindLoadingForms();
+    }
+
+    window.AppLoading = {
+        show,
+        hide,
+        bind: bindLoadingForms
+    };
+})();

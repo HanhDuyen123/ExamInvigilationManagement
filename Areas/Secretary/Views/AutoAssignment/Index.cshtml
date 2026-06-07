@@ -11,13 +11,19 @@
             <div class="subtitle">Chọn học kỳ và đợt thi, hệ thống sẽ tự động đề xuất giám thị phù hợp và giữ nguyên các phân công đã ổn định</div>
         </div>
 
-        <a href="@Url.Action("Index", "ExamSchedule", new { area = "" })" class="btn btn-create">
-            <i class="bi bi-calendar-week"></i>
-            <span>Xem lịch thi</span>
-        </a>
+        <div class="d-flex flex-wrap gap-2">
+            <a asp-area="Secretary" asp-controller="AutoAssignmentPolicy" asp-action="Index" class="btn btn-outline-primary rounded-3">
+                <i class="bi bi-sliders"></i>
+                <span>Cấu hình rule</span>
+            </a>
+            <a href="@Url.Action("Index", "ExamSchedule", new { area = "" })" class="btn btn-create">
+                <i class="bi bi-calendar-week"></i>
+                <span>Xem lịch thi</span>
+            </a>
+        </div>
     </div>
 
-    <form asp-area="Secretary" asp-controller="AutoAssignment" asp-action="Preview" method="post" class="auto-assign-layout">
+    <form asp-area="Secretary" asp-controller="AutoAssignment" asp-action="Preview" method="post" class="auto-assign-layout" data-loading-message="Hệ thống đang phân tích lịch thi và tạo bản xem trước phương án phân công. Vui lòng chờ trong giây lát.">
         @Html.AntiForgeryToken()
 
         <div class="form-card auto-assign-form-card">

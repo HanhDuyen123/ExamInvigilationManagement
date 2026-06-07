@@ -10,6 +10,7 @@
         public int FullyAssignedSchedules { get; set; }
         public int MissingSchedules { get; set; }
         public bool IsPreview { get; set; }
+        public bool IsOptimizationProven { get; set; } = true;
         public int? SemesterId { get; set; }
         public int? PeriodId { get; set; }
 

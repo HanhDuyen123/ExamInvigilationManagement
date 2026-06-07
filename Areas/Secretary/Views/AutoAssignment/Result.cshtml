@@ -12,9 +12,9 @@
         </div>
 
         <div class="d-flex flex-wrap gap-2">
-            @if (Model.IsPreview)
+            @if (Model.IsPreview && Model.Success)
             {
-                <form asp-area="Secretary" asp-controller="AutoAssignment" asp-action="Run" method="post" class="d-inline">
+                <form asp-area="Secretary" asp-controller="AutoAssignment" asp-action="Run" method="post" class="d-inline" data-loading-message="Hệ thống đang lưu phương án phân công và cập nhật trạng thái lịch thi. Vui lòng chờ trong giây lát.">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="SemesterId" value="@Model.SemesterId" />
                     <input type="hidden" name="PeriodId" value="@Model.PeriodId" />
@@ -23,6 +23,13 @@
                         <span>Lưu phương án này</span>
                     </button>
                 </form>
+            }
+            else if (Model.IsPreview)
+            {
+                <button type="button" class="btn btn-outline-secondary" disabled>
+                    <i class="bi bi-lock"></i>
+                    <span>Chưa thể lưu</span>
+                </button>
             }
             <a href="@Url.Action("Index", "ExamSchedule", new { area = "" })" class="btn btn-outline-primary rounded-3">
                 <i class="bi bi-calendar-week"></i>
@@ -60,7 +67,7 @@
             <strong>@Model.AssignedInvigilators</strong>
         </div>
         <div class="auto-stat-card primary">
-            <span>Đủ 2 giám thị</span>
+            <span>Lịch đủ giám thị</span>
             <strong>@Model.FullyAssignedSchedules</strong>
         </div>
         <div class="auto-stat-card warning">

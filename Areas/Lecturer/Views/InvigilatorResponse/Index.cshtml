@@ -149,18 +149,25 @@
                 const note = noteValue || '';
                 if (!ids.length) { showMessage('error', 'Vui lòng chọn ít nhất một lịch coi thi.'); return; }
                 if (status === 'Từ chối' && !note.trim()) { showMessage('error', 'Vui lòng nhập lý do khi từ chối lịch coi thi.'); return; }
-                const response = await fetch('@Url.Action("Submit", "InvigilatorResponse", new { area = "Lecturer" })', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': $('meta[name="request-verification-token"]').attr('content') || '' },
-                    body: JSON.stringify({ examInvigilatorIds: ids, status, note })
-                });
-                const result = await response.json();
-                if (!response.ok || !result.success) { showMessage('error', result.message || 'Không thể ghi nhận phản hồi.', result.errors); return; }
-                showMessage('success', result.message || 'Đã ghi nhận phản hồi.');
-                $('#responseRejectNote').val('');
-                bootstrap.Modal.getInstance(document.getElementById('responseRejectModal'))?.hide();
-                if (status === 'Từ chối') $('#status').val('Từ chối');
-                loadData(1);
+                if (window.AppLoading) window.AppLoading.show(status === 'Từ chối'
+                    ? 'Hệ thống đang ghi nhận từ chối và gửi thông báo cho thư ký. Vui lòng chờ trong giây lát.'
+                    : 'Hệ thống đang ghi nhận xác nhận lịch coi thi. Vui lòng chờ trong giây lát.');
+                try {
+                    const response = await fetch('@Url.Action("Submit", "InvigilatorResponse", new { area = "Lecturer" })', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': $('meta[name="request-verification-token"]').attr('content') || '' },
+                        body: JSON.stringify({ examInvigilatorIds: ids, status, note })
+                    });
+                    const result = await response.json();
+                    if (!response.ok || !result.success) { showMessage('error', result.message || 'Không thể ghi nhận phản hồi.', result.errors); return; }
+                    showMessage('success', result.message || 'Đã ghi nhận phản hồi.');
+                    $('#responseRejectNote').val('');
+                    bootstrap.Modal.getInstance(document.getElementById('responseRejectModal'))?.hide();
+                    if (status === 'Từ chối') $('#status').val('Từ chối');
+                    loadData(1);
+                } finally {
+                    if (window.AppLoading) window.AppLoading.hide();
+                }
             }
 
             $(document).on('change', '#selectAllAssignments', function () { $('.assignment-checkbox').prop('checked', this.checked); });

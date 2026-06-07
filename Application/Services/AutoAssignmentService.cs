@@ -8,7 +8,8 @@ namespace ExamInvigilationManagement.Application.Services
 {
     public class AutoAssignmentService : IAutoAssignmentService
     {
-        private const int RequiredInvigilatorsPerSchedule = 2;
+        private const int DefaultRequiredInvigilatorsPerSchedule = 2;
+        private const int InternalSolverTimeLimitSeconds = 20;
 
         private readonly IAutoAssignmentRepository _repository;
 
@@ -50,6 +51,12 @@ namespace ExamInvigilationManagement.Application.Services
                     cancellationToken))
                 .ToList();
 
+            var policy = await _repository.GetEffectivePolicyAsync(
+                facultyId.Value,
+                request.SemesterId.Value,
+                request.PeriodId.Value,
+                cancellationToken);
+
             var lecturers = (await _repository.GetActiveLecturersAsync(
                     facultyId.Value,
                     schedules.Select(x => x.SubjectId),
@@ -63,7 +70,8 @@ namespace ExamInvigilationManagement.Application.Services
                 lecturers.Select(x => x.UserId),
                 cancellationToken);
 
-            if (whitelistedLecturerIds.Count > 0 || await _repository.HasPeriodAvailabilityListAsync(request.PeriodId.Value, facultyId.Value, cancellationToken))
+            if (policy.RequirePeriodAvailabilityIfExists &&
+                (whitelistedLecturerIds.Count > 0 || await _repository.HasPeriodAvailabilityListAsync(request.PeriodId.Value, facultyId.Value, cancellationToken)))
                 lecturers = lecturers.Where(x => whitelistedLecturerIds.Contains(x.UserId)).ToList();
 
             var busyWholePeriodLecturerIds = await _repository.GetApprovedBusyPeriodLecturerIdsAsync(
@@ -181,16 +189,17 @@ namespace ExamInvigilationManagement.Application.Services
                 sameDayLocationMap,
                 subjectLecturerMap,
                 isLecturerRoleByUser,
-                assignmentMode);
+                assignmentMode,
+                policy);
 
             if (solverResult != null)
             {
                 solverResult.Result.IsPreview = request.PreviewOnly;
                 solverResult.Result.SemesterId = request.SemesterId;
                 solverResult.Result.PeriodId = request.PeriodId;
-                if (!request.PreviewOnly)
+                if (!request.PreviewOnly && solverResult.Result.Success)
                     await _repository.SavePlanAsync(solverResult.Plan, cancellationToken);
-                else
+                else if (request.PreviewOnly && solverResult.Result.Success)
                     solverResult.Result.Message = BuildPreviewMessage(solverResult.Result);
                 return solverResult.Result;
             }
@@ -245,19 +254,21 @@ namespace ExamInvigilationManagement.Application.Services
                     ClassName = schedule.ClassName,
                     ExamFormatDisplay = schedule.ExamFormatDisplay,
                     StatusBefore = schedule.Status,
-                    RequiredCount = RequiredInvigilatorsPerSchedule,
+                    RequiredCount = GetRequiredInvigilators(schedule, policy),
                     AssignedCount = assignedUsers.Count
                 };
             }
 
             // PHASE 1: reserve exact owner cho từng lịch nếu khả dụng
-            foreach (var item in orderedSchedules)
+            if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.ExactOwner) || orderedSchedules.Any(x => IsOwnerOnly(x.Schedule, policy))) foreach (var item in orderedSchedules)
             {
                 var schedule = item.Schedule;
+                if (IsSkippedByFormat(schedule, policy))
+                    continue;
 
                 if (IsFinalStatus(schedule.Status))
                 {
-                    detailByScheduleId[schedule.ExamScheduleId] = CreateSkippedDetail(schedule);
+                    detailByScheduleId[schedule.ExamScheduleId] = CreateSkippedDetail(schedule, GetRequiredInvigilators(schedule, policy));
                     continue;
                 }
 
@@ -268,7 +279,8 @@ namespace ExamInvigilationManagement.Application.Services
 
                 var exactOwner = lecturers.FirstOrDefault(x =>
                     x.PersonKey == schedule.OfferingUserPersonKey &&
-                    IsFeasibleExactOwner(x, schedule, assignedUsers, busyKeySet, occupiedKeySet));
+                    IsFeasibleExactOwner(x, schedule, assignedUsers, busyKeySet, occupiedKeySet) &&
+                    IsWithinPolicyLoad(x, policy, lecturerLoads, sameDayLoadMap, day));
 
                 if (exactOwner != null)
                 {
@@ -278,7 +290,8 @@ namespace ExamInvigilationManagement.Application.Services
                         lecturerLoads,
                         sameDayLoadMap,
                         sameDayLocationMap,
-                        day);
+                        day,
+                        policy);
 
                     AssignOne(
                         plan,
@@ -292,8 +305,9 @@ namespace ExamInvigilationManagement.Application.Services
                         sameDayLoadMap,
                         sameDayLocationMap,
                         occupiedKeySet,
+                        GetRequiredInvigilators(schedule, policy),
                         score,
-                        "đúng giảng viên phụ trách lớp");
+                        "Đang dạy lớp học phần");
                 }
             }
 
@@ -310,7 +324,17 @@ namespace ExamInvigilationManagement.Application.Services
                 var detail = detailByScheduleId[schedule.ExamScheduleId];
                 var day = DateOnly.FromDateTime(schedule.ExamDate);
 
-                var need = Math.Max(0, RequiredInvigilatorsPerSchedule - assignedUsers.Count);
+                if (IsOwnerOnly(schedule, policy))
+                {
+                    detail.Message = "Hình thức thi được cấu hình chỉ giữ/gán giảng viên owner.";
+                    if (assignedUsers.Count >= GetRequiredInvigilators(schedule, policy))
+                        continue;
+                }
+
+                var requiredCount = GetRequiredInvigilators(schedule, policy);
+                var need = Math.Max(0, requiredCount - assignedUsers.Count);
+                if (IsOwnerOnly(schedule, policy))
+                    need = 0;
 
                 while (need > 0)
                 {
@@ -326,6 +350,7 @@ namespace ExamInvigilationManagement.Application.Services
                         ownerScheduleCountByLecturer,
                         subjectLecturerMap,
                         isLecturerRoleByUser,
+                        policy,
                         day);
 
                     if (fallback == null)
@@ -343,6 +368,7 @@ namespace ExamInvigilationManagement.Application.Services
                         sameDayLoadMap,
                         sameDayLocationMap,
                         occupiedKeySet,
+                        requiredCount,
                         fallback.Score,
                         fallback.Reason);
 
@@ -350,7 +376,9 @@ namespace ExamInvigilationManagement.Application.Services
                 }
 
                 var finalCount = assignedUsers.Count;
-                var finalStatus = finalCount >= RequiredInvigilatorsPerSchedule
+                var finalStatus = requiredCount == 0
+                    ? schedule.Status
+                    : finalCount >= requiredCount
                     ? "Chờ duyệt"
                     : "Thiếu giám thị";
 
@@ -362,9 +390,11 @@ namespace ExamInvigilationManagement.Application.Services
 
                 detail.AssignedCount = finalCount;
                 detail.StatusAfter = finalStatus;
-                detail.Message = finalCount >= RequiredInvigilatorsPerSchedule
-                    ? "Đã phân công đủ 2 giám thị."
-                    : $"Thiếu {RequiredInvigilatorsPerSchedule - finalCount} giám thị.";
+                detail.Message = requiredCount == 0
+                    ? "Bỏ qua phân công theo cấu hình hình thức thi."
+                    : finalCount >= requiredCount
+                    ? $"Đã phân công đủ {requiredCount} giám thị."
+                    : $"Thiếu {requiredCount - finalCount} giám thị.";
             }
 
             foreach (var item in orderedSchedules)
@@ -410,7 +440,7 @@ namespace ExamInvigilationManagement.Application.Services
                 throw new ArgumentException("AssignerId không hợp lệ.");
         }
 
-        private static AutoAssignScheduleResultDto CreateSkippedDetail(AutoAssignScheduleDto schedule)
+        private static AutoAssignScheduleResultDto CreateSkippedDetail(AutoAssignScheduleDto schedule, int requiredInvigilators)
         {
             return new AutoAssignScheduleResultDto
             {
@@ -423,7 +453,7 @@ namespace ExamInvigilationManagement.Application.Services
                 ExamFormatDisplay = schedule.ExamFormatDisplay,
                 StatusBefore = schedule.Status,
                 StatusAfter = schedule.Status,
-                RequiredCount = RequiredInvigilatorsPerSchedule,
+                RequiredCount = requiredInvigilators,
                 AssignedCount = 0,
                 Message = "Không gán mới."
             };
@@ -485,10 +515,19 @@ namespace ExamInvigilationManagement.Application.Services
             Dictionary<int, int> ownerScheduleCountByLecturer,
             Dictionary<string, HashSet<int>> subjectLecturerMap,
             Dictionary<int, bool> isLecturerRoleByUser,
+            AutoAssignmentPolicyDto policy,
             DateOnly day)
         {
             var candidates = lecturers
-                .Where(l => IsFeasibleFallback(l, schedule, assignedUsers, busyKeySet, occupiedKeySet))
+                .Where(l =>
+                {
+                    if (!IsFeasibleFallback(l, schedule, assignedUsers, busyKeySet, occupiedKeySet) ||
+                        !IsWithinPolicyLoad(l, policy, lecturerLoads, sameDayLoadMap, day))
+                        return false;
+
+                    var tier = GetCandidateTier(l, schedule, subjectLecturerMap, isLecturerRoleByUser);
+                    return tier != CandidateTier.FacultyMember || policy.AllowFacultyMemberAsFallback;
+                })
                 .Select(l =>
                 {
                     var load = lecturerLoads.TryGetValue(l.UserId, out var currentLoad) ? currentLoad : 0;
@@ -503,44 +542,74 @@ namespace ExamInvigilationManagement.Application.Services
                     var specialtyPriority = GetExamFormatPriority(schedule.ExamFormatDisplay);
                     if (tier == CandidateTier.SameSubject)
                     {
-                        score += specialtyPriority == ExamFormatPriority.Oral ? 9500 : specialtyPriority == ExamFormatPriority.Practical ? 7500 : 2500;
-                        reasons.Add("Có chuyên môn môn thi");
+                        if (specialtyPriority == ExamFormatPriority.Oral && policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.OralSpecialist))
+                        {
+                            score += policy.GetWeight(AutoAssignmentPolicyRuleCodes.OralSpecialist, 9_500);
+                            reasons.Add("Ưu tiên chuyên môn cho thi vấn đáp");
+                        }
+                        else if (specialtyPriority == ExamFormatPriority.Practical && policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.PracticalSpecialist))
+                        {
+                            score += policy.GetWeight(AutoAssignmentPolicyRuleCodes.PracticalSpecialist, 7_500);
+                            reasons.Add("Ưu tiên chuyên môn cho thi thực hành");
+                        }
+                        else if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.SameSubject))
+                        {
+                            score += policy.GetWeight(AutoAssignmentPolicyRuleCodes.SameSubject, 2_500);
+                            reasons.Add("Có chuyên môn môn thi");
+                        }
                     }
                     else if (tier == CandidateTier.ExactOwner)
                     {
-                        score += specialtyPriority == ExamFormatPriority.Oral ? 11000 : specialtyPriority == ExamFormatPriority.Practical ? 9000 : 5000;
-                        reasons.Add("Đang dạy lớp học phần");
+                        if (specialtyPriority == ExamFormatPriority.Oral && policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.OralSpecialist))
+                        {
+                            score += policy.GetWeight(AutoAssignmentPolicyRuleCodes.OralSpecialist, 11_000);
+                            reasons.Add("Ưu tiên chuyên môn cho thi vấn đáp");
+                        }
+                        else if (specialtyPriority == ExamFormatPriority.Practical && policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.PracticalSpecialist))
+                        {
+                            score += policy.GetWeight(AutoAssignmentPolicyRuleCodes.PracticalSpecialist, 9_000);
+                            reasons.Add("Ưu tiên chuyên môn cho thi thực hành");
+                        }
+                        else if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.ExactOwner))
+                        {
+                            score += policy.GetWeight(AutoAssignmentPolicyRuleCodes.ExactOwner, 5_000);
+                            reasons.Add("Đang dạy lớp học phần");
+                        }
                     }
                     else if (tier == CandidateTier.FacultyMember)
                     {
-                        score -= 6500;
-                        reasons.Add($"Dự phòng từ role {l.RoleName}");
+                        score -= policy.GetWeight(AutoAssignmentPolicyRuleCodes.FacultyMember, 6_500);
+                        if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.FacultyMember))
+                            reasons.Add($"Dự phòng từ role {l.RoleName}");
                     }
                     else
                     {
-                        score -= 2500;
-                        reasons.Add("Phù hợp lịch");
+                        score -= policy.GetWeight(AutoAssignmentPolicyRuleCodes.Emergency, 2_500);
+                        if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.Emergency))
+                            reasons.Add("Phù hợp lịch");
                     }
 
-                    // Ưu tiên người ít tải
-                    score += Math.Max(0, 1000 - load * 120);
+                    if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.LowLoad))
+                        score += Math.Max(0, 1000 - load * 120);
 
-                    // Ưu tiên ít ca trong ngày
-                    score += Math.Max(0, 120 - sameDayLoad * 40);
+                    if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.SameDayLoad))
+                        score += Math.Max(0, 120 - sameDayLoad * 40);
 
-                    score += GetLocationScoreBonus(locationCost);
-                    var locationReason = GetLocationReason(locationCost);
-                    if (!string.IsNullOrWhiteSpace(locationReason))
-                        reasons.Add(locationReason);
+                    if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.Location))
+                    {
+                        score += GetLocationScoreBonus(locationCost);
+                        var locationReason = GetLocationReason(locationCost);
+                        if (!string.IsNullOrWhiteSpace(locationReason))
+                            reasons.Add(locationReason);
+                    }
 
-                    // Phạt nhẹ nếu người này là owner của nhiều lịch khác trong batch
-                    // để tránh làm họ bị “ăn mất” quá nhiều, nhưng không loại bỏ hoàn toàn
-                    score -= ownerCount * 150;
+                    if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.OwnerReservePenalty))
+                        score -= ownerCount * policy.GetWeight(AutoAssignmentPolicyRuleCodes.OwnerReservePenalty, 150);
 
                     return new FallbackCandidate(
                         Lecturer: l,
                         Score: score,
-                        Reason: string.Join("; ", reasons));
+                        Reason: reasons.Count > 0 ? string.Join("; ", reasons) : "Đáp ứng ràng buộc bắt buộc");
                 })
                 .OrderByDescending(x => x.Score)
                 .ThenBy(x => x.Lecturer.UserName)
@@ -576,18 +645,37 @@ namespace ExamInvigilationManagement.Application.Services
             Dictionary<int, int> lecturerLoads,
             Dictionary<(int PersonKey, DateOnly Day), int> sameDayLoadMap,
             Dictionary<(int PersonKey, DateOnly Day, int SessionId), List<AutoAssignScheduleDto>> sameDayLocationMap,
-            DateOnly day)
+            DateOnly day,
+            AutoAssignmentPolicyDto policy)
         {
             var load = lecturerLoads.TryGetValue(lecturer.UserId, out var currentLoad) ? currentLoad : 0;
             var sameDayLoad = sameDayLoadMap.TryGetValue((lecturer.PersonKey, day), out var d) ? d : 0;
             var locationCost = CalculateSameDayLocationCost(lecturer.PersonKey, day, schedule, sameDayLocationMap);
 
-            var score = 5000;
-            score += Math.Max(0, 500 - load * 100);
-            score += Math.Max(0, 100 - sameDayLoad * 30);
-            score += GetLocationScoreBonus(locationCost);
+            var score = policy.GetWeight(AutoAssignmentPolicyRuleCodes.ExactOwner, 5_000);
+            if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.LowLoad))
+                score += Math.Max(0, 500 - load * 100);
+            if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.SameDayLoad))
+                score += Math.Max(0, 100 - sameDayLoad * 30);
+            if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.Location))
+                score += GetLocationScoreBonus(locationCost);
 
             return score;
+        }
+
+        private static bool IsWithinPolicyLoad(
+            AutoAssignLecturerDto lecturer,
+            AutoAssignmentPolicyDto policy,
+            Dictionary<int, int> lecturerLoads,
+            Dictionary<(int PersonKey, DateOnly Day), int> sameDayLoadMap,
+            DateOnly day)
+        {
+            var currentLoad = lecturerLoads.TryGetValue(lecturer.UserId, out var load) ? load : 0;
+            if (policy.MaxAssignmentsPerPeriod.HasValue && currentLoad >= policy.MaxAssignmentsPerPeriod.Value)
+                return false;
+
+            var sameDayLoad = sameDayLoadMap.TryGetValue((lecturer.PersonKey, day), out var dayLoad) ? dayLoad : 0;
+            return !policy.MaxAssignmentsPerDay.HasValue || sameDayLoad < policy.MaxAssignmentsPerDay.Value;
         }
 
         private static void AssignOne(
@@ -602,11 +690,12 @@ namespace ExamInvigilationManagement.Application.Services
             Dictionary<(int PersonKey, DateOnly Day), int> sameDayLoadMap,
             Dictionary<(int PersonKey, DateOnly Day, int SessionId), List<AutoAssignScheduleDto>> sameDayLocationMap,
             HashSet<(int PersonKey, int SlotId, DateOnly BusyDate)> occupiedKeySet,
+            int requiredInvigilators,
             int score,
             string reason)
         {
             var day = DateOnly.FromDateTime(schedule.ExamDate);
-            var positionNo = GetNextPositionNo(assignedPositions);
+            var positionNo = GetNextPositionNo(assignedPositions, requiredInvigilators);
 
             plan.NewInvigilators.Add(new AutoAssignInvigilatorCreateDto
             {
@@ -652,9 +741,9 @@ namespace ExamInvigilationManagement.Application.Services
             });
         }
 
-        private static byte GetNextPositionNo(HashSet<byte> assignedPositions)
+        private static byte GetNextPositionNo(HashSet<byte> assignedPositions, int requiredInvigilators)
         {
-            for (byte position = 1; position <= RequiredInvigilatorsPerSchedule; position++)
+            for (byte position = 1; position <= requiredInvigilators; position++)
             {
                 if (!assignedPositions.Contains(position))
                     return position;
@@ -676,7 +765,8 @@ namespace ExamInvigilationManagement.Application.Services
             Dictionary<(int PersonKey, DateOnly Day, int SessionId), List<AutoAssignScheduleDto>> sameDayLocationMap,
             Dictionary<string, HashSet<int>> subjectLecturerMap,
             Dictionary<int, bool> isLecturerRoleByUser,
-            AutoAssignmentMode assignmentMode)
+            AutoAssignmentMode assignmentMode,
+            AutoAssignmentPolicyDto policy)
         {
             try
             {
@@ -706,18 +796,23 @@ namespace ExamInvigilationManagement.Application.Services
                         ClassName = x.ClassName,
                         ExamFormatDisplay = x.ExamFormatDisplay,
                         StatusBefore = x.Status,
-                        RequiredCount = RequiredInvigilatorsPerSchedule,
+                        RequiredCount = GetRequiredInvigilators(x, policy),
                         AssignedCount = scheduleAssignedUsers.TryGetValue(x.ExamScheduleId, out var assigned) ? assigned.Count : 0
                     });
 
                 var processableSchedules = schedules
-                    .Where(x => CanProcessSchedule(x, scheduleAssignedUsers))
+                    .Where(x => CanProcessSchedule(x, scheduleAssignedUsers, GetRequiredInvigilators(x, policy)))
                     .ToList();
 
-                foreach (var schedule in schedules.Where(x => !CanProcessSchedule(x, scheduleAssignedUsers)))
+                foreach (var schedule in schedules.Where(x => !CanProcessSchedule(x, scheduleAssignedUsers, GetRequiredInvigilators(x, policy))))
                 {
                     if (IsFinalStatus(schedule.Status))
-                        details[schedule.ExamScheduleId] = CreateSkippedDetail(schedule);
+                        details[schedule.ExamScheduleId] = CreateSkippedDetail(schedule, GetRequiredInvigilators(schedule, policy));
+                    else if (IsSkippedByFormat(schedule, policy))
+                    {
+                        details[schedule.ExamScheduleId].StatusAfter = schedule.Status;
+                        details[schedule.ExamScheduleId].Message = "Bỏ qua phân công theo cấu hình hình thức thi.";
+                    }
                 }
 
                 foreach (var schedule in processableSchedules)
@@ -725,7 +820,8 @@ namespace ExamInvigilationManagement.Application.Services
                     var assignedUsers = scheduleAssignedUsers.TryGetValue(schedule.ExamScheduleId, out var set)
                         ? set
                         : new HashSet<int>();
-                    var need = Math.Max(0, RequiredInvigilatorsPerSchedule - assignedUsers.Count);
+                    var requiredCount = GetRequiredInvigilators(schedule, policy);
+                    var need = Math.Max(0, requiredCount - assignedUsers.Count);
                     if (need == 0)
                     {
                         continue;
@@ -736,14 +832,19 @@ namespace ExamInvigilationManagement.Application.Services
 
                     foreach (var lecturer in lecturers.Where(x => IsFeasibleCpSatCandidate(x, schedule, assignedUsers, busyKeySet, occupiedKeySet)))
                     {
+                        var tier = GetCandidateTier(lecturer, schedule, subjectLecturerMap, isLecturerRoleByUser);
+                        if (IsOwnerOnly(schedule, policy) && lecturer.PersonKey != schedule.OfferingUserPersonKey)
+                            continue;
+                        if (tier == CandidateTier.FacultyMember && !policy.AllowFacultyMemberAsFallback)
+                            continue;
+
                         var variable = model.NewBoolVar($"x_s{schedule.ExamScheduleId}_u{lecturer.UserId}");
                         variables[(schedule.ExamScheduleId, lecturer.UserId)] = variable;
                         scheduleVars.Add(variable);
 
-                        var tier = GetCandidateTier(lecturer, schedule, subjectLecturerMap, isLecturerRoleByUser);
-                        if (tier == CandidateTier.ExactOwner)
+                        if (tier == CandidateTier.ExactOwner && policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.ExactOwner))
                             exactVars.Add(variable);
-                        else if (tier == CandidateTier.SameSubject)
+                        else if (tier == CandidateTier.SameSubject && policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.SameSubject))
                             sameSubjectVars.Add(variable);
                         else if (tier == CandidateTier.FacultyMember)
                             facultyMemberVars.Add(variable);
@@ -753,13 +854,16 @@ namespace ExamInvigilationManagement.Application.Services
                         if (IsSubjectSpecialist(tier))
                         {
                             var formatPriority = GetExamFormatPriority(schedule.ExamFormatDisplay);
-                            if (formatPriority == ExamFormatPriority.Oral) oralSpecialistVars.Add(variable);
-                            if (formatPriority == ExamFormatPriority.Practical) practicalSpecialistVars.Add(variable);
+                            if (formatPriority == ExamFormatPriority.Oral && policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.OralSpecialist)) oralSpecialistVars.Add(variable);
+                            if (formatPriority == ExamFormatPriority.Practical && policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.PracticalSpecialist)) practicalSpecialistVars.Add(variable);
                         }
 
-                        var fixedLocationCost = CalculateSameDayLocationCost(lecturer.PersonKey, day, schedule, sameDayLocationMap);
-                        if (fixedLocationCost is int cost && cost > 0)
-                            locationCostTerms.Add(LinearExpr.Term(variable, cost * 45));
+                        if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.Location))
+                        {
+                            var fixedLocationCost = CalculateSameDayLocationCost(lecturer.PersonKey, day, schedule, sameDayLocationMap);
+                            if (fixedLocationCost is int cost && cost > 0)
+                                locationCostTerms.Add(LinearExpr.Term(variable, cost * policy.GetWeight(AutoAssignmentPolicyRuleCodes.Location, 45)));
+                        }
                     }
 
                     var shortage = model.NewIntVar(0, need, $"shortage_s{schedule.ExamScheduleId}");
@@ -774,13 +878,13 @@ namespace ExamInvigilationManagement.Application.Services
                     return (x.Key.LecturerId, schedule.SlotId, Day: DateOnly.FromDateTime(schedule.ExamDate));
                 }))
                 {
-                    model.Add(LinearExpr.Sum(group.Select(x => (LinearExpr)x.Value).ToArray()) <= 1);
+                    model.Add(LinearExpr.Sum(group.Select(x => (LinearExpr)x.Value).ToArray()) <= policy.MaxAssignmentsPerSlot);
                 }
 
                 var expectedNewAssignments = processableSchedules.Sum(x =>
                 {
                     var assignedCount = scheduleAssignedUsers.TryGetValue(x.ExamScheduleId, out var assigned) ? assigned.Count : 0;
-                    return Math.Max(0, RequiredInvigilatorsPerSchedule - assignedCount);
+                    return Math.Max(0, GetRequiredInvigilators(x, policy) - assignedCount);
                 });
                 var targetLoad = lecturers.Count == 0
                     ? 0
@@ -793,13 +897,20 @@ namespace ExamInvigilationManagement.Application.Services
                         .Select(x => (LinearExpr)x.Value)
                         .ToArray();
                     var currentLoad = lecturerLoads.TryGetValue(lecturer.UserId, out var load) ? load : 0;
+                    if (policy.MaxAssignmentsPerPeriod.HasValue)
+                    {
+                        var allowedAdditional = Math.Max(0, policy.MaxAssignmentsPerPeriod.Value - currentLoad);
+                        model.Add(LinearExpr.Sum(lecturerVars.Append(LinearExpr.Constant(0)).ToArray()) <= allowedAdditional);
+                    }
+
                     var maxLoad = currentLoad + lecturerVars.Length;
                     var loadVar = model.NewIntVar(currentLoad, maxLoad, $"load_u{lecturer.UserId}");
                     model.Add(loadVar == LinearExpr.Sum(lecturerVars.Append(LinearExpr.Constant(currentLoad)).ToArray()));
 
                     var deviation = model.NewIntVar(0, Math.Max(maxLoad, targetLoad) + currentLoad + 1, $"dev_u{lecturer.UserId}");
                     model.AddAbsEquality(deviation, loadVar - targetLoad);
-                    fairnessTerms.Add(LinearExpr.Term(deviation, 700));
+                    if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.LowLoad))
+                        fairnessTerms.Add(LinearExpr.Term(deviation, policy.GetWeight(AutoAssignmentPolicyRuleCodes.LowLoad, 700)));
                 }
 
                 foreach (var group in variables.GroupBy(x =>
@@ -809,12 +920,19 @@ namespace ExamInvigilationManagement.Application.Services
                 }))
                 {
                     var existingDayLoad = sameDayLoadMap.TryGetValue(group.Key, out var dayLoad) ? dayLoad : 0;
+                    if (policy.MaxAssignmentsPerDay.HasValue)
+                    {
+                        var allowedAdditional = Math.Max(0, policy.MaxAssignmentsPerDay.Value - existingDayLoad);
+                        model.Add(LinearExpr.Sum(group.Select(x => (LinearExpr)x.Value).Append(LinearExpr.Constant(0)).ToArray()) <= allowedAdditional);
+                    }
+
                     var dayVar = model.NewIntVar(existingDayLoad, existingDayLoad + group.Count(), $"day_u{group.Key.LecturerId}_{group.Key.Day:yyyyMMdd}");
                     model.Add(dayVar == LinearExpr.Sum(group.Select(x => (LinearExpr)x.Value).Append(LinearExpr.Constant(existingDayLoad)).ToArray()));
 
                     var overload = model.NewIntVar(0, existingDayLoad + group.Count(), $"day_over_u{group.Key.LecturerId}_{group.Key.Day:yyyyMMdd}");
                     model.Add(overload >= dayVar - 1);
-                    fairnessTerms.Add(LinearExpr.Term(overload, 600));
+                    if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.SameDayLoad))
+                        fairnessTerms.Add(LinearExpr.Term(overload, policy.GetWeight(AutoAssignmentPolicyRuleCodes.SameDayLoad, 600)));
                 }
 
                 foreach (var group in variables.GroupBy(x =>
@@ -830,23 +948,27 @@ namespace ExamInvigilationManagement.Application.Services
                         {
                             var firstSchedule = scheduleById[groupItems[i].Key.ScheduleId];
                             var secondSchedule = scheduleById[groupItems[j].Key.ScheduleId];
+                            if (!policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.Location))
+                                continue;
+
                             var distanceCost = CalculateRoomDistanceCost(firstSchedule, secondSchedule);
                             if (distanceCost == 0)
                                 continue;
 
                             var pair = model.NewBoolVar($"loc_u{group.Key.LecturerId}_s{firstSchedule.ExamScheduleId}_s{secondSchedule.ExamScheduleId}");
                             model.AddMultiplicationEquality(pair, new IntVar[] { groupItems[i].Value, groupItems[j].Value });
-                            locationCostTerms.Add(LinearExpr.Term(pair, distanceCost * 45));
+                            locationCostTerms.Add(LinearExpr.Term(pair, distanceCost * policy.GetWeight(AutoAssignmentPolicyRuleCodes.Location, 45)));
                         }
                     }
                 }
 
                 var solver = new CpSolver
                 {
-                    StringParameters = "max_time_in_seconds:8 num_search_workers:8"
+                    StringParameters = $"max_time_in_seconds:{InternalSolverTimeLimitSeconds} num_search_workers:1 random_seed:1 randomize_search:false"
                 };
 
-                var totalShortage = AddSumVar(model, shortageVars.Select(x => (LinearExpr)x), "total_shortage", 0, processableSchedules.Count * RequiredInvigilatorsPerSchedule);
+                var maxShortage = processableSchedules.Sum(x => GetRequiredInvigilators(x, policy));
+                var totalShortage = AddSumVar(model, shortageVars.Select(x => (LinearExpr)x), "total_shortage", 0, maxShortage);
                 var oralSpecialistTotal = AddSumVar(model, oralSpecialistVars.Select(x => (LinearExpr)x), "total_oral_specialist", 0, oralSpecialistVars.Count);
                 var practicalSpecialistTotal = AddSumVar(model, practicalSpecialistVars.Select(x => (LinearExpr)x), "total_practical_specialist", 0, practicalSpecialistVars.Count);
                 var exactTotal = AddSumVar(model, exactVars.Select(x => (LinearExpr)x), "total_exact", 0, exactVars.Count);
@@ -858,49 +980,72 @@ namespace ExamInvigilationManagement.Application.Services
                 {
                     return null;
                 }
+                var isOptimizationProven = status == CpSolverStatus.Optimal;
 
                 var bestShortage = (int)solver.Value(totalShortage);
                 model.Add(totalShortage == bestShortage);
 
-                model.Maximize(oralSpecialistTotal);
-                status = solver.Solve(model);
-                if (status != CpSolverStatus.Feasible && status != CpSolverStatus.Optimal)
-                    return null;
+                if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.OralSpecialist) && oralSpecialistVars.Count > 0)
+                {
+                    model.Maximize(oralSpecialistTotal);
+                    status = solver.Solve(model);
+                    if (status != CpSolverStatus.Feasible && status != CpSolverStatus.Optimal)
+                        return null;
+                    isOptimizationProven &= status == CpSolverStatus.Optimal;
 
-                var bestOralSpecialist = (int)solver.Value(oralSpecialistTotal);
-                model.Add(oralSpecialistTotal == bestOralSpecialist);
+                    var bestOralSpecialist = (int)solver.Value(oralSpecialistTotal);
+                    model.Add(oralSpecialistTotal == bestOralSpecialist);
+                }
 
-                model.Maximize(practicalSpecialistTotal);
-                status = solver.Solve(model);
-                if (status != CpSolverStatus.Feasible && status != CpSolverStatus.Optimal)
-                    return null;
+                if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.PracticalSpecialist) && practicalSpecialistVars.Count > 0)
+                {
+                    model.Maximize(practicalSpecialistTotal);
+                    status = solver.Solve(model);
+                    if (status != CpSolverStatus.Feasible && status != CpSolverStatus.Optimal)
+                        return null;
+                    isOptimizationProven &= status == CpSolverStatus.Optimal;
 
-                var bestPracticalSpecialist = (int)solver.Value(practicalSpecialistTotal);
-                model.Add(practicalSpecialistTotal == bestPracticalSpecialist);
+                    var bestPracticalSpecialist = (int)solver.Value(practicalSpecialistTotal);
+                    model.Add(practicalSpecialistTotal == bestPracticalSpecialist);
+                }
 
-                model.Maximize(exactTotal);
-                status = solver.Solve(model);
-                if (status != CpSolverStatus.Feasible && status != CpSolverStatus.Optimal)
-                    return null;
+                if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.ExactOwner) && exactVars.Count > 0)
+                {
+                    model.Maximize(exactTotal);
+                    status = solver.Solve(model);
+                    if (status != CpSolverStatus.Feasible && status != CpSolverStatus.Optimal)
+                        return null;
+                    isOptimizationProven &= status == CpSolverStatus.Optimal;
 
-                var bestExact = (int)solver.Value(exactTotal);
-                model.Add(exactTotal == bestExact);
+                    var bestExact = (int)solver.Value(exactTotal);
+                    model.Add(exactTotal == bestExact);
+                }
 
-                model.Maximize(sameSubjectTotal);
-                status = solver.Solve(model);
-                if (status != CpSolverStatus.Feasible && status != CpSolverStatus.Optimal)
-                    return null;
+                if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.SameSubject) && sameSubjectVars.Count > 0)
+                {
+                    model.Maximize(sameSubjectTotal);
+                    status = solver.Solve(model);
+                    if (status != CpSolverStatus.Feasible && status != CpSolverStatus.Optimal)
+                        return null;
+                    isOptimizationProven &= status == CpSolverStatus.Optimal;
 
-                var bestSameSubject = (int)solver.Value(sameSubjectTotal);
-                model.Add(sameSubjectTotal == bestSameSubject);
+                    var bestSameSubject = (int)solver.Value(sameSubjectTotal);
+                    model.Add(sameSubjectTotal == bestSameSubject);
+                }
 
-                fairnessTerms.AddRange(emergencyVars.Select(x => LinearExpr.Term(x, 3_000)));
-                fairnessTerms.AddRange(facultyMemberVars.Select(x => LinearExpr.Term(x, 8_000)));
+                if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.Emergency))
+                    fairnessTerms.AddRange(emergencyVars.Select(x => LinearExpr.Term(x, policy.GetWeight(AutoAssignmentPolicyRuleCodes.Emergency, 3_000))));
+                if (policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.FacultyMember))
+                    fairnessTerms.AddRange(facultyMemberVars.Select(x => LinearExpr.Term(x, policy.GetWeight(AutoAssignmentPolicyRuleCodes.FacultyMember, 8_000))));
                 fairnessTerms.AddRange(locationCostTerms);
-                model.Minimize(LinearExpr.Sum(fairnessTerms.ToArray()));
-                status = solver.Solve(model);
-                if (status != CpSolverStatus.Feasible && status != CpSolverStatus.Optimal)
-                    return null;
+                if (fairnessTerms.Count > 0)
+                {
+                    model.Minimize(LinearExpr.Sum(fairnessTerms.ToArray()));
+                    status = solver.Solve(model);
+                    if (status != CpSolverStatus.Feasible && status != CpSolverStatus.Optimal)
+                        return null;
+                    isOptimizationProven &= status == CpSolverStatus.Optimal;
+                }
 
                 var mutableAssignedUsers = scheduleAssignedUsers.ToDictionary(x => x.Key, x => x.Value.ToHashSet());
                 var mutableAssignedPositions = scheduleAssignedPositions.ToDictionary(x => x.Key, x => x.Value.ToHashSet());
@@ -935,10 +1080,17 @@ namespace ExamInvigilationManagement.Application.Services
                     var sameDayLoad = sameDayLoadMap.TryGetValue((selected.Lecturer.PersonKey, day), out var d) ? d : 0;
                     var tier = GetCandidateTier(selected.Lecturer, selected.Schedule, subjectLecturerMap, isLecturerRoleByUser);
                     var locationCost = CalculateSameDayLocationCost(selected.Lecturer.PersonKey, day, selected.Schedule, sameDayLocationMap);
-                    var score = GetCandidateScore(tier, load, sameDayLoad, locationCost);
-                    var reasonParts = new[] { GetCandidateTierReason(tier), GetLocationReason(locationCost) }
+                    var score = GetCandidateScore(tier, load, sameDayLoad, locationCost, policy);
+                    var reasonParts = new[]
+                        {
+                            GetFormatSpecialistReason(tier, selected.Schedule, policy),
+                            GetCandidateTierReason(tier, policy),
+                            policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.Location) ? GetLocationReason(locationCost) : string.Empty
+                        }
                         .Where(x => !string.IsNullOrWhiteSpace(x));
                     var reason = string.Join("; ", reasonParts);
+                    if (string.IsNullOrWhiteSpace(reason))
+                        reason = "Đáp ứng ràng buộc bắt buộc";
 
                     AssignOne(
                         plan,
@@ -952,6 +1104,7 @@ namespace ExamInvigilationManagement.Application.Services
                         sameDayLoadMap,
                         sameDayLocationMap,
                         occupiedKeySet,
+                        GetRequiredInvigilators(selected.Schedule, policy),
                         score,
                         reason);
                 }
@@ -961,7 +1114,10 @@ namespace ExamInvigilationManagement.Application.Services
                     var assignedCount = mutableAssignedUsers.TryGetValue(schedule.ExamScheduleId, out var assignedUsers)
                         ? assignedUsers.Count
                         : 0;
-                    var statusAfter = assignedCount >= RequiredInvigilatorsPerSchedule ? "Chờ duyệt" : "Thiếu giám thị";
+                    var requiredCount = GetRequiredInvigilators(schedule, policy);
+                    var statusAfter = requiredCount == 0
+                        ? schedule.Status
+                        : assignedCount >= requiredCount ? "Chờ duyệt" : "Thiếu giám thị";
                     plan.ScheduleStatuses.Add(new AutoAssignScheduleStatusUpdateDto
                     {
                         ExamScheduleId = schedule.ExamScheduleId,
@@ -971,11 +1127,13 @@ namespace ExamInvigilationManagement.Application.Services
                     var detail = details[schedule.ExamScheduleId];
                     detail.AssignedCount = assignedCount;
                     detail.StatusAfter = statusAfter;
-                    detail.Message = assignedCount >= RequiredInvigilatorsPerSchedule
+                    detail.Message = requiredCount == 0
+                        ? "Bỏ qua phân công theo cấu hình hình thức thi."
+                        : assignedCount >= requiredCount
                         ? (assignmentMode == AutoAssignmentMode.RepairRejected
                             ? "Đã bổ sung giám thị thay thế và đưa lịch về trạng thái chờ duyệt lại."
-                            : "Đã phân công đủ 2 giám thị theo các tiêu chí ưu tiên.")
-                        : $"Chưa tìm đủ giảng viên phù hợp, còn thiếu {RequiredInvigilatorsPerSchedule - assignedCount} giám thị.";
+                            : $"Đã phân công đủ {requiredCount} giám thị theo các tiêu chí ưu tiên.")
+                        : $"Chưa tìm đủ giảng viên phù hợp, còn thiếu {requiredCount - assignedCount} giám thị.";
                 }
 
                 foreach (var schedule in schedules.Where(x => !processableSchedules.Any(p => p.ExamScheduleId == x.ExamScheduleId)))
@@ -988,7 +1146,7 @@ namespace ExamInvigilationManagement.Application.Services
                         detail.StatusAfter = schedule.Status;
                     detail.AssignedCount = assignedCount;
                     if (string.IsNullOrWhiteSpace(detail.Message))
-                        detail.Message = assignedCount >= RequiredInvigilatorsPerSchedule
+                        detail.Message = assignedCount >= GetRequiredInvigilators(schedule, policy)
                             ? "Không gán mới."
                             : "Không gán mới.";
                 }
@@ -996,22 +1154,17 @@ namespace ExamInvigilationManagement.Application.Services
                 var result = new AutoAssignResultDto
                 {
                     Success = true,
+                    IsOptimizationProven = isOptimizationProven,
                     TotalSchedules = schedules.Count,
                     AssignedInvigilators = plan.NewInvigilators.Count,
                     FullyAssignedSchedules = details.Values.Count(x => x.StatusAfter == "Chờ duyệt"),
                     MissingSchedules = details.Values.Count(x => x.StatusAfter == "Thiếu giám thị"),
                     Details = schedules.Select(x => details[x.ExamScheduleId]).ToList(),
-                    Message = status == CpSolverStatus.Optimal
-                        ? (assignmentMode == AutoAssignmentMode.RepairRejected
-                            ? "Đã hoàn tất bổ sung giám thị cho các lịch cần xử lý lại."
-                            : "Đã hoàn tất tự động phân công giám thị.")
-                        : (assignmentMode == AutoAssignmentMode.RepairRejected
-                            ? "Đã bổ sung giám thị trong thời gian cho phép."
-                            : "Đã tự động phân công trong thời gian cho phép.")
+                    Message = assignmentMode == AutoAssignmentMode.RepairRejected
+                        ? "Đã hoàn tất bổ sung giám thị cho các lịch cần xử lý lại."
+                        : "Đã hoàn tất tự động phân công giám thị."
                 };
 
-                if (status != CpSolverStatus.Optimal)
-                    result.Warnings.Add("Hệ thống đã chọn phương án phù hợp trong thời gian giới hạn.");
                 if (result.MissingSchedules > 0)
                     result.Warnings.Add("Một số lịch vẫn chưa đủ 2 giám thị do không còn giảng viên phù hợp theo lịch bận và trạng thái hiện tại.");
 
@@ -1054,7 +1207,8 @@ namespace ExamInvigilationManagement.Application.Services
 
         private static bool CanProcessSchedule(
             AutoAssignScheduleDto schedule,
-            Dictionary<int, HashSet<int>> scheduleAssignedUsers)
+            Dictionary<int, HashSet<int>> scheduleAssignedUsers,
+            int requiredInvigilators)
         {
             if (schedule.Status.Equals("Từ chối duyệt", StringComparison.OrdinalIgnoreCase))
                 return false;
@@ -1062,7 +1216,33 @@ namespace ExamInvigilationManagement.Application.Services
             var assignedCount = scheduleAssignedUsers.TryGetValue(schedule.ExamScheduleId, out var assignedUsers)
                 ? assignedUsers.Count
                 : 0;
-            return assignedCount < RequiredInvigilatorsPerSchedule;
+            return assignedCount < requiredInvigilators;
+        }
+
+        private static int GetRequiredInvigilators(AutoAssignScheduleDto schedule, AutoAssignmentPolicyDto policy)
+        {
+            return policy.GetAssignmentMode(schedule.ExamFormatId) switch
+            {
+                AutoAssignmentExamFormatAssignmentModes.Skip => 0,
+                AutoAssignmentExamFormatAssignmentModes.OwnerOnly => 1,
+                _ => policy.RequiredInvigilatorsPerSchedule
+            };
+        }
+
+        private static bool IsOwnerOnly(AutoAssignScheduleDto schedule, AutoAssignmentPolicyDto policy)
+        {
+            return string.Equals(
+                policy.GetAssignmentMode(schedule.ExamFormatId),
+                AutoAssignmentExamFormatAssignmentModes.OwnerOnly,
+                StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsSkippedByFormat(AutoAssignScheduleDto schedule, AutoAssignmentPolicyDto policy)
+        {
+            return string.Equals(
+                policy.GetAssignmentMode(schedule.ExamFormatId),
+                AutoAssignmentExamFormatAssignmentModes.Skip,
+                StringComparison.OrdinalIgnoreCase);
         }
 
         private static CandidateTier GetCandidateTier(
@@ -1121,17 +1301,27 @@ namespace ExamInvigilationManagement.Application.Services
             };
         }
 
-        private static int GetCandidateScore(CandidateTier tier, int load, int sameDayLoad, int? locationCost)
+        private static int GetCandidateScore(
+            CandidateTier tier,
+            int load,
+            int sameDayLoad,
+            int? locationCost,
+            AutoAssignmentPolicyDto policy)
         {
             var baseScore = tier switch
             {
-                CandidateTier.ExactOwner => 12_000,
-                CandidateTier.SameSubject => 8_000,
-                CandidateTier.Emergency => 3_000,
-                _ => 1_000
+                CandidateTier.ExactOwner => policy.GetWeight(AutoAssignmentPolicyRuleCodes.ExactOwner, 12_000),
+                CandidateTier.SameSubject => policy.GetWeight(AutoAssignmentPolicyRuleCodes.SameSubject, 8_000),
+                CandidateTier.Emergency => policy.GetWeight(AutoAssignmentPolicyRuleCodes.Emergency, 3_000),
+                _ => policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.FacultyMember)
+                    ? Math.Max(0, 2_000 - policy.GetWeight(AutoAssignmentPolicyRuleCodes.FacultyMember, 8_000) / 4)
+                    : 0
             };
 
-            return Math.Max(0, baseScore - load * 120 - sameDayLoad * 120 + GetLocationScoreBonus(locationCost));
+            var loadPenalty = policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.LowLoad) ? load * 120 : 0;
+            var dayPenalty = policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.SameDayLoad) ? sameDayLoad * 120 : 0;
+            var locationBonus = policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.Location) ? GetLocationScoreBonus(locationCost) : 0;
+            return Math.Max(0, baseScore - loadPenalty - dayPenalty + locationBonus);
         }
 
         private static int? CalculateSameDayLocationCost(
@@ -1247,14 +1437,29 @@ namespace ExamInvigilationManagement.Application.Services
             return normalized;
         }
 
-        private static string GetCandidateTierReason(CandidateTier tier)
+        private static string GetCandidateTierReason(CandidateTier tier, AutoAssignmentPolicyDto policy)
         {
             return tier switch
             {
-                CandidateTier.ExactOwner => "Đang dạy lớp học phần",
-                CandidateTier.SameSubject => "Có chuyên môn môn thi",
-                CandidateTier.Emergency => "Phù hợp lịch",
-                _ => "Dự phòng khi thiếu giảng viên"
+                CandidateTier.ExactOwner when policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.ExactOwner) => "Đang dạy lớp học phần",
+                CandidateTier.SameSubject when policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.SameSubject) => "Có chuyên môn môn thi",
+                CandidateTier.Emergency when policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.Emergency) => "Phù hợp lịch",
+                CandidateTier.FacultyMember when policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.FacultyMember) => "Dự phòng khi thiếu giảng viên",
+                _ => string.Empty
+            };
+        }
+
+        private static string GetFormatSpecialistReason(CandidateTier tier, AutoAssignScheduleDto schedule, AutoAssignmentPolicyDto policy)
+        {
+            if (!IsSubjectSpecialist(tier))
+                return string.Empty;
+
+            var formatPriority = GetExamFormatPriority(schedule.ExamFormatDisplay);
+            return formatPriority switch
+            {
+                ExamFormatPriority.Oral when policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.OralSpecialist) => "Ưu tiên chuyên môn cho thi vấn đáp",
+                ExamFormatPriority.Practical when policy.IsRuleEnabled(AutoAssignmentPolicyRuleCodes.PracticalSpecialist) => "Ưu tiên chuyên môn cho thi thực hành",
+                _ => string.Empty
             };
         }
 

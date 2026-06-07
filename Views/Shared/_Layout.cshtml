@@ -142,6 +142,10 @@
                     </button>
                     <div class="collapse show sidebar-subnav" id="navExam">
                         <a asp-area="" asp-controller="ExamSchedule" asp-action="Index" aria-label="Lịch thi" class="sidebar-link @(IsActive("ExamSchedule") ? "active" : "")"><i class="bi bi-table"></i><span class="sidebar-text">Lịch thi</span></a>
+                        @if (User.IsInRole("Thư ký khoa"))
+                        {
+                            <a asp-area="Secretary" asp-controller="AutoAssignmentPolicy" asp-action="Index" aria-label="Cấu hình phân công" class="sidebar-link @(IsActive("AutoAssignmentPolicy", "Secretary") ? "active" : "")"><i class="bi bi-sliders"></i><span class="sidebar-text">Cấu hình phân công</span></a>
+                        }
                         <a asp-area="Admin" asp-controller="ExamFormat" asp-action="Index" aria-label="Hình thức thi" class="sidebar-link @(IsActive("ExamFormat", "Admin") ? "active" : "")"><i class="bi bi-ui-checks"></i><span class="sidebar-text">Hình thức thi</span></a>
                         <a asp-area="Admin" asp-controller="Building" asp-action="Index" aria-label="Giảng đường" class="sidebar-link @(IsActive("Building", "Admin") ? "active" : "")"><i class="bi bi-building"></i><span class="sidebar-text">Giảng đường</span></a>
                         <a asp-area="Admin" asp-controller="Room" asp-action="Index" aria-label="Phòng thi" class="sidebar-link @(IsActive("Room", "Admin") ? "active" : "")"><i class="bi bi-door-open"></i><span class="sidebar-text">Phòng thi</span></a>
@@ -249,6 +253,12 @@
                         <a asp-area="" asp-controller="ExamSchedule" asp-action="Index" class="sidebar-link @(IsActive("ExamSchedule") ? "active" : "")">
                             <i class="bi bi-table"></i><span class="sidebar-text">Lịch thi</span>
                         </a>
+                        @if (User.IsInRole("Thư ký khoa"))
+                        {
+                            <a asp-area="Secretary" asp-controller="AutoAssignmentPolicy" asp-action="Index" class="sidebar-link @(IsActive("AutoAssignmentPolicy", "Secretary") ? "active" : "")">
+                                <i class="bi bi-sliders"></i><span class="sidebar-text">Cấu hình phân công</span>
+                            </a>
+                        }
                         <a asp-area="Admin" asp-controller="ExamFormat" asp-action="Index" class="sidebar-link @(IsActive("ExamFormat", "Admin") ? "active" : "")">
                             <i class="bi bi-ui-checks"></i><span class="sidebar-text">Hình thức thi</span>
                         </a>
@@ -423,6 +433,16 @@
             document.addEventListener('scroll', removeTooltip, true);
         })();
     </script>
+    <div id="appLoadingOverlay" class="app-loading-overlay" role="status" aria-live="polite" aria-hidden="true">
+        <div class="app-loading-card">
+            <div class="app-loading-spinner" aria-hidden="true"></div>
+            <div>
+                <div class="app-loading-title">Đang xử lý yêu cầu</div>
+                <div id="appLoadingMessage" class="app-loading-message">Hệ thống đang thực hiện, vui lòng chờ trong giây lát.</div>
+            </div>
+        </div>
+    </div>
+    <script src="~/js/site.js" asp-append-version="true"></script>
     <script src="~/js/theme-toggle.js" asp-append-version="true"></script>
      
     @RenderSection("Scripts", required: false)

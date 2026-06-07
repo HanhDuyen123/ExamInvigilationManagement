@@ -65,6 +65,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     ExamFormatDisplay = x.ExamFormat != null
                         ? x.ExamFormat.Code + " - " + x.ExamFormat.Name
                         : string.Empty,
+                    ExamFormatId = x.ExamFormatId,
 
                     ExamDate = x.ExamDate,
                     Status = x.Status
@@ -224,6 +225,83 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
             var busySet = busyPersonKeys.ToHashSet();
             return candidatePersonKeys.Where(x => busySet.Contains(x.Value)).Select(x => x.Key).ToHashSet();
+        }
+
+        public async Task<AutoAssignmentPolicyDto> GetEffectivePolicyAsync(
+            int facultyId,
+            int semesterId,
+            int periodId,
+            CancellationToken cancellationToken = default)
+        {
+            var policy = await _db.AutoAssignmentPolicies
+                .AsNoTracking()
+                .Include(x => x.Rules)
+                .Include(x => x.ExamFormatRules)
+                    .ThenInclude(x => x.ExamFormat)
+                .Where(x =>
+                    x.FacultyId == facultyId &&
+                    x.IsActive &&
+                    (x.SemesterId == null || x.SemesterId == semesterId) &&
+                    (x.PeriodId == null || x.PeriodId == periodId))
+                .OrderByDescending(x => x.PeriodId == periodId)
+                .ThenByDescending(x => x.SemesterId == semesterId)
+                .ThenByDescending(x => x.IsDefault)
+                .ThenByDescending(x => x.PolicyId)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (policy == null)
+                return AutoAssignmentPolicyDto.Default();
+
+            var dto = AutoAssignmentPolicyDto.Default();
+            dto.PolicyId = policy.PolicyId;
+            dto.PolicyName = policy.PolicyName;
+            dto.RequiredInvigilatorsPerSchedule = Math.Max(1, (int)policy.RequiredInvigilatorsPerSchedule);
+            dto.AllowCrossFaculty = policy.AllowCrossFaculty;
+            dto.RequirePeriodAvailabilityIfExists = policy.RequirePeriodAvailabilityIfExists;
+            dto.AllowFacultyMemberAsFallback = policy.AllowFacultyMemberAsFallback;
+            dto.MaxAssignmentsPerDay = policy.MaxAssignmentsPerDay;
+            dto.MaxAssignmentsPerPeriod = policy.MaxAssignmentsPerPeriod;
+            dto.MaxAssignmentsPerSlot = Math.Max(1, policy.MaxAssignmentsPerSlot);
+            dto.SolverTimeLimitSeconds = Math.Clamp(policy.SolverTimeLimitSeconds, 1, 60);
+
+            foreach (var rule in policy.Rules)
+            {
+                dto.Rules[rule.RuleCode] = new AutoAssignmentRuleDto
+                {
+                    RuleCode = rule.RuleCode,
+                    RuleName = rule.RuleName,
+                    RuleType = rule.RuleType,
+                    IsEnabled = rule.IsEnabled,
+                    IsRequired = rule.IsRequired,
+                    PriorityOrder = rule.PriorityOrder,
+                    Weight = rule.Weight,
+                    ParametersJson = rule.ParametersJson
+                };
+            }
+
+            dto.ExamFormatPolicies = policy.ExamFormatRules
+                .Where(x => x.ExamFormat.IsActive)
+                .ToDictionary(
+                    x => x.ExamFormatId,
+                    x => new AutoAssignmentExamFormatPolicyDto
+                    {
+                        ExamFormatId = x.ExamFormatId,
+                        Code = x.ExamFormat.Code,
+                        Name = x.ExamFormat.Name,
+                        AssignmentMode = NormalizeAssignmentMode(x.AssignmentMode)
+                    });
+
+            return dto;
+        }
+
+        private static string NormalizeAssignmentMode(string? value)
+        {
+            return value switch
+            {
+                AutoAssignmentExamFormatAssignmentModes.OwnerOnly => AutoAssignmentExamFormatAssignmentModes.OwnerOnly,
+                AutoAssignmentExamFormatAssignmentModes.Skip => AutoAssignmentExamFormatAssignmentModes.Skip,
+                _ => AutoAssignmentExamFormatAssignmentModes.Full
+            };
         }
 
         public async Task<Dictionary<string, HashSet<int>>> GetSubjectLecturerMapAsync(

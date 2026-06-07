@@ -2,7 +2,7 @@
 @using System.Linq
 
 @{
-    ViewData["Title"] = "Duyệt lịch thi";
+    ViewData["Title"] = "Duyệt lịch coi thi";
     var totalCount = Model.TotalCount;
     var reviewableCount = Model.ReviewableCount;
     var notEnoughCount = Model.NotEnoughCount;
@@ -11,8 +11,8 @@
 <div class="role-page">
     <div class="role-header mb-4">
         <div>
-            <h3 class="title-gradient">Duyệt lịch thi</h3>
-            <div class="subtitle">Lọc, chọn và duyệt / từ chối duyệt các lịch thi đủ điều kiện</div>
+            <h3 class="title-gradient">Duyệt lịch coi thi</h3>
+            <div class="subtitle">Lọc, chọn và duyệt / từ chối duyệt các lịch coi thi đủ điều kiện</div>
         </div>
 
         <a href="@Url.Action("Index", "ExamSchedule", new { area = "" })" class="btn btn-create">

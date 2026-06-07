@@ -26,6 +26,7 @@
         public string ClassName { get; set; } = string.Empty;
         public string GroupNumber { get; set; } = string.Empty;
         public string ExamFormatDisplay { get; set; } = string.Empty;
+        public int? ExamFormatId { get; set; }
 
         public DateTime ExamDate { get; set; }
         public string Status { get; set; } = string.Empty;

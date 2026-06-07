@@ -38,6 +38,16 @@ public partial class ApplicationDbContext : DbContext
 
     public virtual DbSet<AuditLog> AuditLogs { get; set; }
 
+    public virtual DbSet<AutoAssignmentPolicy> AutoAssignmentPolicies { get; set; }
+
+    public virtual DbSet<AutoAssignmentRule> AutoAssignmentRules { get; set; }
+
+    public virtual DbSet<AutoAssignmentExamFormatRule> AutoAssignmentExamFormatRules { get; set; }
+
+    public virtual DbSet<AutoAssignmentRoleRule> AutoAssignmentRoleRules { get; set; }
+
+    public virtual DbSet<AutoAssignmentRun> AutoAssignmentRuns { get; set; }
+
     public virtual DbSet<Building> Buildings { get; set; }
 
     public virtual DbSet<CourseOffering> CourseOfferings { get; set; }
@@ -133,6 +143,68 @@ public partial class ApplicationDbContext : DbContext
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.HasIndex(e => new { e.EntityName, e.EntityId }).HasDatabaseName("IX_AuditLog_Entity");
             entity.HasIndex(e => e.CorrelationId).HasDatabaseName("IX_AuditLog_CorrelationId");
+        });
+
+        modelBuilder.Entity<AutoAssignmentPolicy>(entity =>
+        {
+            entity.HasKey(e => e.PolicyId).HasName("PK_AutoAssignmentPolicy");
+            entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.RequiredInvigilatorsPerSchedule).HasDefaultValue((byte)2);
+            entity.Property(e => e.RequirePeriodAvailabilityIfExists).HasDefaultValue(true);
+            entity.Property(e => e.AllowFacultyMemberAsFallback).HasDefaultValue(true);
+            entity.Property(e => e.MaxAssignmentsPerSlot).HasDefaultValue(1);
+            entity.Property(e => e.SolverTimeLimitSeconds).HasDefaultValue(8);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+            entity.HasIndex(e => new { e.FacultyId, e.SemesterId, e.PeriodId, e.IsActive }).HasDatabaseName("IX_AutoAssignmentPolicy_Scope");
+            entity.HasOne(d => d.Faculty).WithMany(p => p.AutoAssignmentPolicies)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_AutoAssignmentPolicy_Faculty");
+        });
+
+        modelBuilder.Entity<AutoAssignmentRule>(entity =>
+        {
+            entity.HasKey(e => e.RuleId).HasName("PK_AutoAssignmentRule");
+            entity.Property(e => e.IsEnabled).HasDefaultValue(true);
+            entity.Property(e => e.PriorityOrder).HasDefaultValue(100);
+            entity.HasIndex(e => new { e.PolicyId, e.RuleCode }).IsUnique().HasDatabaseName("UX_AutoAssignmentRule_Policy_Code");
+            entity.HasOne(d => d.Policy).WithMany(p => p.Rules)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_AutoAssignmentRule_Policy");
+        });
+
+        modelBuilder.Entity<AutoAssignmentExamFormatRule>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_AutoAssignmentExamFormatRule");
+            entity.Property(e => e.AssignmentMode).HasDefaultValue("Full");
+            entity.HasIndex(e => new { e.PolicyId, e.ExamFormatId }).IsUnique().HasDatabaseName("UX_AutoAssignmentExamFormatRule_Policy_Format");
+            entity.HasOne(d => d.ExamFormat).WithMany(p => p.AutoAssignmentExamFormatRules)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_AutoAssignmentExamFormatRule_Format");
+            entity.HasOne(d => d.Policy).WithMany(p => p.ExamFormatRules)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_AutoAssignmentExamFormatRule_Policy");
+        });
+
+        modelBuilder.Entity<AutoAssignmentRoleRule>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("PK_AutoAssignmentRoleRule");
+            entity.HasIndex(e => new { e.PolicyId, e.RoleId }).IsUnique().HasDatabaseName("UX_AutoAssignmentRoleRule_Policy_Role");
+            entity.HasOne(d => d.Policy).WithMany(p => p.RoleRules)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_AutoAssignmentRoleRule_Policy");
+            entity.HasOne(d => d.Role).WithMany(p => p.AutoAssignmentRoleRules)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_AutoAssignmentRoleRule_Role");
+        });
+
+        modelBuilder.Entity<AutoAssignmentRun>(entity =>
+        {
+            entity.HasKey(e => e.RunId).HasName("PK_AutoAssignmentRun");
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+            entity.HasIndex(e => new { e.FacultyId, e.SemesterId, e.PeriodId, e.CreatedAt }).HasDatabaseName("IX_AutoAssignmentRun_Scope");
+            entity.HasOne(d => d.Policy).WithMany(p => p.Runs)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_AutoAssignmentRun_Policy");
         });
 
         modelBuilder.Entity<Building>(entity =>
@@ -545,6 +617,11 @@ public partial class ApplicationDbContext : DbContext
         if (entry.Entity is AuditLog or OutboxMessage) return false;
 
         return entry.Entity is AcademyYear
+            or AutoAssignmentPolicy
+            or AutoAssignmentRule
+            or AutoAssignmentExamFormatRule
+            or AutoAssignmentRoleRule
+            or AutoAssignmentRun
             or Building
             or CourseOffering
             or ExamFormat

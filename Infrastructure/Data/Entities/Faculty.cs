@@ -20,4 +20,7 @@ public partial class Faculty
 
     [InverseProperty("Faculty")]
     public virtual ICollection<User> Users { get; set; } = new List<User>();
+
+    [InverseProperty("Faculty")]
+    public virtual ICollection<AutoAssignmentPolicy> AutoAssignmentPolicies { get; set; } = new List<AutoAssignmentPolicy>();
 }

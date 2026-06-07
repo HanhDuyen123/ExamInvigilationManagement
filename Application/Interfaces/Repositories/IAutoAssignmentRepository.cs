@@ -36,6 +36,12 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
             IEnumerable<int> userIds,
             CancellationToken cancellationToken = default);
 
+        Task<AutoAssignmentPolicyDto> GetEffectivePolicyAsync(
+            int facultyId,
+            int semesterId,
+            int periodId,
+            CancellationToken cancellationToken = default);
+
         Task<Dictionary<int, int>> GetLecturerLoadsAsync(
             int semesterId,
             IEnumerable<int> userIds,

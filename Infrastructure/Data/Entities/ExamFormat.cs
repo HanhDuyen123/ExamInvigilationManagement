@@ -20,4 +20,7 @@ public partial class ExamFormat
 
     [InverseProperty("ExamFormat")]
     public virtual ICollection<ExamSchedule> ExamSchedules { get; set; } = new List<ExamSchedule>();
+
+    [InverseProperty("ExamFormat")]
+    public virtual ICollection<AutoAssignmentExamFormatRule> AutoAssignmentExamFormatRules { get; set; } = new List<AutoAssignmentExamFormatRule>();
 }
