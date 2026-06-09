@@ -78,13 +78,17 @@
                     : true;
                 if (!validator) return;
 
-                form.dataset.submitting = '1';
                 const submitter = event.submitter || form.querySelector('[type="submit"]');
-                if (submitter) {
-                    submitter.disabled = true;
-                    submitter.classList.add('disabled');
-                }
-                show(form.getAttribute('data-loading-message'));
+                window.setTimeout(function () {
+                    if (event.defaultPrevented || form.dataset.submitting === '1') return;
+
+                    form.dataset.submitting = '1';
+                    if (submitter) {
+                        submitter.disabled = true;
+                        submitter.classList.add('disabled');
+                    }
+                    show(form.getAttribute('data-loading-message'));
+                }, 0);
             });
         });
     }

@@ -30,7 +30,7 @@
         <input type="hidden" asp-for="IsDatabasePolicy" />
         <input type="hidden" asp-for="SolverTimeLimitSeconds" />
 
-        <div class="form-card auto-policy-card">
+        <div class="form-card auto-policy-card auto-policy-ops-card">
             <div asp-validation-summary="All" class="alert alert-danger auto-policy-full auto-policy-validation"></div>
 
             <div class="auto-policy-section auto-policy-full">
@@ -95,96 +95,100 @@
             </div>
         </div>
 
-        <div class="form-card auto-policy-card">
-            <div class="auto-policy-section auto-policy-full">
-                <div class="section-icon"><i class="bi bi-diagram-3"></i></div>
-                <div>
-                    <h5>Tiêu chí ưu tiên</h5>
-                    <p>Bật/tắt và điều chỉnh trọng số. Trọng số cao hơn nghĩa là tiêu chí có ảnh hưởng mạnh hơn khi tối ưu.</p>
+        <div class="auto-policy-side-stack">
+            <div class="form-card auto-policy-card auto-policy-rules-card">
+                <div class="auto-policy-section auto-policy-full">
+                    <div class="section-icon"><i class="bi bi-diagram-3"></i></div>
+                    <div>
+                        <h5>Tiêu chí ưu tiên</h5>
+                        <p>Bật/tắt và điều chỉnh trọng số. Trọng số cao hơn nghĩa là tiêu chí có ảnh hưởng mạnh hơn khi tối ưu.</p>
+                    </div>
+                </div>
+
+                <div class="auto-rule-list auto-policy-full">
+                    @for (var i = 0; i < Model.Rules.Count; i++)
+                    {
+                        <div class="auto-rule-item">
+                            <input type="hidden" asp-for="Rules[i].RuleCode" />
+                            <input type="hidden" asp-for="Rules[i].RuleName" />
+                            <input type="hidden" asp-for="Rules[i].RuleType" />
+                            <input type="hidden" asp-for="Rules[i].IsRequired" />
+                            <input type="hidden" asp-for="Rules[i].Description" />
+
+                            <div class="rule-main">
+                                <div class="rule-toggle-cell">
+                                    @if (Model.Rules[i].IsRequired)
+                                    {
+                                        <input type="hidden" asp-for="Rules[i].IsEnabled" value="true" />
+                                        <span class="rule-required-badge">Bắt buộc</span>
+                                    }
+                                    else
+                                    {
+                                        <label class="rule-check" title="Bật/tắt tiêu chí này khi thuật toán tối ưu">
+                                            <input asp-for="Rules[i].IsEnabled" />
+                                            <span></span>
+                                        </label>
+                                        <span class="rule-toggle-label">Bật/Tắt</span>
+                                    }
+                                </div>
+                                <div>
+                                    <strong>@Model.Rules[i].RuleName</strong>
+                                    <p>@Model.Rules[i].Description</p>
+                                    <small>@Model.Rules[i].RuleCode · @Model.Rules[i].RuleType</small>
+                                </div>
+                            </div>
+
+                            <div class="rule-controls">
+                                <label>Thứ tự</label>
+                                <input asp-for="Rules[i].PriorityOrder" type="number" class="input-modern rule-order" />
+                                <label>Trọng số</label>
+                                <input asp-for="Rules[i].Weight" type="number" class="input-modern rule-weight" />
+                            </div>
+                        </div>
+                    }
+                </div>
+
+                <div class="auto-policy-note auto-policy-full">
+                    <i class="bi bi-shield-check"></i>
+                    <span>Hệ thống vẫn giữ các ràng buộc an toàn: không gán người bận, không gán trùng người trong cùng lịch, không xử lý lịch đã duyệt hoặc từ chối duyệt.</span>
                 </div>
             </div>
 
-            <div class="auto-rule-list auto-policy-full">
-                @for (var i = 0; i < Model.Rules.Count; i++)
-                {
-                    <div class="auto-rule-item">
-                        <input type="hidden" asp-for="Rules[i].RuleCode" />
-                        <input type="hidden" asp-for="Rules[i].RuleName" />
-                        <input type="hidden" asp-for="Rules[i].RuleType" />
-                        <input type="hidden" asp-for="Rules[i].IsRequired" />
-                        <input type="hidden" asp-for="Rules[i].Description" />
+            <div class="form-card auto-policy-card auto-policy-format-card">
+                <div class="auto-policy-section auto-policy-full format-section">
+                    <div class="section-icon"><i class="bi bi-ui-checks-grid"></i></div>
+                    <div>
+                        <h5>Hình thức thi</h5>
+                        <p>Chọn cách xử lý phân công theo từng hình thức thi. Mặc định là phân công đầy đủ.</p>
+                    </div>
+                </div>
 
-                        <div class="rule-main">
-                            <div class="rule-toggle-cell">
-                                @if (Model.Rules[i].IsRequired)
-                                {
-                                    <input type="hidden" asp-for="Rules[i].IsEnabled" value="true" />
-                                    <span class="rule-required-badge">Bắt buộc</span>
-                                }
-                                else
-                                {
-                                    <label class="rule-check" title="Bật/tắt tiêu chí này khi thuật toán tối ưu">
-                                        <input asp-for="Rules[i].IsEnabled" />
-                                        <span></span>
-                                    </label>
-                                    <span class="rule-toggle-label">Bật/Tắt</span>
-                                }
-                            </div>
+                <div class="format-policy-list auto-policy-full">
+                    @for (var i = 0; i < Model.ExamFormatPolicies.Count; i++)
+                    {
+                        <div class="format-policy-item">
+                            <input type="hidden" asp-for="ExamFormatPolicies[i].ExamFormatId" />
+                            <input type="hidden" asp-for="ExamFormatPolicies[i].Code" />
+                            <input type="hidden" asp-for="ExamFormatPolicies[i].Name" />
                             <div>
-                                <strong>@Model.Rules[i].RuleName</strong>
-                                <p>@Model.Rules[i].Description</p>
-                                <small>@Model.Rules[i].RuleCode · @Model.Rules[i].RuleType</small>
+                                <strong>@Model.ExamFormatPolicies[i].Code</strong>
+                                <span>@Model.ExamFormatPolicies[i].Name</span>
                             </div>
+                            <select asp-for="ExamFormatPolicies[i].AssignmentMode" class="input-modern format-mode-select">
+                                <option value="Full">Phân công đầy đủ</option>
+                                <option value="OwnerOnly">Chỉ giữ/gán giảng viên owner</option>
+                                <option value="Skip">Bỏ qua phân công</option>
+                            </select>
                         </div>
-
-                        <div class="rule-controls">
-                            <label>Thứ tự</label>
-                            <input asp-for="Rules[i].PriorityOrder" type="number" class="input-modern rule-order" />
-                            <label>Trọng số</label>
-                            <input asp-for="Rules[i].Weight" type="number" class="input-modern rule-weight" />
-                        </div>
-                    </div>
-                }
-            </div>
-
-            <div class="auto-policy-note auto-policy-full">
-                <i class="bi bi-shield-check"></i>
-                <span>Hệ thống vẫn giữ các ràng buộc an toàn: không gán người bận, không gán trùng người trong cùng lịch, không xử lý lịch đã duyệt hoặc từ chối duyệt.</span>
-            </div>
-
-            <div class="auto-policy-section auto-policy-full format-section">
-                <div class="section-icon"><i class="bi bi-ui-checks-grid"></i></div>
-                <div>
-                    <h5>Hình thức thi</h5>
-                    <p>Chọn cách xử lý phân công theo từng hình thức thi. Mặc định là phân công đầy đủ.</p>
+                    }
                 </div>
-            </div>
 
-            <div class="format-policy-list auto-policy-full">
-                @for (var i = 0; i < Model.ExamFormatPolicies.Count; i++)
-                {
-                    <div class="format-policy-item">
-                        <input type="hidden" asp-for="ExamFormatPolicies[i].ExamFormatId" />
-                        <input type="hidden" asp-for="ExamFormatPolicies[i].Code" />
-                        <input type="hidden" asp-for="ExamFormatPolicies[i].Name" />
-                        <div>
-                            <strong>@Model.ExamFormatPolicies[i].Code</strong>
-                            <span>@Model.ExamFormatPolicies[i].Name</span>
-                        </div>
-                        <select asp-for="ExamFormatPolicies[i].AssignmentMode" class="input-modern format-mode-select">
-                            <option value="Full">Phân công đầy đủ</option>
-                            <option value="OwnerOnly">Chỉ giữ/gán giảng viên owner</option>
-                            <option value="Skip">Bỏ qua phân công</option>
-                        </select>
-                    </div>
-                }
-            </div>
-
-            <div class="auto-policy-actions auto-policy-full">
-                <button type="submit" class="btn-submit">
-                    <i class="bi bi-save2"></i>
-                    Lưu chính sách
-                </button>
+                <div class="auto-policy-actions auto-policy-full">
+                    <button type="submit" class="btn-submit">
+                        <i class="bi bi-save2"></i>
+                        Lưu chính sách
+                    </button>
+                </div>
             </div>
         </div>
     </form>
@@ -193,15 +197,34 @@
 <style>
     .auto-policy-layout {
         display: grid;
-        grid-template-columns: minmax(0, 520px) minmax(0, 1fr);
-        gap: 18px;
+        grid-template-columns: minmax(380px, 0.92fr) minmax(0, 1.45fr);
+        gap: 20px;
         align-items: start;
+    }
+
+    .auto-policy-side-stack {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 20px;
+        min-width: 0;
     }
 
     .auto-policy-card {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 15px 16px;
+        min-width: 0;
+    }
+
+    .auto-policy-ops-card {
+        align-content: start;
+    }
+
+    .auto-policy-rules-card,
+    .auto-policy-format-card { grid-template-columns: 1fr; }
+
+    .auto-policy-format-card {
+        position: static;
     }
 
     .auto-policy-full { grid-column: 1 / -1; }
@@ -281,7 +304,7 @@
 
     .auto-rule-item {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-columns: minmax(0, 1fr) minmax(210px, auto);
         gap: 14px;
         align-items: center;
         padding: 14px;
@@ -383,9 +406,9 @@
 
     .format-policy-item {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+        grid-template-columns: 1fr;
         gap: 12px;
-        align-items: center;
+        align-items: stretch;
         padding: 12px 14px;
         border-radius: 16px;
         background: var(--surface-1);
@@ -411,8 +434,10 @@
         justify-content: flex-end;
     }
 
-    @@media (max-width: 1100px) {
+    @@media (max-width: 1120px) {
         .auto-policy-layout { grid-template-columns: 1fr; }
+        .auto-policy-ops-card { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .format-policy-list { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
     }
 
     @@media (max-width: 720px) {
@@ -422,6 +447,22 @@
         .rule-controls { grid-template-columns: auto 1fr; }
         .format-policy-item { grid-template-columns: 1fr; }
         .auto-policy-actions .btn-submit { width: 100%; justify-content: center; }
+    }
+
+    @@media (max-width: 520px) {
+        .auto-policy-layout { gap: 12px; }
+        .auto-policy-card { gap: 12px; padding: 14px; }
+        .auto-policy-section { align-items: flex-start; }
+        .policy-switch { grid-template-columns: 1fr; }
+        .policy-switch em { grid-column: 1; }
+        .rule-main { grid-template-columns: 1fr; }
+        .rule-toggle-cell { justify-items: flex-start; }
+        .rule-controls { grid-template-columns: 1fr; }
+        .rule-controls label { margin-top: 4px; }
+        .rule-order,
+        .rule-weight { width: 100%; }
+        .format-policy-item strong,
+        .format-policy-item span { word-break: break-word; }
     }
 </style>
 

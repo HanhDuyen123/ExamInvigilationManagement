@@ -15,14 +15,14 @@
     <script>
         function clearBelow(level) {
             const map = {
-                semester: ['semester', 'period', 'session', 'slot'],
-                period: ['period', 'session', 'slot'],
-                session: ['session', 'slot'],
-                slot: ['slot']
+                year: ['semester', 'period', 'session', 'slot'],
+                semester: ['period', 'session', 'slot'],
+                period: ['session', 'slot'],
+                session: ['slot']
             };
 
             map[level]?.forEach(k => {
-                const lookup = AdminLookup.get(k);
+                const lookup = AdminLookup.get('busy-' + k);
                 if (lookup) lookup.clear();
             });
         }
@@ -77,10 +77,10 @@
                 valueField: 'id',
                 textField: 'name',
                 onSelect: function () {
-                    clearBelow('semester');
+                    clearBelow('year');
                     CrudPage.loadData(1);
                 },
-                onClear: function () { CrudPage.loadData(1); }
+                onClear: function () { clearBelow('year'); CrudPage.loadData(1); }
             });
 
             AdminLookup.create({
@@ -99,10 +99,10 @@
                 textField: 'name',
                 beforeSearch: function () { return $('#yearId').val() ? true : 'Vui lòng chọn năm học'; },
                 onSelect: function () {
-                    clearBelow('period');
+                    clearBelow('semester');
                     CrudPage.loadData(1);
                 },
-                onClear: function () { CrudPage.loadData(1); }
+                onClear: function () { clearBelow('semester'); CrudPage.loadData(1); }
             });
 
             AdminLookup.create({
@@ -121,10 +121,10 @@
                 textField: 'name',
                 beforeSearch: function () { return $('#yearId').val() && $('#semesterId').val() ? true : 'Vui lòng chọn năm học và học kỳ'; },
                 onSelect: function () {
-                    clearBelow('session');
+                    clearBelow('period');
                     CrudPage.loadData(1);
                 },
-                onClear: function () { CrudPage.loadData(1); }
+                onClear: function () { clearBelow('period'); CrudPage.loadData(1); }
             });
 
             AdminLookup.create({
@@ -143,10 +143,10 @@
                 textField: 'name',
                 beforeSearch: function () { return $('#periodId').val() ? true : 'Vui lòng chọn đợt thi'; },
                 onSelect: function () {
-                    clearBelow('slot');
+                    clearBelow('session');
                     CrudPage.loadData(1);
                 },
-                onClear: function () { CrudPage.loadData(1); }
+                onClear: function () { clearBelow('session'); CrudPage.loadData(1); }
             });
 
             AdminLookup.create({

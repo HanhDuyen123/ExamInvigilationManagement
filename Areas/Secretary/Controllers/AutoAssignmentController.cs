@@ -61,7 +61,8 @@ namespace ExamInvigilationManagement.Areas.Secretary.Controllers
             return View(new AutoAssignRequestDto
             {
                 SemesterId = semesterId,
-                PeriodId = periodId
+                PeriodId = periodId,
+                RunSeed = Random.Shared.Next(1, int.MaxValue)
             });
         }
 

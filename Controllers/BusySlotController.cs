@@ -349,7 +349,6 @@ namespace ExamInvigilationManagement.Controllers
                 filter.FacultyId = null;
             }
 
-            await ApplyDefaultAcademicContextAsync(filter);
             return filter;
         }
 

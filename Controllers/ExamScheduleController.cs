@@ -149,8 +149,6 @@ namespace ExamInvigilationManagement.Controllers
                 CurrentFacultyId = scope.FacultyId
             };
 
-            await ApplyDefaultAcademicContextAsync(filter, scope);
-
             ViewBag.ScheduleActionMode = User.IsInRole("Admin")
                 ? "admin"
                 : User.IsInRole("Thư ký khoa")
@@ -209,8 +207,6 @@ namespace ExamInvigilationManagement.Controllers
                 CurrentUserId = scope.UserId,
                 CurrentFacultyId = scope.FacultyId
             };
-
-            await ApplyDefaultAcademicContextAsync(filter, scope);
 
             var result = await _service.GetPagedAsync(filter, 1, int.MaxValue);
             var templatePath = Path.Combine(_environment.WebRootPath, "templates", "MAU EXPORT LICH PHAN CONG COI THI.xlsx");

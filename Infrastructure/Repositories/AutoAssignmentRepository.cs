@@ -280,7 +280,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             }
 
             dto.ExamFormatPolicies = policy.ExamFormatRules
-                .Where(x => x.ExamFormat.IsActive)
+                .Where(x => x.ExamFormat != null && x.ExamFormat.IsActive)
                 .ToDictionary(
                     x => x.ExamFormatId,
                     x => new AutoAssignmentExamFormatPolicyDto

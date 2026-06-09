@@ -53,7 +53,6 @@ namespace ExamInvigilationManagement.Areas.Secretary.Controllers
             if (userId is null)
                 return Unauthorized();
 
-            await ApplyDefaultAcademicContextAsync(search, userId.Value, cancellationToken);
             var pageModel = await _approvalService.GetIndexAsync(search, userId.Value, page, pageSize, cancellationToken);
             return PartialView("_ExamScheduleApprovalTable", pageModel.PagedItems);
         }

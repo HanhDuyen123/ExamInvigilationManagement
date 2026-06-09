@@ -43,6 +43,7 @@
         let currentIndex = -1;
         let requestSeq = 0;
         let isInitializing = true;
+        let committedText = '';
 
         function escapeHtml(text) {
             return String(text ?? '')
@@ -215,13 +216,17 @@
         function setValue(value, text) {
             $hidden.val(value ?? '');
             $input.val(text ?? '');
+            committedText = text ?? '';
             $hidden.trigger('change');
             clearBlockedMessage();
         }
 
-        function clear() {
+        function clearInternal(keepInputText) {
             $hidden.val('');
-            $input.val('');
+            if (!keepInputText) {
+                $input.val('');
+            }
+            committedText = '';
             $hidden.trigger('change');
             currentIndex = -1;
             api._currentItems = [];
@@ -230,6 +235,10 @@
             if (typeof cfg.onClear === 'function') {
                 cfg.onClear(api);
             }
+        }
+
+        function clear() {
+            clearInternal(false);
         }
 
         function selectItem($item) {
@@ -330,6 +339,11 @@
 
                 if (!$input.val().trim()) {
                     clear();
+                    return;
+                }
+
+                if ($hidden.val() && $input.val() !== committedText) {
+                    clearInternal(true);
                 }
             });
 
@@ -379,6 +393,7 @@
 
         if (cfg.initialText !== undefined && cfg.initialText !== null && cfg.initialText !== '') {
             $input.val(cfg.initialText);
+            committedText = String(cfg.initialText);
         }
 
         bindEvents();

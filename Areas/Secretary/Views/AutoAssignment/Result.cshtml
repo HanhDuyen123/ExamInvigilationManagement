@@ -18,6 +18,7 @@
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="SemesterId" value="@Model.SemesterId" />
                     <input type="hidden" name="PeriodId" value="@Model.PeriodId" />
+                    <input type="hidden" name="PreviewToken" value="@Model.PreviewToken" />
                     <button type="submit" class="btn btn-create">
                         <i class="bi bi-save2"></i>
                         <span>Lưu phương án này</span>

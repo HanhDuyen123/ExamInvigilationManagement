@@ -40,7 +40,7 @@
                 };
 
                 (map[level] || []).forEach(k => {
-                    const lookup = AdminLookup.get(k);
+                    const lookup = AdminLookup.get('exam-' + k);
                     if (lookup) lookup.clear();
                 });
             }

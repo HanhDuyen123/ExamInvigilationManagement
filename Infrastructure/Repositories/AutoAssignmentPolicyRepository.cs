@@ -38,6 +38,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             }
 
             await EnsureExamFormatRulesAsync(policy, cancellationToken);
+            policy = await LoadDefaultPolicyAsync(facultyId, tracking: true, cancellationToken) ?? policy;
 
             return ToEditDto(policy);
         }
@@ -226,7 +227,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 .ToList();
 
             var formatPolicies = policy.ExamFormatRules
-                .Where(x => x.ExamFormat.IsActive)
+                .Where(x => x.ExamFormat != null && x.ExamFormat.IsActive)
                 .OrderBy(x => x.ExamFormat.Code)
                 .Select(x => new AutoAssignmentExamFormatPolicyEditDto
                 {

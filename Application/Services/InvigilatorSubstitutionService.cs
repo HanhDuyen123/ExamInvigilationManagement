@@ -146,7 +146,7 @@ namespace ExamInvigilationManagement.Application.Services
             }
 
             var busyIds = await _repository.GetBusyLecturerIdsAsync(lecturerIds, schedule.SlotId, DateOnly.FromDateTime(schedule.ExamDate), cancellationToken);
-            var conflictIds = await _repository.GetConflictingLecturerIdsAsync(schedule.ExamScheduleId, schedule.SemesterId, schedule.PeriodId, schedule.SessionId, schedule.SlotId, lecturerIds, cancellationToken);
+            var conflictIds = await _repository.GetConflictingLecturerIdsAsync(schedule.ExamInvigilatorId, schedule.ExamScheduleId, schedule.SemesterId, schedule.PeriodId, schedule.SessionId, schedule.SlotId, lecturerIds, cancellationToken);
             var loads = await _repository.GetLecturerLoadsAsync(schedule.SemesterId, schedule.FacultyId, cancellationToken);
             var periodLoads = await _repository.GetPeriodLoadsAsync(schedule.SemesterId, schedule.PeriodId, schedule.FacultyId, cancellationToken);
             var sameDayLoads = await _repository.GetSameDayLoadsAsync(schedule.SemesterId, schedule.FacultyId, schedule.ExamDate, cancellationToken);

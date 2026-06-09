@@ -116,16 +116,16 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             return candidatePersonKeys.Where(x => busySet.Contains(x.Value)).Select(x => x.Key).ToHashSet();
         }
 
-        public async Task<List<int>> GetConflictingLecturerIdsAsync(int scheduleId, int semesterId, int periodId, int sessionId, int slotId, IEnumerable<int> userIds, CancellationToken cancellationToken = default)
+        public async Task<List<int>> GetConflictingLecturerIdsAsync(int examInvigilatorId, int scheduleId, int semesterId, int periodId, int sessionId, int slotId, IEnumerable<int> userIds, CancellationToken cancellationToken = default)
         {
             var ids = userIds.Distinct().ToList();
             var candidatePersonKeys = await GetPersonKeysByUserIdAsync(ids, cancellationToken);
             var personKeySet = candidatePersonKeys.Values.ToHashSet();
             var matchingAssignments = _db.ExamInvigilators.AsNoTracking()
-                .Where(x => x.ExamScheduleId != scheduleId && x.ExamSchedule.SemesterId == semesterId && x.ExamSchedule.PeriodId == periodId && x.ExamSchedule.SessionId == sessionId && x.ExamSchedule.SlotId == slotId && personKeySet.Contains(x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId))
+                .Where(x => x.ExamInvigilatorId != examInvigilatorId && x.Status != ExamInvigilatorStatuses.Cancelled && x.ExamSchedule.SemesterId == semesterId && x.ExamSchedule.PeriodId == periodId && x.ExamSchedule.SessionId == sessionId && x.ExamSchedule.SlotId == slotId && personKeySet.Contains(x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId))
                 .Select(x => x.Assignee.InformationId > 0 ? x.Assignee.InformationId : x.AssigneeId);
             var matchingReplacements = _db.ExamInvigilators.AsNoTracking()
-                .Where(x => x.ExamScheduleId != scheduleId && x.ExamSchedule.SemesterId == semesterId && x.ExamSchedule.PeriodId == periodId && x.ExamSchedule.SessionId == sessionId && x.ExamSchedule.SlotId == slotId && x.NewAssigneeId.HasValue && personKeySet.Contains(x.NewAssignee!.InformationId > 0 ? x.NewAssignee.InformationId : x.NewAssigneeId.Value))
+                .Where(x => x.ExamInvigilatorId != examInvigilatorId && x.Status != ExamInvigilatorStatuses.Cancelled && x.ExamSchedule.SemesterId == semesterId && x.ExamSchedule.PeriodId == periodId && x.ExamSchedule.SessionId == sessionId && x.ExamSchedule.SlotId == slotId && x.NewAssigneeId.HasValue && personKeySet.Contains(x.NewAssignee!.InformationId > 0 ? x.NewAssignee.InformationId : x.NewAssigneeId.Value))
                 .Select(x => x.NewAssignee!.InformationId > 0 ? x.NewAssignee.InformationId : x.NewAssigneeId!.Value);
 
             var conflictingPersonKeys = await matchingAssignments.Concat(matchingReplacements).Distinct().ToListAsync(cancellationToken);

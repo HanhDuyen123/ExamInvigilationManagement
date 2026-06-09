@@ -95,6 +95,16 @@
         .assignment-calendar-actions { justify-content:flex-start; }
         .assignment-week-grid { grid-template-columns:repeat(7, minmax(210px, 1fr)); }
     }
+    @@media (max-width: 768px) {
+        .assignment-calendar { padding: 10px; }
+        .assignment-calendar-actions { width: 100%; }
+        .assignment-calendar-actions .btn { flex: 1 1 120px; }
+        .assignment-week-grid { grid-template-columns: 1fr; min-width: 0; }
+        .assignment-day-body { min-height: auto; }
+        .assignment-card-topline,
+        .assignment-day-head { align-items: flex-start; }
+        body .table-modern:has(.assignment-calendar) { overflow-x: visible; }
+    }
 </style>
 
 @section Scripts {

@@ -3,19 +3,22 @@ using ExamInvigilationManagement.Application.Interfaces.Repositories;
 using ExamInvigilationManagement.Application.Interfaces.Service;
 using ExamInvigilationManagement.Common.Constants;
 using Google.OrTools.Sat;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace ExamInvigilationManagement.Application.Services
 {
     public class AutoAssignmentService : IAutoAssignmentService
     {
-        private const int DefaultRequiredInvigilatorsPerSchedule = 2;
         private const int InternalSolverTimeLimitSeconds = 20;
+        private const string PreviewCachePrefix = "AutoAssignmentPreview";
 
         private readonly IAutoAssignmentRepository _repository;
+        private readonly IMemoryCache _memoryCache;
 
-        public AutoAssignmentService(IAutoAssignmentRepository repository)
+        public AutoAssignmentService(IAutoAssignmentRepository repository, IMemoryCache memoryCache)
         {
             _repository = repository;
+            _memoryCache = memoryCache;
         }
 
         public async Task<AutoAssignResultDto> AutoAssignAsync(
@@ -23,6 +26,9 @@ namespace ExamInvigilationManagement.Application.Services
             CancellationToken cancellationToken = default)
         {
             request.PreviewOnly = false;
+            if (!string.IsNullOrWhiteSpace(request.PreviewToken))
+                return await SaveCachedPreviewAsync(request, cancellationToken);
+
             return await BuildAssignmentAsync(request, cancellationToken);
         }
 
@@ -31,7 +37,95 @@ namespace ExamInvigilationManagement.Application.Services
             CancellationToken cancellationToken = default)
         {
             request.PreviewOnly = true;
-            return await BuildAssignmentAsync(request, cancellationToken);
+            var result = await BuildAssignmentAsync(request, cancellationToken);
+            if (result.Success && result.PlanSnapshot != null)
+            {
+                var token = Guid.NewGuid().ToString("N");
+                result.PreviewToken = token;
+                _memoryCache.Set(
+                    BuildPreviewCacheKey(request.AssignerId, token),
+                    new CachedPreviewPlan(
+                        request.AssignerId,
+                        request.SemesterId!.Value,
+                        request.PeriodId!.Value,
+                        result.PlanSnapshot,
+                        CloneResultForCache(result),
+                        DateTime.UtcNow),
+                    TimeSpan.FromMinutes(20));
+            }
+
+            result.PlanSnapshot = null;
+            return result;
+        }
+
+        private async Task<AutoAssignResultDto> SaveCachedPreviewAsync(AutoAssignRequestDto request, CancellationToken cancellationToken)
+        {
+            ValidateRequest(request);
+
+            var key = BuildPreviewCacheKey(request.AssignerId, request.PreviewToken!);
+            if (!_memoryCache.TryGetValue<CachedPreviewPlan>(key, out var cached) || cached == null)
+                throw new InvalidOperationException("Phương án xem trước đã hết hạn hoặc không còn hợp lệ. Vui lòng chạy xem trước lại trước khi lưu.");
+
+            if (cached.AssignerId != request.AssignerId || cached.SemesterId != request.SemesterId || cached.PeriodId != request.PeriodId)
+                throw new InvalidOperationException("Phương án xem trước không khớp với phạm vi phân công hiện tại. Vui lòng chạy xem trước lại.");
+
+            await _repository.SavePlanAsync(cached.Plan, cancellationToken);
+            _memoryCache.Remove(key);
+
+            var result = CloneResultForCache(cached.Result);
+            result.IsPreview = false;
+            result.PreviewToken = null;
+            result.PlanSnapshot = null;
+            result.Message = result.MissingSchedules > 0
+                ? "Đã lưu đúng phương án đã xem trước, nhưng vẫn còn một số lịch thiếu giám thị."
+                : "Đã lưu đúng phương án đã xem trước.";
+            return result;
+        }
+
+        private static string BuildPreviewCacheKey(int assignerId, string token)
+            => $"{PreviewCachePrefix}:{assignerId}:{token}";
+
+        private static AutoAssignResultDto CloneResultForCache(AutoAssignResultDto source)
+        {
+            return new AutoAssignResultDto
+            {
+                Success = source.Success,
+                Message = source.Message,
+                TotalSchedules = source.TotalSchedules,
+                AssignedInvigilators = source.AssignedInvigilators,
+                FullyAssignedSchedules = source.FullyAssignedSchedules,
+                MissingSchedules = source.MissingSchedules,
+                IsPreview = source.IsPreview,
+                IsOptimizationProven = source.IsOptimizationProven,
+                SemesterId = source.SemesterId,
+                PeriodId = source.PeriodId,
+                PreviewToken = source.PreviewToken,
+                Warnings = source.Warnings.ToList(),
+                Details = source.Details.Select(d => new AutoAssignScheduleResultDto
+                {
+                    ExamScheduleId = d.ExamScheduleId,
+                    ExamDate = d.ExamDate,
+                    SlotName = d.SlotName,
+                    RoomDisplay = d.RoomDisplay,
+                    SubjectName = d.SubjectName,
+                    ClassName = d.ClassName,
+                    ExamFormatDisplay = d.ExamFormatDisplay,
+                    StatusBefore = d.StatusBefore,
+                    StatusAfter = d.StatusAfter,
+                    RequiredCount = d.RequiredCount,
+                    AssignedCount = d.AssignedCount,
+                    Message = d.Message,
+                    AssignedLecturers = d.AssignedLecturers.Select(l => new AutoAssignAssignedLecturerDto
+                    {
+                        UserId = l.UserId,
+                        UserName = l.UserName,
+                        FullName = l.FullName,
+                        PositionNo = l.PositionNo,
+                        Score = l.Score,
+                        Reason = l.Reason
+                    }).ToList()
+                }).ToList()
+            };
         }
 
         private async Task<AutoAssignResultDto> BuildAssignmentAsync(
@@ -200,7 +294,10 @@ namespace ExamInvigilationManagement.Application.Services
                 if (!request.PreviewOnly && solverResult.Result.Success)
                     await _repository.SavePlanAsync(solverResult.Plan, cancellationToken);
                 else if (request.PreviewOnly && solverResult.Result.Success)
+                {
+                    solverResult.Result.PlanSnapshot = solverResult.Plan;
                     solverResult.Result.Message = BuildPreviewMessage(solverResult.Result);
+                }
                 return solverResult.Result;
             }
 
@@ -351,7 +448,8 @@ namespace ExamInvigilationManagement.Application.Services
                         subjectLecturerMap,
                         isLecturerRoleByUser,
                         policy,
-                        day);
+                        day,
+                        request.RunSeed.GetValueOrDefault(1));
 
                     if (fallback == null)
                         break;
@@ -414,6 +512,8 @@ namespace ExamInvigilationManagement.Application.Services
                 : result.MissingSchedules > 0
                 ? "Tự động phân công hoàn thành nhưng còn một số lịch thiếu giám thị."
                 : "Tự động phân công hoàn thành.";
+            if (request.PreviewOnly)
+                result.PlanSnapshot = plan;
 
             if (result.MissingSchedules > 0)
                 result.Warnings.Add("Một số lịch không đủ 2 giám thị do không còn người phù hợp theo lịch bận, trùng ca hoặc dữ liệu chuyên môn hiện có.");
@@ -516,7 +616,8 @@ namespace ExamInvigilationManagement.Application.Services
             Dictionary<string, HashSet<int>> subjectLecturerMap,
             Dictionary<int, bool> isLecturerRoleByUser,
             AutoAssignmentPolicyDto policy,
-            DateOnly day)
+            DateOnly day,
+            int runSeed)
         {
             var candidates = lecturers
                 .Where(l =>
@@ -609,9 +710,11 @@ namespace ExamInvigilationManagement.Application.Services
                     return new FallbackCandidate(
                         Lecturer: l,
                         Score: score,
+                        TieBreaker: StableJitter(runSeed, schedule.ExamScheduleId, l.UserId),
                         Reason: reasons.Count > 0 ? string.Join("; ", reasons) : "Đáp ứng ràng buộc bắt buộc");
                 })
                 .OrderByDescending(x => x.Score)
+                .ThenBy(x => x.TieBreaker)
                 .ThenBy(x => x.Lecturer.UserName)
                 .ToList();
 
@@ -962,9 +1065,10 @@ namespace ExamInvigilationManagement.Application.Services
                     }
                 }
 
+                var solverSeed = Math.Max(1, request.RunSeed.GetValueOrDefault(1));
                 var solver = new CpSolver
                 {
-                    StringParameters = $"max_time_in_seconds:{InternalSolverTimeLimitSeconds} num_search_workers:1 random_seed:1 randomize_search:false"
+                    StringParameters = $"max_time_in_seconds:{InternalSolverTimeLimitSeconds} num_search_workers:1 random_seed:{solverSeed} randomize_search:true"
                 };
 
                 var maxShortage = processableSchedules.Sum(x => GetRequiredInvigilators(x, policy));
@@ -1375,6 +1479,17 @@ namespace ExamInvigilationManagement.Application.Services
             };
         }
 
+        private static int StableJitter(int runSeed, int scheduleId, int lecturerId)
+        {
+            unchecked
+            {
+                var hash = runSeed;
+                hash = (hash * 397) ^ scheduleId;
+                hash = (hash * 397) ^ lecturerId;
+                return hash & 0x7fffffff;
+            }
+        }
+
         private static string GetLocationReason(int? locationCost)
         {
             if (!locationCost.HasValue)
@@ -1475,11 +1590,20 @@ namespace ExamInvigilationManagement.Application.Services
         private sealed record FallbackCandidate(
             AutoAssignLecturerDto Lecturer,
             int Score,
+            int TieBreaker,
             string Reason);
 
         private sealed record CpSatAssignmentResult(
             AutoAssignPlanDto Plan,
             AutoAssignResultDto Result);
+
+        private sealed record CachedPreviewPlan(
+            int AssignerId,
+            int SemesterId,
+            int PeriodId,
+            AutoAssignPlanDto Plan,
+            AutoAssignResultDto Result,
+            DateTime CreatedAtUtc);
 
         private sealed record RoomLocation(
             string NormalizedRoom,

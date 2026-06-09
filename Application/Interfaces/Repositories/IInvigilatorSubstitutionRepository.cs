@@ -15,7 +15,7 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
         Task<HashSet<int>> GetPeriodAvailableLecturerIdsAsync(int periodId, int facultyId, IEnumerable<int> userIds, CancellationToken cancellationToken = default);
         Task<bool> HasPeriodAvailabilityListAsync(int periodId, int facultyId, CancellationToken cancellationToken = default);
         Task<HashSet<int>> GetApprovedBusyPeriodLecturerIdsAsync(int periodId, IEnumerable<int> userIds, CancellationToken cancellationToken = default);
-        Task<List<int>> GetConflictingLecturerIdsAsync(int scheduleId, int semesterId, int periodId, int sessionId, int slotId, IEnumerable<int> userIds, CancellationToken cancellationToken = default);
+        Task<List<int>> GetConflictingLecturerIdsAsync(int examInvigilatorId, int scheduleId, int semesterId, int periodId, int sessionId, int slotId, IEnumerable<int> userIds, CancellationToken cancellationToken = default);
         Task<Dictionary<int, int>> GetLecturerLoadsAsync(int semesterId, int facultyId, CancellationToken cancellationToken = default);
         Task<Dictionary<int, int>> GetPeriodLoadsAsync(int semesterId, int periodId, int facultyId, CancellationToken cancellationToken = default);
         Task<Dictionary<int, int>> GetSameDayLoadsAsync(int semesterId, int facultyId, DateTime examDate, CancellationToken cancellationToken = default);

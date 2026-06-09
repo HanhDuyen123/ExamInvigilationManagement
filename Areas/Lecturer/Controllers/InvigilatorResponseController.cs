@@ -55,8 +55,6 @@ namespace ExamInvigilationManagement.Areas.Lecturer.Controllers
             var userId = GetCurrentUserId();
             if (!userId.HasValue) return Unauthorized();
 
-            await ApplyDefaultAcademicContextAsync(userId.Value, search, cancellationToken);
-
             if (string.Equals(viewMode, "calendar", StringComparison.OrdinalIgnoreCase))
             {
                 var calendar = await _service.GetAssignmentCalendarWeekAsync(userId.Value, search, weekStart, cancellationToken);

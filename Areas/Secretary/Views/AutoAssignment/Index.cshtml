@@ -25,9 +25,10 @@
 
     <form asp-area="Secretary" asp-controller="AutoAssignment" asp-action="Preview" method="post" class="auto-assign-layout" data-loading-message="Hệ thống đang phân tích lịch thi và tạo bản xem trước phương án phân công. Vui lòng chờ trong giây lát.">
         @Html.AntiForgeryToken()
+        <input type="hidden" name="RunSeed" value="@(Model.RunSeed ?? Random.Shared.Next(1, int.MaxValue))" />
 
         <div class="form-card auto-assign-form-card">
-            <div asp-validation-summary="All" class="alert alert-danger auto-assign-full auto-assign-validation"></div>
+            @* <div asp-validation-summary="All" class="alert alert-danger auto-assign-full auto-assign-validation"></div> *@
 
             <div class="auto-assign-section auto-assign-full">
                 <div class="section-icon"><i class="bi bi-funnel"></i></div>

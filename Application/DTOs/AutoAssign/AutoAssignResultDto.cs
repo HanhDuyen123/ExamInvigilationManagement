@@ -13,6 +13,10 @@
         public bool IsOptimizationProven { get; set; } = true;
         public int? SemesterId { get; set; }
         public int? PeriodId { get; set; }
+        public string? PreviewToken { get; set; }
+
+        [System.Text.Json.Serialization.JsonIgnore]
+        public AutoAssignPlanDto? PlanSnapshot { get; set; }
 
         public List<string> Warnings { get; set; } = new();
         public List<AutoAssignScheduleResultDto> Details { get; set; } = new();

@@ -123,19 +123,6 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             int scheduleId,
             CancellationToken cancellationToken = default)
         {
-            var assignmentLogs = await _db.ExamInvigilators
-                .AsNoTracking()
-                .Where(x => x.ExamScheduleId == scheduleId && x.Status != ExamInvigilatorStatuses.Cancelled)
-                .Select(x => new ManualAssignmentActivityLogDto
-                {
-                    OccurredAt = x.CreateAt,
-                    Type = "assign",
-                    Title = "Phân công giám thị",
-                    Description = "Vị trí GT " + x.PositionNo + " được phân công cho " +
-                                  (x.Assignee.Information != null ? x.Assignee.Information.LastName + " " + x.Assignee.Information.FirstName : x.Assignee.UserName)
-                })
-                .ToListAsync(cancellationToken);
-
             var responseLogs = await _db.InvigilatorResponses
                 .AsNoTracking()
                 .Where(x => x.ExamInvigilator.ExamScheduleId == scheduleId)
@@ -203,8 +190,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                 Description = BuildAssignmentHistoryDescription(x, historyUsers)
             }).ToList();
 
-            return assignmentLogs
-                .Concat(responseLogs)
+            return responseLogs
                 .Concat(substitutionLogs)
                 .Concat(historyLogs)
                 .Where(x => x.OccurredAt.HasValue)

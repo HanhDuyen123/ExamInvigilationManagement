@@ -8,6 +8,7 @@ namespace ExamInvigilationManagement.Application.Services
     public class ManualAssignmentService : IManualAssignmentService
     {
         private const int RequiredInvigilatorsPerSchedule = 2;
+        private const string DuplicateInvigilatorMessage = "Không được chọn cùng một người cho 2 vị trí khác nhau.";
 
         private readonly IManualAssignmentRepository _repository;
 
@@ -291,21 +292,20 @@ namespace ExamInvigilationManagement.Application.Services
                 return Fail(schedule.ExamScheduleId, "Vui lòng thay đổi ít nhất 1 vị trí giám thị trước khi lưu.");
             }
 
-            // Không được chọn cùng 1 giảng viên cho 2 vị trí
             var finalSelectedUserIds = selectedByPosition.Values.Where(x => x.HasValue).Select(x => x!.Value).ToList();
             var selectedUserIds = selectedAssignments.Values.Concat(selectedReplacements.Values).ToList();
             if (selectedUserIds.Distinct().Count() != selectedUserIds.Count)
-                errors.Add("Không được chọn cùng một giảng viên cho 2 vị trí khác nhau.");
+                errors.Add(DuplicateInvigilatorMessage);
 
             if (finalSelectedUserIds.Distinct().Count() != finalSelectedUserIds.Count)
-                errors.Add("Không được chọn cùng một giảng viên cho 2 vị trí khác nhau.");
+                errors.Add(DuplicateInvigilatorMessage);
 
             var selectedPersonKeys = finalSelectedUserIds
                 .Where(lecturerOptions.ContainsKey)
                 .Select(x => lecturerOptions[x].PersonKey)
                 .ToList();
             if (selectedPersonKeys.Distinct().Count() != selectedPersonKeys.Count)
-                errors.Add("Không được chọn cùng một người cho 2 vị trí khác nhau, kể cả khi người đó có nhiều tài khoản/role.");
+                errors.Add(DuplicateInvigilatorMessage);
 
             foreach (var kvp in selectedAssignments.Concat(selectedReplacements))
             {

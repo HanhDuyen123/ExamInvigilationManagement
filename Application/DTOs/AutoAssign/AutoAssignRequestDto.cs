@@ -14,5 +14,9 @@ namespace ExamInvigilationManagement.Application.DTOs.AutoAssign
         public int AssignerId { get; set; }
 
         public bool PreviewOnly { get; set; }
+
+        public string? PreviewToken { get; set; }
+
+        public int? RunSeed { get; set; }
     }
 }

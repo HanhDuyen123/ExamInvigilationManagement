@@ -111,7 +111,7 @@ namespace ExamInvigilationManagement.Application.Services
             ],
             "lecturer-busy-slot" =>
             [
-                Col("UserName", "Tên đăng nhập giảng viên", true, "Tài khoản giảng viên đã tồn tại.", "gv001"),
+                Col("UserName", "Tên đăng nhập giảng viên", true, "Tài khoản hợp lệ đã tồn tại; không bắt buộc role Giảng viên.", "gv001"),
                 Col("AcademyYearName", "Năm học", true, "Tên năm học phải khớp chính xác.", "2025-2026"),
                 Col("SemesterName", "Học kỳ", true, "Tên học kỳ trong năm học đã chọn.", "Học kỳ 1"),
                 Col("PeriodName", "Đợt thi", true, "Tên đợt thi trong học kỳ.", "Đợt 1"),
@@ -122,9 +122,9 @@ namespace ExamInvigilationManagement.Application.Services
             ],
             "lecturer-period-availability" =>
             [
-                Col("UserName", "Tên đăng nhập giảng viên", true, "Tài khoản giảng viên có khả năng tham gia coi thi trong đợt.", "gv001"),
-                Col("LastName", "Họ", true, "Họ giảng viên phải khớp với tên đăng nhập trong hệ thống.", "Nguyễn Văn"),
-                Col("FirstName", "Tên", true, "Tên giảng viên phải khớp với tên đăng nhập trong hệ thống.", "An"),
+                Col("UserName", "Tên đăng nhập giảng viên", true, "Tài khoản hợp lệ có khả năng tham gia coi thi trong đợt; không bắt buộc role Giảng viên.", "gv001"),
+                Col("LastName", "Họ", true, "Họ phải khớp với tên đăng nhập trong hệ thống.", "Nguyễn Văn"),
+                Col("FirstName", "Tên", true, "Tên phải khớp với tên đăng nhập trong hệ thống.", "An"),
                 Col("AcademyYearName", "Năm học", true, "Tên năm học phải khớp chính xác.", "2025-2026"),
                 Col("SemesterName", "Học kỳ", true, "Tên học kỳ trong năm học đã chọn.", "Học kỳ 1"),
                 Col("PeriodName", "Đợt thi", true, "Tên đợt thi trong học kỳ.", "Đợt 1"),
@@ -133,7 +133,7 @@ namespace ExamInvigilationManagement.Application.Services
             "exam-invigilator" =>
             [
                 Col("ExamScheduleId", "Mã lịch thi", true, "ExamScheduleId đã tồn tại.", "1"),
-                Col("AssigneeUserName", "Tên đăng nhập giám thị", true, "Tài khoản giảng viên cùng khoa.", "gv001"),
+                Col("AssigneeUserName", "Tên đăng nhập giám thị", true, "Tài khoản hợp lệ có thể tham gia coi thi; không bắt buộc role Giảng viên.", "gv001"),
                 Col("PositionNo", "Vị trí", true, "Chỉ nhận 1 hoặc 2.", "1"),
                 Col("Status", "Trạng thái", false, "Mặc định Chờ xác nhận.", "Chờ xác nhận")
             ],
@@ -148,18 +148,33 @@ namespace ExamInvigilationManagement.Application.Services
             {
                 var workbookPart = document.AddWorkbookPart();
                 workbookPart.Workbook = new Workbook();
+                var stylesPart = workbookPart.AddNewPart<WorkbookStylesPart>();
+                stylesPart.Stylesheet = BuildImportStylesheet();
+                stylesPart.Stylesheet.Save();
                 var worksheetPart = workbookPart.AddNewPart<WorksheetPart>();
                 var sheetData = new SheetData();
-                worksheetPart.Worksheet = new Worksheet(sheetData);
+                var columnCount = Math.Max(1, columns.Count);
+                worksheetPart.Worksheet = new Worksheet(BuildImportColumns(columns), sheetData);
                 var sheets = workbookPart.Workbook.AppendChild(new Sheets());
                 sheets.Append(new Sheet { Id = workbookPart.GetIdOfPart(worksheetPart), SheetId = 1, Name = "Import" });
 
-                sheetData.Append(BuildRow(1, [DocumentLetterhead.Ministry, string.Empty, string.Empty, DocumentLetterhead.Nation]));
-                sheetData.Append(BuildRow(2, [DocumentLetterhead.School, string.Empty, string.Empty, DocumentLetterhead.Motto]));
-                sheetData.Append(BuildRow(4, [GetModuleTitle(module).ToUpperInvariant()]));
-                sheetData.Append(BuildRow(6, columns.Select(x => x.Header)));
-                sheetData.Append(BuildRow(7, columns.Select(x => x.Example)));
-                sheetData.Append(BuildRow(8, columns.Select(x => x.Description)));
+                string[] SpreadHeader(string left, string right)
+                {
+                    var values = Enumerable.Repeat(string.Empty, columnCount).ToArray();
+                    values[0] = left;
+                    values[^1] = right;
+                    return values;
+                }
+
+                sheetData.Append(BuildRow(1, SpreadHeader(DocumentLetterhead.Ministry, DocumentLetterhead.Nation), 3));
+                sheetData.Append(BuildRow(2, SpreadHeader(DocumentLetterhead.School, DocumentLetterhead.Motto), 3));
+                sheetData.Append(BuildRow(4, [GetModuleTitle(module).ToUpperInvariant()], 2));
+                sheetData.Append(BuildRow(5, [$"Nhập dữ liệu từ dòng 7. Các cột bắt buộc: {string.Join(", ", columns.Where(x => x.Required).Select(x => x.Header))}"], 4));
+                sheetData.Append(BuildRow(6, columns.Select(x => x.Header), 1));
+
+                worksheetPart.Worksheet.Append(new MergeCells(
+                    new MergeCell { Reference = new StringValue($"A4:{GetExcelColumnName(columnCount)}4") },
+                    new MergeCell { Reference = new StringValue($"A5:{GetExcelColumnName(columnCount)}5") }));
                 workbookPart.Workbook.Save();
             }
             return stream.ToArray();
@@ -563,8 +578,8 @@ namespace ExamInvigilationManagement.Application.Services
             {
                 var r = RowNo(row);
                 var userName = Val(row, "Tên đăng nhập giảng viên").Trim();
-                if (!users.TryGetValue(userName, out var user) || user.Role.RoleName != "Giảng viên") result.Errors.Add(Error(r, "Tên đăng nhập giảng viên", userName, "Không tồn tại hoặc không phải giảng viên."));
-                if (currentRole == "Thư ký khoa" && user != null && user.FacultyId != currentFacultyId) result.Errors.Add(Error(r, "Tên đăng nhập giảng viên", userName, "Không thuộc khoa của thư ký hiện tại."));
+                if (!users.TryGetValue(userName, out var user)) result.Errors.Add(Error(r, "Tên đăng nhập", userName, "Tài khoản không tồn tại."));
+                if (currentRole == "Thư ký khoa" && user != null && user.FacultyId != currentFacultyId) result.Errors.Add(Error(r, "Tên đăng nhập", userName, "Không thuộc khoa của thư ký hiện tại."));
                 var year = ResolveOne(years, x => x.AcademyYearName, Val(row, "Năm học"), result, r, "Năm học");
                 var semester = ResolveSemester(semesters.Where(x => year == null || x.AcademyYearId == year.AcademyYearId), x => x.SemesterName, Val(row, "Học kỳ"), result, r, "Học kỳ");
                 if (semester?.EndDate.HasValue == true && semester.EndDate.Value.Date < today)
@@ -600,7 +615,7 @@ namespace ExamInvigilationManagement.Application.Services
                 var userName = Val(row, "Tên đăng nhập giảng viên").Trim();
                 var lastName = Val(row, "Họ");
                 var firstName = Val(row, "Tên");
-                if (!users.TryGetValue(userName, out var user) || user.Role.RoleName != "Giảng viên") result.Errors.Add(Error(r, "Tên đăng nhập giảng viên", userName, "Không tồn tại hoặc không phải giảng viên."));
+                if (!users.TryGetValue(userName, out var user)) result.Errors.Add(Error(r, "Tên đăng nhập", userName, "Tài khoản không tồn tại."));
                 Required(result, r, "Họ", lastName);
                 Required(result, r, "Tên", firstName);
                 if (user?.Information != null)
@@ -613,18 +628,18 @@ namespace ExamInvigilationManagement.Application.Services
                     var importedFullName = NormalizePersonName($"{lastName} {firstName}");
                     var systemFullName = NormalizePersonName($"{user.Information.LastName} {user.Information.FirstName}");
                     if (!string.IsNullOrWhiteSpace(importedFullName) && importedFullName != systemFullName)
-                        result.Errors.Add(Error(r, "Họ/Tên", $"{lastName} {firstName}", $"Không cùng giảng viên với tên đăng nhập {userName} ({user.Information.LastName} {user.Information.FirstName})."));
+                        result.Errors.Add(Error(r, "Họ/Tên", $"{lastName} {firstName}", $"Không cùng tài khoản với tên đăng nhập {userName} ({user.Information.LastName} {user.Information.FirstName})."));
                 }
                 else if (user != null)
                 {
-                    result.Errors.Add(Error(r, "Tên đăng nhập giảng viên", userName, "Tài khoản chưa gắn hồ sơ thông tin để đối chiếu họ tên."));
+                    result.Errors.Add(Error(r, "Tên đăng nhập", userName, "Tài khoản chưa gắn hồ sơ thông tin để đối chiếu họ tên."));
                 }
 
                 var year = ResolveOne(years, x => x.AcademyYearName, Val(row, "Năm học"), result, r, "Năm học");
                 var semester = ResolveSemester(semesters.Where(x => year == null || x.AcademyYearId == year.AcademyYearId), x => x.SemesterName, Val(row, "Học kỳ"), result, r, "Học kỳ");
                 var period = ResolveExamPeriod(periods.Where(x => semester == null || x.SemesterId == semester.SemesterId), x => x.PeriodName, Val(row, "Đợt thi"), result, r, "Đợt thi");
                 var key = (user?.UserId ?? 0, period?.PeriodId ?? 0);
-                if (!seen.Add(key)) result.Errors.Add(Error(r, "Dòng", $"{userName}-{period?.PeriodName}", "Giảng viên bị trùng trong danh sách khả thi."));
+                if (!seen.Add(key)) result.Errors.Add(Error(r, "Dòng", $"{userName}-{period?.PeriodName}", "Tài khoản bị trùng trong danh sách khả thi."));
 
                 list.Add(new E.LecturerPeriodAvailability
                 {
@@ -662,12 +677,12 @@ namespace ExamInvigilationManagement.Application.Services
                 if (!TryInt(row, "Mã lịch thi", result, r, out var scheduleId) || !schedules.TryGetValue(scheduleId, out schedule)) result.Errors.Add(Error(r, "Mã lịch thi", Val(row, "Mã lịch thi"), "Không tồn tại."));
                 else if (schedule.Offering.UserId == currentUserId) { }
                 var userName = Val(row, "Tên đăng nhập giám thị").Trim();
-                if (!users.TryGetValue(userName, out var user) || user.Role.RoleName != "Giảng viên") result.Errors.Add(Error(r, "Tên đăng nhập giám thị", userName, "Không tồn tại hoặc không phải giảng viên."));
+                if (!users.TryGetValue(userName, out var user)) result.Errors.Add(Error(r, "Tên đăng nhập giám thị", userName, "Tài khoản không tồn tại."));
                 if (user != null && schedule != null && user.FacultyId != currentFacultyId && (!schedule.SupportRequestedAt.HasValue || !supportAvailabilitySet.Contains((user.UserId, schedule.PeriodId))))
-                    result.Errors.Add(Error(r, "Tên đăng nhập giám thị", userName, "Giảng viên khác khoa chỉ được phân công sau khi lịch đã gửi hỗ trợ CBCT và giảng viên có trong danh sách khả dụng đã import."));
+                    result.Errors.Add(Error(r, "Tên đăng nhập giám thị", userName, "Tài khoản khác khoa chỉ được phân công sau khi lịch đã gửi hỗ trợ CBCT và tài khoản có trong danh sách khả dụng đã import."));
                 if (!TryByte(row, "Vị trí", result, r, out var pos) || pos is < 1 or > 2) result.Errors.Add(Error(r, "Vị trí", Val(row, "Vị trí"), "Chỉ nhận 1 hoặc 2."));
                 if (!seenPos.Add((scheduleId, pos)) || occupiedPositions.Contains((scheduleId, pos))) result.Errors.Add(Error(r, "Vị trí", pos.ToString(), "Vị trí giám thị của lịch thi đã có người hoặc bị trùng trong file."));
-                if (user != null && assignedUsers.Contains((scheduleId, user.UserId))) result.Errors.Add(Error(r, "Tên đăng nhập giám thị", userName, "Giảng viên đã được phân công ở lịch này."));
+                if (user != null && assignedUsers.Contains((scheduleId, user.UserId))) result.Errors.Add(Error(r, "Tên đăng nhập giám thị", userName, "Tài khoản đã được phân công ở lịch này."));
                 var status = Val(row, "Trạng thái").Trim();
                 if (string.IsNullOrWhiteSpace(status)) status = ExamInvigilatorStatuses.PendingConfirmation;
                 if (!ValidInvigilatorStatuses.Contains(status)) result.Errors.Add(Error(r, "Trạng thái", status, "Không hợp lệ."));
@@ -944,9 +959,6 @@ namespace ExamInvigilationManagement.Application.Services
                 foreach (var row in excelRows.Where(x => (x.RowIndex?.Value ?? 0) > headerRowIndex))
                 {
                     var currentRowIndex = row.RowIndex?.Value ?? 0;
-                    if (headerRowIndex == 6 && (currentRowIndex == 7 || currentRowIndex == 8))
-                        continue;
-
                     var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase) { ["__RowNumber"] = row.RowIndex?.Value.ToString() ?? "0" };
                     foreach (var cell in row.Elements<Cell>())
                     {
@@ -1314,7 +1326,76 @@ namespace ExamInvigilationManagement.Application.Services
             return System.Text.RegularExpressions.Regex.Replace(builder.ToString().Normalize(NormalizationForm.FormC), @"[-/]", "-");
         }
 
-        private static Row BuildRow(uint index, IEnumerable<string> values)
+        private static Columns BuildImportColumns(IReadOnlyList<ImportColumnDto> columns)
+        {
+            var cols = new Columns();
+            for (var i = 0; i < columns.Count; i++)
+            {
+                var width = Math.Clamp(columns[i].Header.Length * 1.2 + 10, 14, 34);
+                cols.Append(new Column
+                {
+                    Min = (uint)(i + 1),
+                    Max = (uint)(i + 1),
+                    Width = width,
+                    CustomWidth = true
+                });
+            }
+
+            return cols;
+        }
+
+        private static Stylesheet BuildImportStylesheet()
+        {
+            var fonts = new Fonts(
+                new Font(),
+                new Font(
+                    new Bold(),
+                    new Color { Rgb = "FFFFFF" }),
+                new Font(
+                    new Bold(),
+                    new FontSize { Val = 14D }),
+                new Font(
+                    new Bold(),
+                    new FontSize { Val = 11D }),
+                new Font(
+                    new Italic(),
+                    new FontSize { Val = 10D },
+                    new Color { Rgb = "64748B" }));
+
+            var fills = new Fills(
+                new Fill(new PatternFill { PatternType = PatternValues.None }),
+                new Fill(new PatternFill { PatternType = PatternValues.Gray125 }),
+                new Fill(new PatternFill(new ForegroundColor { Rgb = "1D4ED8" }) { PatternType = PatternValues.Solid }),
+                new Fill(new PatternFill(new ForegroundColor { Rgb = "EFF6FF" }) { PatternType = PatternValues.Solid }),
+                new Fill(new PatternFill(new ForegroundColor { Rgb = "F8FAFC" }) { PatternType = PatternValues.Solid }));
+
+            var borders = new Borders(
+                new Border(),
+                new Border(
+                    new LeftBorder(new Color { Auto = true }) { Style = BorderStyleValues.Thin },
+                    new RightBorder(new Color { Auto = true }) { Style = BorderStyleValues.Thin },
+                    new TopBorder(new Color { Auto = true }) { Style = BorderStyleValues.Thin },
+                    new BottomBorder(new Color { Auto = true }) { Style = BorderStyleValues.Thin },
+                    new DiagonalBorder()),
+                new Border(
+                    new LeftBorder(new Color { Auto = true }) { Style = BorderStyleValues.Thin },
+                    new RightBorder(new Color { Auto = true }) { Style = BorderStyleValues.Thin },
+                    new TopBorder(new Color { Auto = true }) { Style = BorderStyleValues.Thin },
+                    new BottomBorder(new Color { Auto = true }) { Style = BorderStyleValues.Thin },
+                    new DiagonalBorder()));
+
+            var cellFormats = new CellFormats(
+                new CellFormat { FontId = 0, FillId = 0, BorderId = 0, ApplyFont = true },
+                new CellFormat { FontId = 1, FillId = 2, BorderId = 0, ApplyFont = true, ApplyAlignment = true, Alignment = new Alignment { Horizontal = HorizontalAlignmentValues.Center } },
+                new CellFormat { FontId = 2, FillId = 4, BorderId = 0, ApplyFont = true, ApplyAlignment = true, Alignment = new Alignment { Horizontal = HorizontalAlignmentValues.Center } },
+                new CellFormat { FontId = 3, FillId = 3, BorderId = 1, ApplyFont = true, ApplyFill = true, ApplyBorder = true, ApplyAlignment = true, Alignment = new Alignment { Horizontal = HorizontalAlignmentValues.Center, Vertical = VerticalAlignmentValues.Center } },
+                new CellFormat { FontId = 4, FillId = 4, BorderId = 0, ApplyFont = true, ApplyFill = true, ApplyAlignment = true, Alignment = new Alignment { Horizontal = HorizontalAlignmentValues.Left, WrapText = true } },
+                new CellFormat { FontId = 0, FillId = 0, BorderId = 2, ApplyBorder = true, ApplyAlignment = true, Alignment = new Alignment { WrapText = true } });
+
+            return new Stylesheet(fonts, fills, borders, cellFormats);
+        }
+
+        private static Row BuildRow(uint index, IEnumerable<string> values, uint styleIndex = 0)
         {
             var row = new Row { RowIndex = index };
             var column = 1;
@@ -1324,7 +1405,8 @@ namespace ExamInvigilationManagement.Application.Services
                 {
                     CellReference = GetExcelColumnName(column++) + index,
                     DataType = CellValues.String,
-                    CellValue = new CellValue(value ?? string.Empty)
+                    CellValue = new CellValue(value ?? string.Empty),
+                    StyleIndex = styleIndex
                 });
             }
             return row;

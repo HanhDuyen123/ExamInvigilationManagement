@@ -15,13 +15,16 @@ namespace ExamInvigilationManagement.Application.Services
         private const string NotificationType = "ExamScheduleApproval";
 
         private readonly IExamScheduleApprovalRepository _repository;
+        private readonly IInvigilatorResponseRepository _invigilatorResponseRepository;
         private readonly INotificationService _notificationService;
 
         public ExamScheduleApprovalService(
             IExamScheduleApprovalRepository repository,
+            IInvigilatorResponseRepository invigilatorResponseRepository,
             INotificationService notificationService)
         {
             _repository = repository;
+            _invigilatorResponseRepository = invigilatorResponseRepository;
             _notificationService = notificationService;
         }
 
@@ -147,6 +150,9 @@ namespace ExamInvigilationManagement.Application.Services
 
             int notificationsSent = 0;
 
+            if (request.IsApproved)
+                notificationsSent += await NotifyApprovedInvigilatorsAsync(targets, userId, cancellationToken);
+
             if (context.RoleName.Equals(RoleDean, StringComparison.OrdinalIgnoreCase))
             {
                 var secretaryIds = await _repository.GetSecretaryRecipientIdsAsync(
@@ -243,6 +249,48 @@ namespace ExamInvigilationManagement.Application.Services
                 Message = message,
                 Errors = new List<string> { message }
             };
+        }
+
+        private async Task<int> NotifyApprovedInvigilatorsAsync(
+            IReadOnlyList<ExamScheduleApprovalIndexItemDto> targets,
+            int actorUserId,
+            CancellationToken cancellationToken)
+        {
+            var schedules = await _invigilatorResponseRepository.GetConfirmationSchedulesAsync(
+                targets.Select(x => x.ExamScheduleId),
+                cancellationToken);
+
+            var lecturerGroups = schedules
+                .SelectMany(schedule => schedule.Lecturers.Select(lecturer => new { Schedule = schedule, Lecturer = lecturer }))
+                .GroupBy(x => x.Lecturer.UserId)
+                .ToList();
+
+            var sent = 0;
+            foreach (var group in lecturerGroups)
+            {
+                var lecturer = group.First().Lecturer;
+                var groupSchedules = group.Select(x => x.Schedule).DistinctBy(x => x.ExamScheduleId).ToList();
+
+                await _invigilatorResponseRepository.MarkConfirmationSentAsync(
+                    groupSchedules.Select(x => x.ExamScheduleId),
+                    lecturer.UserId,
+                    cancellationToken);
+
+                await _notificationService.CreateAsync(new NotificationWriteDto
+                {
+                    UserId = lecturer.UserId,
+                    Title = "Lịch coi thi đã được duyệt",
+                    Content = $"Bạn có {groupSchedules.Count} lịch coi thi đã được duyệt và cần phản hồi xác nhận hoặc từ chối trong vòng 48 giờ.",
+                    Type = NotificationTypes.SchedulePublished,
+                    RelatedId = groupSchedules.Count == 1 ? groupSchedules[0].ExamScheduleId : null,
+                    CreatedBy = actorUserId,
+                    IsRead = false,
+                    CreatedAt = DateTime.Now
+                }, cancellationToken);
+                sent++;
+            }
+
+            return sent;
         }
     }
 }
