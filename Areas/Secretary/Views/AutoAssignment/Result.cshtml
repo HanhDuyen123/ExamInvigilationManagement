@@ -14,6 +14,20 @@
         <div class="d-flex flex-wrap gap-2">
             @if (Model.IsPreview && Model.Success)
             {
+                @if (Model.HasSavedDraft && !Model.DraftSaved && Model.Comparison == null)
+                {
+                    <form asp-area="Secretary" asp-controller="AutoAssignment" asp-action="CompareDraft" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="SemesterId" value="@Model.SemesterId" />
+                        <input type="hidden" name="PeriodId" value="@Model.PeriodId" />
+                        <input type="hidden" name="PreviewToken" value="@Model.PreviewToken" />
+                        <button type="submit" class="btn btn-outline-info rounded-3">
+                            <i class="bi bi-layout-split"></i>
+                            <span>So sánh với bản tạm</span>
+                        </button>
+                    </form>
+                }
+
                 <form asp-area="Secretary" asp-controller="AutoAssignment" asp-action="Run" method="post" class="d-inline" data-loading-message="Hệ thống đang lưu phương án phân công và cập nhật trạng thái lịch thi. Vui lòng chờ trong giây lát.">
                     @Html.AntiForgeryToken()
                     <input type="hidden" name="SemesterId" value="@Model.SemesterId" />
@@ -24,6 +38,20 @@
                         <span>Lưu phương án này</span>
                     </button>
                 </form>
+
+                @if (!Model.DraftSaved)
+                {
+                    <form asp-area="Secretary" asp-controller="AutoAssignment" asp-action="SaveDraft" method="post" class="d-inline">
+                        @Html.AntiForgeryToken()
+                        <input type="hidden" name="SemesterId" value="@Model.SemesterId" />
+                        <input type="hidden" name="PeriodId" value="@Model.PeriodId" />
+                        <input type="hidden" name="PreviewToken" value="@Model.PreviewToken" />
+                        <button type="submit" class="btn btn-outline-primary rounded-3">
+                            <i class="bi bi-bookmark-plus"></i>
+                            <span>Lưu bản tạm</span>
+                        </button>
+                    </form>
+                }
             }
             else if (Model.IsPreview)
             {
@@ -31,6 +59,19 @@
                     <i class="bi bi-lock"></i>
                     <span>Chưa thể lưu</span>
                 </button>
+            }
+            @if (Model.IsPreview && Model.HasSavedDraft && Model.DraftSaved)
+            {
+                <form asp-area="Secretary" asp-controller="AutoAssignment" asp-action="ClearDraft" method="post" class="d-inline">
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="SemesterId" value="@Model.SemesterId" />
+                    <input type="hidden" name="PeriodId" value="@Model.PeriodId" />
+                    <input type="hidden" name="PreviewToken" value="@Model.PreviewToken" />
+                    <button type="submit" class="btn btn-outline-danger rounded-3">
+                        <i class="bi bi-bookmark-x"></i>
+                        <span>Xoá bản tạm</span>
+                    </button>
+                </form>
             }
             <a href="@Url.Action("Index", "ExamSchedule", new { area = "" })" class="btn btn-outline-primary rounded-3">
                 <i class="bi bi-calendar-week"></i>
@@ -58,92 +99,198 @@
         </div>
     }
 
-    <div class="auto-result-stats mb-4">
-        <div class="auto-stat-card">
-            <span>Tổng lịch</span>
-            <strong>@Model.TotalSchedules</strong>
-        </div>
-        <div class="auto-stat-card success">
-            <span>Giám thị mới</span>
-            <strong>@Model.AssignedInvigilators</strong>
-        </div>
-        <div class="auto-stat-card primary">
-            <span>Lịch đủ giám thị</span>
-            <strong>@Model.FullyAssignedSchedules</strong>
-        </div>
-        <div class="auto-stat-card warning">
-            <span>Còn thiếu</span>
-            <strong>@Model.MissingSchedules</strong>
-        </div>
-    </div>
+    @if (Model.Comparison != null)
+    {
+        <div class="comparison-card mb-4">
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                <div>
+                    <div class="comparison-title">So sánh với bản tạm</div>
+                    <div class="comparison-subtitle">@Model.Comparison.Summary</div>
+                </div>
+                <span class="badge bg-info text-dark rounded-pill px-3 py-2">Bản tạm đã lưu</span>
+            </div>
 
-    <div class="table-modern">
-        <div class="table-inner full-width">
-            <table class="modern-table schedule-table-compact auto-result-table">
-                <thead>
-                    <tr>
-                        <th class="col-id">#</th>
-                        <th>Môn học</th>
-                        <th>Lớp</th>
-                        <th>Ngày thi</th>
-                        <th>Ca / Phòng</th>
-                        <th>Trạng thái</th>
-                        <th>Giám thị được gán</th>
-                        <th>Ghi chú</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @if (!Model.Details.Any())
-                    {
+            <div class="comparison-grid">
+                <div class="comparison-metric">
+                    <span>Giám thị mới</span>
+                    <strong>@Model.AssignedInvigilators</strong>
+                    <small>Bản hiện tại</small>
+                </div>
+                <div class="comparison-metric">
+                    <span>Giám thị mới</span>
+                    <strong>@Model.Comparison.BaselineAssignedInvigilators</strong>
+                    <small>Bản tạm</small>
+                </div>
+                <div class="comparison-metric">
+                    <span>Lịch thay đổi</span>
+                    <strong>@Model.Comparison.ChangedSchedules</strong>
+                    <small>Khác bản tạm</small>
+                </div>
+                <div class="comparison-metric">
+                    <span>Lượt gán thêm / bỏ</span>
+                    <strong>@Model.Comparison.AddedAssignments / @Model.Comparison.RemovedAssignments</strong>
+                    <small>Theo vị trí giám thị</small>
+                </div>
+            </div>
+
+            @if (Model.Comparison.ChangedDetails.Any())
+            {
+                <div class="comparison-detail mt-3">
+                    <div class="comparison-detail-title">Chi tiết lịch thay đổi</div>
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-0 comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Lịch thi</th>
+                                    <th>Ngày / Ca / Phòng</th>
+                                    <th>Trạng thái</th>
+                                    <th>Thay đổi giám thị</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var changed in Model.Comparison.ChangedDetails)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@changed.SubjectName</strong><br />
+                                            <span class="text-muted">@changed.ClassName</span>
+                                        </td>
+                                        <td>
+                                            @changed.ExamDate.ToString("dd/MM/yyyy")<br />
+                                            <span class="text-muted">@changed.SlotName - @changed.RoomDisplay</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark border">@changed.StatusBefore</span>
+                                            <i class="bi bi-arrow-right mx-1 text-muted"></i>
+                                            <span class="badge @(changed.StatusAfter == "Chờ duyệt" ? "bg-success" : changed.StatusAfter == "Thiếu giám thị" ? "bg-warning text-dark" : "bg-secondary")">@changed.StatusAfter</span>
+                                        </td>
+                                        <td>
+                                            @foreach (var position in changed.Positions)
+                                            {
+                                                <div class="comparison-position @(position.Changed ? "changed" : "")">
+                                                    <strong>GT @position.PositionNo</strong>
+                                                    <span>@position.BaselineLecturerName</span>
+                                                    <i class="bi bi-arrow-right"></i>
+                                                    <span>@position.CurrentLecturerName</span>
+                                                </div>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+
+    @if (Model.Comparison == null)
+    {
+        <div class="auto-result-stats mb-4">
+            <div class="auto-stat-card">
+                <span>Tổng lịch</span>
+                <strong>@Model.TotalSchedules</strong>
+            </div>
+            <div class="auto-stat-card success">
+                <span>Giám thị mới</span>
+                <strong>@Model.AssignedInvigilators</strong>
+            </div>
+            <div class="auto-stat-card primary">
+                <span>Lịch đủ giám thị</span>
+                <strong>@Model.FullyAssignedSchedules</strong>
+            </div>
+            <div class="auto-stat-card warning">
+                <span>Còn thiếu</span>
+                <strong>@Model.MissingSchedules</strong>
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+            <div class="text-muted small">
+                Chọn số dòng mỗi trang để xem nhanh hơn hoặc mở rộng khi cần đối chiếu nhiều lịch.
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <label for="autoResultPageSize" class="form-label mb-0 small text-muted">Dòng/trang</label>
+                <select id="autoResultPageSize" class="form-select form-select-sm auto-result-page-size">
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                    <option value="all">Tất cả</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="table-modern">
+            <div class="table-inner full-width">
+                <table class="modern-table schedule-table-compact auto-result-table">
+                    <thead>
                         <tr>
-                            <td colspan="8" class="text-center text-muted py-4">Không có lịch cần hiển thị.</td>
+                            <th class="col-id">#</th>
+                            <th>Môn học</th>
+                            <th>Lớp</th>
+                            <th>Ngày thi</th>
+                            <th>Ca / Phòng</th>
+                            <th>Trạng thái</th>
+                            <th>Giám thị được gán</th>
+                            <th>Ghi chú</th>
                         </tr>
-                    }
-                    else
-                    {
-                        @foreach (var item in Model.Details)
+                    </thead>
+                    <tbody>
+                        @if (!Model.Details.Any())
                         {
-                            <tr class="auto-result-row">
-                                <td class="cell-code">@item.ExamScheduleId</td>
-                                <td class="cell-wrap">@item.SubjectName</td>
-                                <td class="cell-wrap">@item.ClassName<br /><span class="text-muted">@(string.IsNullOrWhiteSpace(item.ExamFormatDisplay) ? "Chưa có hình thức thi" : item.ExamFormatDisplay)</span></td>
-                                <td class="cell-nowrap">@item.ExamDate.ToString("dd/MM/yyyy")</td>
-                                <td class="cell-wrap">@item.SlotName<br /><span class="text-muted">@item.RoomDisplay</span></td>
-                                <td class="cell-wrap">
-                                    <span class="badge bg-light text-dark border">@item.StatusBefore</span>
-                                    <i class="bi bi-arrow-right mx-1 text-muted"></i>
-                                    <span class="badge @(item.StatusAfter == "Chờ duyệt" ? "bg-success" : item.StatusAfter == "Thiếu giám thị" ? "bg-warning text-dark" : "bg-secondary")">@item.StatusAfter</span>
-                                </td>
-                                <td class="cell-wrap">
-                                    @if (item.AssignedLecturers.Any())
-                                    {
-                                        foreach (var lecturer in item.AssignedLecturers)
-                                        {
-                                            <div class="assigned-chip">
-                                                <strong>GT @lecturer.PositionNo</strong>
-                                                <span class="assigned-name">@lecturer.FullName</span>
-                                                @if (!string.IsNullOrWhiteSpace(lecturer.Reason))
-                                                {
-                                                    <em>@lecturer.Reason</em>
-                                                }
-                                            </div>
-                                        }
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">Không gán mới</span>
-                                    }
-                                </td>
-                                <td class="cell-wrap">@item.Message</td>
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">Không có lịch cần hiển thị.</td>
                             </tr>
                         }
-                    }
-                </tbody>
-            </table>
+                        else
+                        {
+                            @foreach (var item in Model.Details)
+                            {
+                                <tr class="auto-result-row">
+                                    <td class="cell-code">@item.ExamScheduleId</td>
+                                    <td class="cell-wrap">@item.SubjectName</td>
+                                    <td class="cell-wrap">@item.ClassName<br /><span class="text-muted">@(string.IsNullOrWhiteSpace(item.ExamFormatDisplay) ? "Chưa có hình thức thi" : item.ExamFormatDisplay)</span></td>
+                                    <td class="cell-nowrap">@item.ExamDate.ToString("dd/MM/yyyy")</td>
+                                    <td class="cell-wrap">@item.SlotName<br /><span class="text-muted">@item.RoomDisplay</span></td>
+                                    <td class="cell-wrap">
+                                        <span class="badge bg-light text-dark border">@item.StatusBefore</span>
+                                        <i class="bi bi-arrow-right mx-1 text-muted"></i>
+                                        <span class="badge @(item.StatusAfter == "Chờ duyệt" ? "bg-success" : item.StatusAfter == "Thiếu giám thị" ? "bg-warning text-dark" : "bg-secondary")">@item.StatusAfter</span>
+                                    </td>
+                                    <td class="cell-wrap">
+                                        @if (item.AssignedLecturers.Any())
+                                        {
+                                            foreach (var lecturer in item.AssignedLecturers)
+                                            {
+                                                <div class="assigned-chip">
+                                                    <strong>GT @lecturer.PositionNo</strong>
+                                                    <span class="assigned-name">@lecturer.FullName</span>
+                                                    @if (!string.IsNullOrWhiteSpace(lecturer.Reason))
+                                                    {
+                                                        <em>@lecturer.Reason</em>
+                                                    }
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Không gán mới</span>
+                                        }
+                                    </td>
+                                    <td class="cell-wrap">@item.Message</td>
+                                </tr>
+                            }
+                        }
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
 
-    <div class="auto-result-pagination pagination justify-content-center mt-3" id="autoResultPagination"></div>
+        <div class="auto-result-pagination pagination justify-content-center mt-3" id="autoResultPagination"></div>
+    }
 </div>
 
 <style>
@@ -180,6 +327,112 @@
     .auto-stat-card.primary { border-color: rgba(37, 99, 235, .28); }
     .auto-stat-card.warning { border-color: rgba(245, 158, 11, .34); }
 
+    .comparison-card {
+        padding: 18px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, rgba(37, 99, 235, .08), rgba(14, 165, 233, .06));
+        border: 1px solid rgba(37, 99, 235, .18);
+        box-shadow: var(--card-shadow);
+    }
+
+    .comparison-title {
+        color: var(--text-strong);
+        font-size: 16px;
+        font-weight: 900;
+    }
+
+    .comparison-subtitle {
+        color: var(--text-muted);
+        font-size: 13px;
+        margin-top: 4px;
+    }
+
+    .comparison-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 12px;
+    }
+
+    .comparison-metric {
+        padding: 14px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, .65);
+        border: 1px solid rgba(255, 255, 255, .65);
+    }
+
+    .comparison-metric span {
+        display: block;
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+    }
+
+    .comparison-metric strong {
+        display: block;
+        margin-top: 4px;
+        color: var(--text-strong);
+        font-size: 22px;
+        line-height: 1.1;
+    }
+
+    .comparison-metric small {
+        color: var(--text-muted);
+        font-size: 12px;
+    }
+
+    .comparison-detail {
+        padding-top: 14px;
+        border-top: 1px solid rgba(37, 99, 235, .16);
+    }
+
+    .comparison-detail-title {
+        margin-bottom: 10px;
+        color: var(--text-strong);
+        font-size: 14px;
+        font-weight: 900;
+    }
+
+    .comparison-table {
+        background: rgba(255, 255, 255, .7);
+        border-radius: 14px;
+        overflow: hidden;
+    }
+
+    .comparison-table th {
+        color: var(--text-muted);
+        font-size: 12px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+    }
+
+    .comparison-position {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 8px;
+        margin-bottom: 5px;
+        border-radius: 10px;
+        background: rgba(148, 163, 184, .12);
+        color: var(--text-muted);
+        font-size: 12px;
+    }
+
+    .comparison-position.changed {
+        background: rgba(37, 99, 235, .1);
+        color: var(--text-strong);
+    }
+
+    .comparison-position strong {
+        color: var(--text-strong);
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
     .auto-result-table .assigned-chip {
         display: grid;
         gap: 2px;
@@ -210,17 +463,40 @@
         font-size: 12px;
         font-style: normal;
     }
+
+    .auto-result-page-size {
+        width: 110px;
+    }
 </style>
 
 <script>
     (function () {
         const rows = Array.from(document.querySelectorAll('.auto-result-row'));
         const pager = document.getElementById('autoResultPagination');
-        const pageSize = 5;
-        if (!pager || rows.length <= pageSize) return;
+        const pageSizeSelect = document.getElementById('autoResultPageSize');
+        if (!pager || !pageSizeSelect || rows.length === 0) return;
+
+        const storageKey = 'autoAssignmentResultPageSize';
+        const savedPageSize = localStorage.getItem(storageKey);
+        if (savedPageSize) {
+            const optionExists = Array.from(pageSizeSelect.options).some(option => option.value === savedPageSize);
+            if (optionExists) pageSizeSelect.value = savedPageSize;
+        }
+
+        function getPageSize() {
+            return pageSizeSelect.value === 'all' ? rows.length : Number(pageSizeSelect.value || 10);
+        }
 
         function render(page) {
-            const totalPages = Math.ceil(rows.length / pageSize);
+            const pageSize = getPageSize();
+            const totalPages = Math.max(1, Math.ceil(rows.length / pageSize));
+
+            if (pageSize >= rows.length) {
+                rows.forEach(row => row.style.display = '');
+                pager.innerHTML = '';
+                return;
+            }
+
             rows.forEach((row, index) => row.style.display = Math.floor(index / pageSize) + 1 === page ? '' : 'none');
             let html = '';
             if (page > 1) html += `<button type="button" class="page-link" data-page="${page - 1}">‹</button>`;
@@ -238,8 +514,14 @@
             pager.innerHTML = html;
         }
 
+        pageSizeSelect.addEventListener('change', function () {
+            localStorage.setItem(storageKey, pageSizeSelect.value);
+            render(1);
+        });
+
         pager.addEventListener('click', function (event) {
-            const page = Number(event.target.dataset.page || 0);
+            const button = event.target.closest('button[data-page]');
+            const page = Number(button?.dataset.page || 0);
             if (page) render(page);
         });
 

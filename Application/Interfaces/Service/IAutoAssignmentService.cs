@@ -11,5 +11,17 @@ namespace ExamInvigilationManagement.Application.Interfaces.Service
         Task<AutoAssignResultDto> PreviewAsync(
             AutoAssignRequestDto request,
             CancellationToken cancellationToken = default);
+
+        Task<AutoAssignResultDto> SaveDraftAsync(
+            AutoAssignRequestDto request,
+            CancellationToken cancellationToken = default);
+
+        Task<AutoAssignResultDto> CompareDraftAsync(
+            AutoAssignRequestDto request,
+            CancellationToken cancellationToken = default);
+
+        Task<AutoAssignResultDto> ClearDraftAsync(
+            AutoAssignRequestDto request,
+            CancellationToken cancellationToken = default);
     }
 }

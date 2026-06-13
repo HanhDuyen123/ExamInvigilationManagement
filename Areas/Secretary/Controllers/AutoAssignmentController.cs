@@ -1,5 +1,6 @@
 ﻿using ExamInvigilationManagement.Application.DTOs.AutoAssign;
 using ExamInvigilationManagement.Application.Interfaces.Service;
+using ExamInvigilationManagement.Common.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -91,6 +92,92 @@ namespace ExamInvigilationManagement.Areas.Secretary.Controllers
             {
                 ModelState.AddModelError(string.Empty, ex.Message);
                 return View("Index", request);
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveDraft(AutoAssignRequestDto request, CancellationToken cancellationToken)
+        {
+            if (!ModelState.IsValid)
+                return View("Index", request);
+
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdClaim, out var assignerId))
+            {
+                ModelState.AddModelError(string.Empty, "Không xác định được người dùng hiện tại.");
+                return View("Index", request);
+            }
+
+            request.AssignerId = assignerId;
+
+            try
+            {
+                var result = await _autoAssignmentService.SaveDraftAsync(request, cancellationToken);
+                TempData.SetNotification("success", "Đã lưu bản tạm để so sánh với lần chạy sau.");
+                return View("Result", result);
+            }
+            catch (Exception ex)
+            {
+                TempData.SetNotification("error", ex.Message);
+                return RedirectToAction(nameof(Index), new { semesterId = request.SemesterId, periodId = request.PeriodId });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ClearDraft(AutoAssignRequestDto request, CancellationToken cancellationToken)
+        {
+            if (!ModelState.IsValid)
+                return View("Index", request);
+
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdClaim, out var assignerId))
+            {
+                ModelState.AddModelError(string.Empty, "Không xác định được người dùng hiện tại.");
+                return View("Index", request);
+            }
+
+            request.AssignerId = assignerId;
+
+            try
+            {
+                var result = await _autoAssignmentService.ClearDraftAsync(request, cancellationToken);
+                TempData.SetNotification("success", "Đã xoá bản tạm.");
+                return View("Result", result);
+            }
+            catch (Exception ex)
+            {
+                TempData.SetNotification("error", ex.Message);
+                return RedirectToAction(nameof(Index), new { semesterId = request.SemesterId, periodId = request.PeriodId });
+            }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> CompareDraft(AutoAssignRequestDto request, CancellationToken cancellationToken)
+        {
+            if (!ModelState.IsValid)
+                return View("Index", request);
+
+            var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            if (!int.TryParse(userIdClaim, out var assignerId))
+            {
+                ModelState.AddModelError(string.Empty, "Không xác định được người dùng hiện tại.");
+                return View("Index", request);
+            }
+
+            request.AssignerId = assignerId;
+
+            try
+            {
+                var result = await _autoAssignmentService.CompareDraftAsync(request, cancellationToken);
+                return View("Result", result);
+            }
+            catch (Exception ex)
+            {
+                TempData.SetNotification("error", ex.Message);
+                return RedirectToAction(nameof(Index), new { semesterId = request.SemesterId, periodId = request.PeriodId });
             }
         }
 
