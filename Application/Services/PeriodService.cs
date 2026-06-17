@@ -3,7 +3,6 @@ using ExamInvigilationManagement.Application.Interfaces.Repositories;
 using ExamInvigilationManagement.Application.Interfaces.Service;
 using ExamInvigilationManagement.Common.Helpers;
 using ExamInvigilationManagement.Domain.Entities;
-using ExamInvigilationManagement.Infrastructure.Repositories;
 
 namespace ExamInvigilationManagement.Application.Services
 {

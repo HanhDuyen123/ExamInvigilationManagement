@@ -1,10 +1,10 @@
 ﻿using ExamInvigilationManagement.Application.DTOs;
+using ExamInvigilationManagement.Application.DTOs.Import;
+using ExamInvigilationManagement.Application.Interfaces.Common;
 using ExamInvigilationManagement.Application.Interfaces.Service;
 using ExamInvigilationManagement.ViewModel;
 using ExamInvigilationManagement.Common.Helpers;
 using ExamInvigilationManagement.Common.Security;
-using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -14,16 +14,20 @@ public class ProfileController : Controller
 {
     private readonly IUserService _service;
     private readonly IAuthService _authService;
+    private readonly IAvatarStorageService _avatarStorageService;
+    private readonly IRequestContextService _requestContextService;
 
-    public ProfileController(IUserService service, IAuthService authService)
+    public ProfileController(IUserService service, IAuthService authService, IAvatarStorageService avatarStorageService, IRequestContextService requestContextService)
     {
         _service = service;
         _authService = authService;
+        _avatarStorageService = avatarStorageService;
+        _requestContextService = requestContextService;
     }
 
     public async Task<IActionResult> Index()
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+        int userId = GetCurrentUserId();
 
         var profile = await _service.GetProfileAsync(userId);
 
@@ -34,12 +38,20 @@ public class ProfileController : Controller
     [ValidateAntiForgeryToken]
     public async Task<IActionResult> Update(UpdateProfileDto dto, IFormFile? avatarFile)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+        int userId = GetCurrentUserId();
 
         try
         {
             if (avatarFile != null && avatarFile.Length > 0)
-                dto.Avt = await SaveAvatarAsync(userId, avatarFile);
+            {
+                var importFile = new ImportFileDto
+                {
+                    FileName = avatarFile.FileName,
+                    Length = avatarFile.Length,
+                    OpenReadStream = avatarFile.OpenReadStream
+                };
+                dto.Avt = await _avatarStorageService.SaveAvatarAsync(userId, importFile, cancellationToken: HttpContext.RequestAborted);
+            }
 
             await _service.UpdateProfileAsync(userId, dto);
         }
@@ -54,35 +66,6 @@ public class ProfileController : Controller
         return RedirectToAction("Index");
     }
 
-    private async Task<string> SaveAvatarAsync(int userId, IFormFile file)
-    {
-        var allowed = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            [".jpg"] = ".jpg",
-            [".jpeg"] = ".jpg",
-            [".png"] = ".png",
-            [".webp"] = ".webp"
-        };
-
-        var ext = Path.GetExtension(file.FileName);
-        if (!allowed.TryGetValue(ext, out var safeExt))
-            throw new InvalidOperationException("Ảnh đại diện chỉ hỗ trợ JPG, PNG hoặc WEBP.");
-
-        if (file.Length > 2 * 1024 * 1024)
-            throw new InvalidOperationException("Ảnh đại diện không được vượt quá 2MB.");
-
-        var root = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "avatars");
-        Directory.CreateDirectory(root);
-
-        var fileName = $"user-{userId}-{Guid.NewGuid():N}{safeExt}";
-        var path = Path.Combine(root, fileName);
-
-        await using var stream = System.IO.File.Create(path);
-        await file.CopyToAsync(stream);
-
-        return $"/uploads/avatars/{fileName}";
-    }
-
     [HttpGet]
     [RequireRecentAuthentication]
     public IActionResult ChangePassword()
@@ -95,7 +78,7 @@ public class ProfileController : Controller
     [RequireRecentAuthentication]
     public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
     {
-        int userId = int.Parse(User.FindFirst(ClaimTypes.NameIdentifier).Value);
+        int userId = GetCurrentUserId();
 
         if (!ModelState.IsValid)
             return View(model);
@@ -111,7 +94,7 @@ public class ProfileController : Controller
             });
 
             TempData.SetNotification("success", "Đổi mật khẩu thành công. Vui lòng đăng nhập lại bằng mật khẩu mới.");
-            await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            await _requestContextService.SignOutAsync();
             return RedirectToAction("Login", "Account");
         }
         catch
@@ -120,5 +103,11 @@ public class ProfileController : Controller
             TempData.SetNotification("error", "Mật khẩu hiện tại không đúng.");
             return View(model);
         }
+    }
+
+    private int GetCurrentUserId()
+    {
+        var raw = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return int.TryParse(raw, out var userId) ? userId : 0;
     }
 }

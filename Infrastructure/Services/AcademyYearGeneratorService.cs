@@ -1,8 +1,9 @@
 ﻿using ExamInvigilationManagement.Infrastructure.Data;
-using ExamInvigilationManagement.Infrastructure.Data.Entities;
 using ExamInvigilationManagement.Application.DTOs.Admin.AcademyYear;
 using ExamInvigilationManagement.Application.Interfaces.Common;
 using ExamInvigilationManagement.Common.Helpers;
+using ExamInvigilationManagement.Infrastructure.Mapping;
+using E = ExamInvigilationManagement.Infrastructure.Data.Entities;
 
 namespace ExamInvigilationManagement.Infrastructure.Services
 {
@@ -15,43 +16,44 @@ namespace ExamInvigilationManagement.Infrastructure.Services
             _context = context;
         }
 
-        public async Task GenerateAsync(AcademyYear year, List<SemesterOptionDto> options)
+        public async Task GenerateAsync(Domain.Entities.AcademyYear year, List<SemesterOptionDto> options)
         {
-            var semesters = new List<Semester>();
+            var dataYear = year.ToEntity();
+            var semesters = new List<E.Semester>();
 
             foreach (var semOpt in options.Where(x => x.Selected))
             {
-                var sem = new Semester
+                var sem = new E.Semester
                 {
                     SemesterName = SemesterHelper.ToName(semOpt.Type),
-                    AcademyYear = year
+                    AcademyYear = dataYear
                 };
 
-                var periods = new List<ExamPeriod>();
+                var periods = new List<E.ExamPeriod>();
 
                 foreach (var perOpt in semOpt.Periods.Where(x => x.Selected))
                 {
-                    var period = new ExamPeriod
+                    var period = new E.ExamPeriod
                     {
                         PeriodName = perOpt.Name,
                         Semester = sem
                     };
 
-                    var sessions = new List<ExamSession>();
+                    var sessions = new List<E.ExamSession>();
 
                     foreach (var sesOpt in perOpt.Sessions.Where(x => x.Selected))
                     {
-                        var session = new ExamSession
+                        var session = new E.ExamSession
                         {
                             SessionName = sesOpt.Name,
                             Period = period
                         };
 
-                        var slots = new List<ExamSlot>();
+                        var slots = new List<E.ExamSlot>();
 
                         foreach (var slotOpt in sesOpt.Slots.Where(x => x.Selected))
                         {
-                            slots.Add(new ExamSlot
+                            slots.Add(new E.ExamSlot
                             {
                                 SlotName = slotOpt.Name,
                                 TimeStart = slotOpt.TimeStart,
@@ -71,9 +73,9 @@ namespace ExamInvigilationManagement.Infrastructure.Services
                 semesters.Add(sem);
             }
 
-            year.Semesters = semesters;
+            dataYear.Semesters = semesters;
 
-            _context.AcademyYears.Add(year);
+            _context.AcademyYears.Add(dataYear);
             await _context.SaveChangesAsync();
         }
     }

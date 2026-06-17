@@ -45,7 +45,15 @@ namespace ExamInvigilationManagement.Controllers
             var userIdText = User.FindFirstValue(ClaimTypes.NameIdentifier);
             var userId = int.TryParse(userIdText, out var id) ? id : 0;
             var role = User.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Role)?.Value ?? string.Empty;
-            var result = await _service.ImportAsync(module, file, userId, role, cancellationToken);
+            var importFile = file == null
+                ? null
+                : new ImportFileDto
+                {
+                    FileName = file.FileName,
+                    Length = file.Length,
+                    OpenReadStream = file.OpenReadStream
+                };
+            var result = await _service.ImportAsync(module, importFile, userId, role, cancellationToken);
             if (result.Success)
                 TempData.SetNotification("success", $"Import thành công {result.InsertedRows} dòng.");
             else

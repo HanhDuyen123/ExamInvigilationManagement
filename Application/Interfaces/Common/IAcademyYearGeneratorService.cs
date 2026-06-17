@@ -1,5 +1,5 @@
 ﻿using ExamInvigilationManagement.Application.DTOs.Admin.AcademyYear;
-using ExamInvigilationManagement.Infrastructure.Data.Entities;
+using ExamInvigilationManagement.Domain.Entities;
 
 namespace ExamInvigilationManagement.Application.Interfaces.Common
 {

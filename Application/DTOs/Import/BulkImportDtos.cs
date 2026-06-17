@@ -27,6 +27,13 @@ namespace ExamInvigilationManagement.Application.DTOs.Import
         public List<ImportErrorDto> Errors { get; set; } = new();
     }
 
+    public class ImportFileDto
+    {
+        public string FileName { get; set; } = string.Empty;
+        public long Length { get; set; }
+        public Func<Stream> OpenReadStream { get; set; } = () => Stream.Null;
+    }
+
     public class ImportPageDto
     {
         public string Module { get; set; } = string.Empty;

@@ -55,7 +55,6 @@ namespace ExamInvigilationManagement.Controllers
             var paged = await _userService.GetPagedAsync(null, null, null, null, null, 1, 1000);
             var users = paged.Items.AsEnumerable();
 
-            // Chỉ lấy 3 role được phép hiện trong BusySlot
             users = users.Where(x =>
                 x.RoleName == "Giảng viên").ToList();
 
@@ -139,7 +138,7 @@ namespace ExamInvigilationManagement.Controllers
                 }
                 catch
                 {
-                    // Đăng ký đã lưu thành công; lỗi notification không được làm hỏng luồng chính.
+                    
                 }
                 TempData.SetNotification("success", $"Đăng ký lịch bận thành công cho {count} ca.");
                 return RedirectToAction(nameof(Index));

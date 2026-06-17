@@ -9,11 +9,10 @@ using ExamInvigilationManagement.Application.Interfaces.Service;
 using ExamInvigilationManagement.Common;
 using ExamInvigilationManagement.Common.Constants;
 using ExamInvigilationManagement.Infrastructure.Data;
-using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using E = ExamInvigilationManagement.Infrastructure.Data.Entities;
 
-namespace ExamInvigilationManagement.Application.Services
+namespace ExamInvigilationManagement.Infrastructure.Services
 {
     public class BulkImportService : IBulkImportService
     {
@@ -180,7 +179,7 @@ namespace ExamInvigilationManagement.Application.Services
             return stream.ToArray();
         }
 
-        public async Task<ImportResultDto> ImportAsync(string module, IFormFile file, int currentUserId, string currentRole, CancellationToken cancellationToken = default)
+        public async Task<ImportResultDto> ImportAsync(string module, ImportFileDto? file, int currentUserId, string currentRole, CancellationToken cancellationToken = default)
         {
             module = NormalizeModule(module);
             var result = new ImportResultDto { Module = module, ModuleTitle = GetModuleTitle(module) };
@@ -921,7 +920,7 @@ namespace ExamInvigilationManagement.Application.Services
         private static string ScheduleImportKey(int offeringId, int roomId, DateTime examDate, int slotId)
             => $"{offeringId}|{roomId}|{examDate:yyyy-MM-dd}|{slotId}";
 
-        private List<Dictionary<string, string>> ReadRows(string module, IFormFile file, ImportResultDto result)
+        private List<Dictionary<string, string>> ReadRows(string module, ImportFileDto file, ImportResultDto result)
         {
             var rows = new List<Dictionary<string, string>>();
             try

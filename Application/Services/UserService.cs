@@ -1,7 +1,6 @@
 ﻿using ExamInvigilationManagement.Application.DTOs;
 using ExamInvigilationManagement.Application.Interfaces.Repositories;
 using ExamInvigilationManagement.Application.Interfaces.Service;
-using Microsoft.EntityFrameworkCore;
 
 namespace ExamInvigilationManagement.Application.Services
 {
@@ -14,7 +13,7 @@ namespace ExamInvigilationManagement.Application.Services
             _repo = repo;
         }
 
-        public async Task<ProfileDto> GetProfileAsync(int userId)
+        public async Task<ProfileDto?> GetProfileAsync(int userId)
         {
             var user = await _repo.GetProfileByIdAsync(userId);
 

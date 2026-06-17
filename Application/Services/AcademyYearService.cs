@@ -5,8 +5,6 @@ using ExamInvigilationManagement.Application.Interfaces.Service;
 using ExamInvigilationManagement.Common.Helpers;
 using ExamInvigilationManagement.Domain.Entities;
 using ExamInvigilationManagement.Domain.Enums;
-using ExamInvigilationManagement.Infrastructure.Services;
-using ExamInvigilationManagement.Infrastructure.Mapping;
 using ExamInvigilationManagement.Application.Interfaces.Common;
 
 namespace ExamInvigilationManagement.Application.Services
@@ -171,11 +169,7 @@ namespace ExamInvigilationManagement.Application.Services
                 return;
             }
             dto.Semesters = NormalizeAndValidateOptions(dto.Semesters);
-            var dataEntity = entity.ToEntity();
-
-            await _generator.GenerateAsync(dataEntity, dto.Semesters);
-
-            //await _generator.GenerateAsync(entity, dto.Semesters);
+            await _generator.GenerateAsync(entity, dto.Semesters);
         }
 
         public async Task UpdateAsync(AcademyYearDto dto)

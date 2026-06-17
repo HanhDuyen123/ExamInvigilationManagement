@@ -3,8 +3,6 @@ using ExamInvigilationManagement.Application.Interfaces.Common;
 using ExamInvigilationManagement.Application.Interfaces.Repositories;
 using ExamInvigilationManagement.Application.Interfaces.Service;
 using ExamInvigilationManagement.Domain.Entities;
-using Microsoft.AspNetCore.Authentication.Cookies;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using System.Net;
 using System.Security.Cryptography;
@@ -16,8 +14,7 @@ public class AuthService : IAuthService
     private readonly IPasswordService _passwordService;
     private readonly IEmailService _emailService;
     private readonly IEmailLogService _emailLogService;
-    private readonly IHttpContextAccessor _httpContext;
-    private readonly IConfiguration _configuration;
+    private readonly IRequestContextService _requestContext;
 
     private const int MAX_FAILED = 5;
 
@@ -26,15 +23,13 @@ public class AuthService : IAuthService
     IPasswordService passwordService,
     IEmailService emailService,
     IEmailLogService emailLogService,
-    IHttpContextAccessor httpContext,
-    IConfiguration configuration)
+    IRequestContextService requestContext)
     {
         _repo = repo;
         _passwordService = passwordService;
         _emailService = emailService;
         _emailLogService = emailLogService;
-        _httpContext = httpContext;
-        _configuration = configuration;
+        _requestContext = requestContext;
     }
 
     public async Task<User?> LoginAsync(string username, string password)
@@ -96,7 +91,7 @@ public class AuthService : IAuthService
             DateTime.Now.AddMinutes(15)
         );
 
-        var link = BuildAbsoluteUrl($"/Account/ResetPassword?token={Uri.EscapeDataString(token)}");
+        var link = _requestContext.BuildAbsoluteUrl($"/Account/ResetPassword?token={Uri.EscapeDataString(token)}");
 
         try
         {
@@ -175,7 +170,7 @@ public class AuthService : IAuthService
 
     public async Task LogoutAsync()
     {
-        await _httpContext.HttpContext!.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+        await _requestContext.SignOutAsync();
     }
 
     private static void ValidatePasswordPolicy(string password)
@@ -188,20 +183,6 @@ public class AuthService : IAuthService
         {
             throw new Exception("Mật khẩu phải có ít nhất 8 ký tự, gồm chữ cái, số và ký tự đặc biệt.");
         }
-    }
-
-    private string BuildAbsoluteUrl(string path)
-    {
-        var baseUrl = _configuration["App:BaseUrl"]?.Trim().TrimEnd('/');
-        var requestContext = _httpContext.HttpContext?.Request;
-        if (string.IsNullOrWhiteSpace(baseUrl) && requestContext != null)
-        {
-            baseUrl = $"{requestContext.Scheme}://{requestContext.Host}".TrimEnd('/');
-        }
-
-        return string.IsNullOrWhiteSpace(baseUrl)
-            ? path
-            : $"{baseUrl}/{path.TrimStart('/')}";
     }
 
     private static string BuildResetPasswordEmail(string userName, string link)

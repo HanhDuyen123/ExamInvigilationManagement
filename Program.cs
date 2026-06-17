@@ -33,9 +33,14 @@ builder.Services.AddScoped<RequireRecentAuthenticationFilter>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<IPasswordService, PasswordService>();
+builder.Services.AddScoped<IRequestContextService, RequestContextService>();
+builder.Services.AddScoped<ITemplatePathService, TemplatePathService>();
+builder.Services.AddScoped<ICacheService, MemoryCacheService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IEmailLogService, EmailLogService>();
+builder.Services.AddScoped<IEmailConfigurationService, EmailConfigurationService>();
+builder.Services.AddScoped<IAvatarStorageService, AvatarStorageService>();
 builder.Services.AddScoped<IAdminUserService, AdminUserService>();
 builder.Services.AddScoped<IAdminUserRepository, AdminUserRepository>();
 builder.Services.AddScoped<IRoleRepository, RoleRepository>();
@@ -82,13 +87,24 @@ builder.Services.AddScoped<IInvigilatorSubstitutionService, InvigilatorSubstitut
 builder.Services.AddScoped<IExamScheduleApprovalRepository, ExamScheduleApprovalRepository>();
 builder.Services.AddScoped<IStatisticsRepository, StatisticsRepository>();
 builder.Services.AddScoped<INotificationRepository, NotificationRepository>();
+builder.Services.AddScoped<IDashboardRepository, DashboardRepository>();
+builder.Services.AddScoped<IExamFormatRepository, ExamFormatRepository>();
+builder.Services.AddScoped<IOutboxRepository, OutboxRepository>();
+builder.Services.AddScoped<IAuditLogRepository, AuditLogRepository>();
+builder.Services.AddScoped<IEmailNotificationRepository, EmailNotificationRepository>();
 
 builder.Services.AddScoped<IExamScheduleApprovalService, ExamScheduleApprovalService>();
+builder.Services.AddScoped<IExamScheduleDocumentService, ExamScheduleDocumentService>();
 builder.Services.AddScoped<ICurrentAcademicContextService, CurrentAcademicContextService>();
 builder.Services.AddScoped<IStatisticsService, StatisticsService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<INotificationRealtimePublisher, SignalRNotificationRealtimePublisher>();
 builder.Services.AddScoped<IBulkImportService, BulkImportService>();
+builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IExamFormatService, ExamFormatService>();
+builder.Services.AddScoped<IOutboxService, OutboxService>();
+builder.Services.AddScoped<IAuditLogService, AuditLogService>();
+builder.Services.AddScoped<IEmailNotificationAdminService, EmailNotificationAdminService>();
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>

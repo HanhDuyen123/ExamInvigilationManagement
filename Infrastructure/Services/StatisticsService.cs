@@ -11,7 +11,7 @@ using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
 
-namespace ExamInvigilationManagement.Application.Services
+namespace ExamInvigilationManagement.Infrastructure.Services
 {
     public class StatisticsService : IStatisticsService
     {

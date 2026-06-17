@@ -16,5 +16,11 @@
         public bool IsRejected =>
             InvigilatorStatus.Equals("Từ chối", StringComparison.OrdinalIgnoreCase) ||
             ResponseStatus.Equals("Từ chối", StringComparison.OrdinalIgnoreCase);
+
+        public bool IsCancelled =>
+            InvigilatorStatus.Equals("Đã hủy", StringComparison.OrdinalIgnoreCase) ||
+            InvigilatorStatus.Equals("Cancelled", StringComparison.OrdinalIgnoreCase);
+
+        public bool IsInactive => IsRejected || IsCancelled;
     }
 }

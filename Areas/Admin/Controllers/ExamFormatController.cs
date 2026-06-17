@@ -1,11 +1,8 @@
-using ExamInvigilationManagement.Application.DTOs.ExamSchedule;
-using ExamInvigilationManagement.Common;
+﻿using ExamInvigilationManagement.Application.DTOs.ExamSchedule;
+using ExamInvigilationManagement.Application.Interfaces.Service;
 using ExamInvigilationManagement.Common.Helpers;
-using ExamInvigilationManagement.Infrastructure.Data;
-using ExamInvigilationManagement.Infrastructure.Data.Entities;
 using ExamInvigilationManagement.ViewModel;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace ExamInvigilationManagement.Areas.Admin.Controllers
 {
@@ -13,11 +10,11 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
     [Microsoft.AspNetCore.Authorization.Authorize(Roles = "Admin")]
     public class ExamFormatController : Controller
     {
-        private readonly ApplicationDbContext _db;
+        private readonly IExamFormatService _service;
 
-        public ExamFormatController(ApplicationDbContext db)
+        public ExamFormatController(IExamFormatService service)
         {
-            _db = db;
+            _service = service;
         }
 
         public IActionResult Index()
@@ -33,22 +30,8 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
 
         public async Task<IActionResult> GetList(string? keyword, int page = 1, int pageSize = 5)
         {
-            var query = _db.ExamFormats.AsNoTracking().AsQueryable();
-            if (!string.IsNullOrWhiteSpace(keyword))
-            {
-                var kw = keyword.Trim().ToLower();
-                query = query.Where(x => x.Code.ToLower().Contains(kw) || x.Name.ToLower().Contains(kw));
-            }
-
-            var total = await query.CountAsync();
-            var items = await query
-                .OrderBy(x => x.Code)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(x => new ExamFormatDto { Id = x.ExamFormatId, Code = x.Code, Name = x.Name, IsActive = x.IsActive })
-                .ToListAsync();
-
-            return PartialView("_ExamFormatTable", new PagedResult<ExamFormatDto> { Items = items, TotalCount = total, Page = page, PageSize = pageSize });
+            var result = await _service.GetPagedAsync(keyword, page, pageSize);
+            return PartialView("_ExamFormatTable", result);
         }
 
         [HttpGet]
@@ -61,14 +44,13 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
             Normalize(dto);
             if (!ModelState.IsValid) return View(dto);
 
-            if (await _db.ExamFormats.AnyAsync(x => x.Code == dto.Code))
+            if (await _service.CodeExistsAsync(dto.Code))
             {
                 ModelState.AddModelError(nameof(dto.Code), "Mã hình thức thi đã tồn tại.");
                 return View(dto);
             }
 
-            _db.ExamFormats.Add(new ExamFormat { Code = dto.Code, Name = dto.Name, IsActive = dto.IsActive });
-            await _db.SaveChangesAsync();
+            await _service.CreateAsync(dto);
             TempData.SetNotification("success", "Tạo hình thức thi thành công.");
             return RedirectToAction(nameof(Index));
         }
@@ -76,14 +58,14 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         [HttpGet]
         public async Task<IActionResult> Edit(int id)
         {
-            var item = await _db.ExamFormats.AsNoTracking().FirstOrDefaultAsync(x => x.ExamFormatId == id);
+            var item = await _service.GetByIdAsync(id);
             if (item == null)
             {
                 TempData.SetNotification("error", "Không tìm thấy hình thức thi cần chỉnh sửa.");
                 return RedirectToAction(nameof(Index));
             }
 
-            return View(new ExamFormatDto { Id = item.ExamFormatId, Code = item.Code, Name = item.Name, IsActive = item.IsActive });
+            return View(item);
         }
 
         [HttpPost]
@@ -93,23 +75,20 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
             Normalize(dto);
             if (!ModelState.IsValid) return View(dto);
 
-            var item = await _db.ExamFormats.FirstOrDefaultAsync(x => x.ExamFormatId == dto.Id);
+            var item = await _service.GetByIdAsync(dto.Id);
             if (item == null)
             {
                 TempData.SetNotification("error", "Không tìm thấy hình thức thi cần chỉnh sửa.");
                 return RedirectToAction(nameof(Index));
             }
 
-            if (await _db.ExamFormats.AnyAsync(x => x.ExamFormatId != dto.Id && x.Code == dto.Code))
+            if (await _service.CodeExistsAsync(dto.Code, dto.Id))
             {
                 ModelState.AddModelError(nameof(dto.Code), "Mã hình thức thi đã tồn tại.");
                 return View(dto);
             }
 
-            item.Code = dto.Code;
-            item.Name = dto.Name;
-            item.IsActive = dto.IsActive;
-            await _db.SaveChangesAsync();
+            await _service.UpdateAsync(dto);
             TempData.SetNotification("success", "Cập nhật hình thức thi thành công.");
             return RedirectToAction(nameof(Index));
         }
@@ -118,21 +97,20 @@ namespace ExamInvigilationManagement.Areas.Admin.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(int id)
         {
-            var item = await _db.ExamFormats.FirstOrDefaultAsync(x => x.ExamFormatId == id);
+            var item = await _service.GetByIdAsync(id);
             if (item == null)
             {
                 TempData.SetNotification("error", "Không tìm thấy hình thức thi cần xóa.");
                 return RedirectToAction(nameof(Index));
             }
 
-            if (await _db.ExamSchedules.AnyAsync(x => x.ExamFormatId == id))
+            if (await _service.IsUsedInScheduleAsync(id))
             {
                 TempData.SetNotification("error", "Không thể xóa hình thức thi đã được dùng trong lịch thi.");
                 return RedirectToAction(nameof(Index));
             }
 
-            _db.ExamFormats.Remove(item);
-            await _db.SaveChangesAsync();
+            await _service.DeleteAsync(id);
             TempData.SetNotification("success", "Xóa hình thức thi thành công.");
             return RedirectToAction(nameof(Index));
         }

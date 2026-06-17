@@ -4,6 +4,7 @@
     {
         public List<AutoAssignInvigilatorCreateDto> NewInvigilators { get; set; } = new();
         public List<AutoAssignScheduleStatusUpdateDto> ScheduleStatuses { get; set; } = new();
+        public List<int> CancelledExistingInvigilatorIds { get; set; } = new();
     }
 
     public class AutoAssignInvigilatorCreateDto

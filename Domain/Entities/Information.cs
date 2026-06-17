@@ -1,6 +1,4 @@
-﻿using ExamInvigilationManagement.Infrastructure.Data.Entities;
-
-namespace ExamInvigilationManagement.Domain.Entities;
+﻿namespace ExamInvigilationManagement.Domain.Entities;
 
 public class Information
 {

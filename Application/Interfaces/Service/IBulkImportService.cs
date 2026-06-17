@@ -1,5 +1,4 @@
 using ExamInvigilationManagement.Application.DTOs.Import;
-using Microsoft.AspNetCore.Http;
 
 namespace ExamInvigilationManagement.Application.Interfaces.Service
 {
@@ -10,6 +9,6 @@ namespace ExamInvigilationManagement.Application.Interfaces.Service
         string GetBackUrl(string module);
         List<ImportColumnDto> GetTemplateColumns(string module);
         byte[] BuildTemplate(string module);
-        Task<ImportResultDto> ImportAsync(string module, IFormFile file, int currentUserId, string currentRole, CancellationToken cancellationToken = default);
+        Task<ImportResultDto> ImportAsync(string module, ImportFileDto? file, int currentUserId, string currentRole, CancellationToken cancellationToken = default);
     }
 }

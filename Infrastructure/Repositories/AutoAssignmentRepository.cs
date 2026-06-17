@@ -424,6 +424,35 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             {
                 var now = DateTime.Now;
                 var correlationId = Guid.NewGuid();
+
+                if (plan.CancelledExistingInvigilatorIds.Count > 0)
+                {
+                    var cancelledIds = plan.CancelledExistingInvigilatorIds.Distinct().ToList();
+                    var existingInvigilators = await _db.ExamInvigilators
+                        .Where(x => cancelledIds.Contains(x.ExamInvigilatorId))
+                        .ToListAsync(cancellationToken);
+
+                    foreach (var existing in existingInvigilators)
+                    {
+                        existing.Status = ExamInvigilatorStatuses.Cancelled;
+                        existing.UpdateAt = now;
+
+                        _db.AssignmentChangeHistories.Add(new Data.Entities.AssignmentChangeHistory
+                        {
+                            ExamScheduleId = existing.ExamScheduleId,
+                            ExamInvigilatorId = existing.ExamInvigilatorId,
+                            OldAssigneeId = existing.NewAssigneeId ?? existing.AssigneeId,
+                            NewAssigneeId = null,
+                            PositionNo = existing.PositionNo,
+                            ChangeType = "AutoReassignCancel",
+                            Reason = "Hủy phân công cũ do lịch thi bị từ chối duyệt và được chạy phân công lại.",
+                            ActorUserId = plan.NewInvigilators.FirstOrDefault()?.AssignerId,
+                            CreatedAt = now,
+                            CorrelationId = correlationId
+                        });
+                    }
+                }
+
                 if (plan.NewInvigilators.Count > 0)
                 {
                     var entities = plan.NewInvigilators.Select(x => new Data.Entities.ExamInvigilator

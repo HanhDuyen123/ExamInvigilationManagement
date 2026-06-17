@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using ExamInvigilationManagement.Application.DTOs.Statistics;
+using ExamInvigilationManagement.Application.Interfaces.Common;
 using ExamInvigilationManagement.Application.Interfaces.Service;
 using ExamInvigilationManagement.Common.Helpers;
 using Microsoft.AspNetCore.Authorization;
@@ -11,12 +12,12 @@ namespace ExamInvigilationManagement.Controllers
     public class StatisticsController : Controller
     {
         private readonly IStatisticsService _statisticsService;
-        private readonly IWebHostEnvironment _environment;
+        private readonly ITemplatePathService _templatePathService;
 
-        public StatisticsController(IStatisticsService statisticsService, IWebHostEnvironment environment)
+        public StatisticsController(IStatisticsService statisticsService, ITemplatePathService templatePathService)
         {
             _statisticsService = statisticsService;
-            _environment = environment;
+            _templatePathService = templatePathService;
         }
 
         [HttpGet]
@@ -83,7 +84,7 @@ namespace ExamInvigilationManagement.Controllers
 
                 if (format.Equals("excel", StringComparison.OrdinalIgnoreCase) || format.Equals("xlsx", StringComparison.OrdinalIgnoreCase))
                 {
-                    var templatePath = Path.Combine(_environment.WebRootPath, "templates", "MAU BAO CAO THONG KE EXCEL.xlsx");
+                    var templatePath = _templatePathService.GetTemplatePath("MAU BAO CAO THONG KE EXCEL.xlsx");
                     return File(
                         _statisticsService.ExportExcel(model, templatePath),
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
