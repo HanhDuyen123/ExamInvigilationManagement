@@ -49,6 +49,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     SemesterId = x.SemesterId,
                     PeriodId = x.PeriodId,
                     SessionId = x.SessionId,
+                    SessionName = x.Session.SessionName,
 
                     RoomId = x.RoomId,
                     RoomDisplay = x.Room.BuildingId == "KHAC" ? x.Room.RoomName : x.Room.BuildingId + "-" + x.Room.RoomName,

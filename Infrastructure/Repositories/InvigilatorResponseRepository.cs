@@ -321,9 +321,9 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                         ExamInvigilatorId = target.ExamInvigilatorId,
                         UserId = assigneeId,
                         Status = InvigilatorResponseStatuses.Confirmed,
-                    Note = "Hệ thống tự động xác nhận sau 48 giờ kể từ khi gửi yêu cầu xác nhận.",
-                    ResponseAt = DateTime.Now
-                });
+                        Note = "Hệ thống tự động xác nhận sau 48 giờ kể từ khi gửi yêu cầu xác nhận.",
+                        ResponseAt = DateTime.Now
+                    });
             }
 
             await _db.SaveChangesAsync(cancellationToken);

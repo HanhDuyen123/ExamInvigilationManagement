@@ -136,6 +136,7 @@ namespace ExamInvigilationManagement.Application.Services
             {
                 ExamScheduleId = current.ExamScheduleId,
                 ExamDate = current.ExamDate,
+                SessionName = current.SessionName,
                 SlotName = current.SlotName,
                 RoomDisplay = current.RoomDisplay,
                 SubjectName = current.SubjectName,
@@ -195,6 +196,7 @@ namespace ExamInvigilationManagement.Application.Services
                         {
                             ExamScheduleId = d.ExamScheduleId,
                             ExamDate = d.ExamDate,
+                            SessionName = d.SessionName,
                             SlotName = d.SlotName,
                             RoomDisplay = d.RoomDisplay,
                             SubjectName = d.SubjectName,
@@ -214,6 +216,7 @@ namespace ExamInvigilationManagement.Application.Services
                 {
                     ExamScheduleId = d.ExamScheduleId,
                     ExamDate = d.ExamDate,
+                    SessionName = d.SessionName,
                     SlotName = d.SlotName,
                     RoomDisplay = d.RoomDisplay,
                     SubjectName = d.SubjectName,

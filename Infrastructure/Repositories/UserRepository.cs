@@ -71,6 +71,26 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
                     x.Role.RoleName == "Giảng viên");
         }
 
+        public async Task<bool> EmailExistsForOtherProfileAsync(int userId, string email)
+        {
+            var currentInformationId = await _context.Users
+                .AsNoTracking()
+                .Where(x => x.UserId == userId)
+                .Select(x => (int?)x.InformationId)
+                .FirstOrDefaultAsync();
+
+            if (!currentInformationId.HasValue)
+                return false;
+
+            var normalizedEmail = email.Trim().ToLower();
+            return await _context.Information
+                .AsNoTracking()
+                .AnyAsync(x =>
+                    x.InformationId != currentInformationId.Value &&
+                    !string.IsNullOrWhiteSpace(x.Email) &&
+                    x.Email.ToLower() == normalizedEmail);
+        }
+
         public async Task UpdateAsync(Domain.Entities.User user)
         {
             var entity = await _context.Users
@@ -96,6 +116,7 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
             entity.Information.FirstName = domain.Information.FirstName;
             entity.Information.LastName = domain.Information.LastName;
+            entity.Information.Email = domain.Information.Email;
             entity.Information.Phone = domain.Information.Phone;
             entity.Information.Address = domain.Information.Address;
             entity.Information.Dob = domain.Information.Dob;

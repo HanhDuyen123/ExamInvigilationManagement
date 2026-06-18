@@ -155,7 +155,7 @@ namespace ExamInvigilationManagement.Application.Services
                     errors.Add($"Lịch {label} chưa ở trạng thái Đã duyệt.");
 
                 if (schedule.Lecturers.Count < 2)
-                    errors.Add($"Lịch {label} chưa đủ 2 giám thị.");
+                    errors.Add($"Lịch {label} chưa đủ giám thị.");
 
                 if (schedule.Lecturers.Any(i => string.IsNullOrWhiteSpace(i.Email)))
                     errors.Add($"Lịch {label} có giám thị chưa có email trong hồ sơ.");
@@ -194,7 +194,7 @@ namespace ExamInvigilationManagement.Application.Services
                     await _emailLogService.LogAsync(lecturer.UserId, lecturer.Email!, "Failed", ex.Message, "InvigilatorConfirmation");
                     throw;
                 }
-                await _notificationService.CreateAsync(new NotificationWriteDto
+                await _notificationService.UpsertAsync(new NotificationWriteDto
                 {
                     UserId = lecturer.UserId,
                     Title = "Lịch coi thi cần xác nhận",

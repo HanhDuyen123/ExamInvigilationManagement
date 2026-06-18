@@ -270,6 +270,7 @@ namespace ExamInvigilationManagement.Application.Services
                         {
                             ExamScheduleId = x.ExamScheduleId,
                             ExamDate = x.ExamDate,
+                            SessionName = x.SessionName,
                             SlotName = x.SlotName,
                             RoomDisplay = x.RoomDisplay,
                             SubjectName = x.SubjectName,

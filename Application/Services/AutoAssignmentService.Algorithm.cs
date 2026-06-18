@@ -246,6 +246,7 @@ namespace ExamInvigilationManagement.Application.Services
                 {
                     ExamScheduleId = schedule.ExamScheduleId,
                     ExamDate = schedule.ExamDate,
+                    SessionName = schedule.SessionName,
                     SlotName = schedule.SlotName,
                     RoomDisplay = schedule.RoomDisplay,
                     SubjectName = schedule.SubjectName,
@@ -447,6 +448,7 @@ namespace ExamInvigilationManagement.Application.Services
             {
                 ExamScheduleId = schedule.ExamScheduleId,
                 ExamDate = schedule.ExamDate,
+                SessionName = schedule.SessionName,
                 SlotName = schedule.SlotName,
                 RoomDisplay = schedule.RoomDisplay,
                 SubjectName = schedule.SubjectName,

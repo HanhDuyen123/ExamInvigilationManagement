@@ -11,6 +11,7 @@
         public int SemesterId { get; set; }
         public int PeriodId { get; set; }
         public int SessionId { get; set; }
+        public string SessionName { get; set; } = string.Empty;
 
         public int RoomId { get; set; }
         public string RoomDisplay { get; set; } = string.Empty;

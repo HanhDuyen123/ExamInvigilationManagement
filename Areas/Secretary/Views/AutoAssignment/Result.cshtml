@@ -139,10 +139,16 @@
                     <div class="comparison-detail-title">Chi tiết lịch thay đổi</div>
                     <div class="table-responsive">
                         <table class="table table-sm align-middle mb-0 comparison-table">
+                            <colgroup>
+                                <col class="comparison-col-schedule" />
+                                <col class="comparison-col-time" />
+                                <col class="comparison-col-status" />
+                                <col class="comparison-col-invigilators" />
+                            </colgroup>
                             <thead>
                                 <tr>
                                     <th>Lịch thi</th>
-                                    <th>Ngày / Ca / Phòng</th>
+                                    <th>Ngày / Buổi / Ca / Phòng</th>
                                     <th>Trạng thái</th>
                                     <th>Thay đổi giám thị</th>
                                 </tr>
@@ -157,7 +163,8 @@
                                         </td>
                                         <td>
                                             @changed.ExamDate.ToString("dd/MM/yyyy")<br />
-                                            <span class="text-muted">@changed.SlotName - @changed.RoomDisplay</span>
+                                            <span class="text-muted">@(string.IsNullOrWhiteSpace(changed.SessionName) ? "Chưa có buổi" : changed.SessionName) - @changed.SlotName</span><br />
+                                            <span class="text-muted">@changed.RoomDisplay</span>
                                         </td>
                                         <td>
                                             <span class="badge bg-light text-dark border">@changed.StatusBefore</span>
@@ -226,13 +233,23 @@
         <div class="table-modern">
             <div class="table-inner full-width">
                 <table class="modern-table schedule-table-compact auto-result-table">
+                    <colgroup>
+                        <col class="auto-col-id" />
+                        <col class="auto-col-subject" />
+                        <col class="auto-col-class" />
+                        <col class="auto-col-date" />
+                        <col class="auto-col-session" />
+                        <col class="auto-col-status" />
+                        <col class="auto-col-invigilators" />
+                        <col class="auto-col-note" />
+                    </colgroup>
                     <thead>
                         <tr>
                             <th class="col-id">#</th>
                             <th>Môn học</th>
                             <th>Lớp</th>
                             <th>Ngày thi</th>
-                            <th>Ca / Phòng</th>
+                            <th>Buổi / Ca / Phòng</th>
                             <th>Trạng thái</th>
                             <th>Giám thị được gán</th>
                             <th>Ghi chú</th>
@@ -254,7 +271,7 @@
                                     <td class="cell-wrap">@item.SubjectName</td>
                                     <td class="cell-wrap">@item.ClassName<br /><span class="text-muted">@(string.IsNullOrWhiteSpace(item.ExamFormatDisplay) ? "Chưa có hình thức thi" : item.ExamFormatDisplay)</span></td>
                                     <td class="cell-nowrap">@item.ExamDate.ToString("dd/MM/yyyy")</td>
-                                    <td class="cell-wrap">@item.SlotName<br /><span class="text-muted">@item.RoomDisplay</span></td>
+                                    <td class="cell-wrap">@(string.IsNullOrWhiteSpace(item.SessionName) ? "Chưa có buổi" : item.SessionName)<br /><span class="text-muted">@item.SlotName</span><br /><span class="text-muted">@item.RoomDisplay</span></td>
                                     <td class="cell-wrap">
                                         <span class="badge bg-light text-dark border">@item.StatusBefore</span>
                                         <i class="bi bi-arrow-right mx-1 text-muted"></i>
@@ -398,7 +415,13 @@
         background: rgba(255, 255, 255, .7);
         border-radius: 14px;
         overflow: hidden;
+        table-layout: fixed;
     }
+
+    .comparison-col-schedule { width: 24%; }
+    .comparison-col-time { width: 20%; }
+    .comparison-col-status { width: 18%; }
+    .comparison-col-invigilators { width: 38%; }
 
     .comparison-table th {
         color: var(--text-muted);
@@ -431,6 +454,25 @@
         font-size: 11px;
         text-transform: uppercase;
         letter-spacing: .04em;
+    }
+
+    .auto-result-table {
+        table-layout: fixed;
+        min-width: 1180px;
+    }
+
+    .auto-col-id { width: 4%; }
+    .auto-col-subject { width: 15%; }
+    .auto-col-class { width: 13%; }
+    .auto-col-date { width: 8%; }
+    .auto-col-session { width: 12%; }
+    .auto-col-status { width: 12%; }
+    .auto-col-invigilators { width: 21%; }
+    .auto-col-note { width: 15%; }
+
+    .auto-result-table th,
+    .auto-result-table td {
+        vertical-align: top;
     }
 
     .auto-result-table .assigned-chip {

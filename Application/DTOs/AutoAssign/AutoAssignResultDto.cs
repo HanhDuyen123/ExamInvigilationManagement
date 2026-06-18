@@ -44,6 +44,7 @@
     {
         public int ExamScheduleId { get; set; }
         public DateTime ExamDate { get; set; }
+        public string SessionName { get; set; } = string.Empty;
         public string SlotName { get; set; } = string.Empty;
         public string RoomDisplay { get; set; } = string.Empty;
         public string SubjectName { get; set; } = string.Empty;
@@ -65,6 +66,7 @@
     {
         public int ExamScheduleId { get; set; }
         public DateTime ExamDate { get; set; }
+        public string SessionName { get; set; } = string.Empty;
         public string SlotName { get; set; } = string.Empty;
         public string RoomDisplay { get; set; } = string.Empty;
         public string SubjectName { get; set; } = string.Empty;
