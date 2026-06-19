@@ -12,6 +12,7 @@ namespace ExamInvigilationManagement.Application.DTOs.Import
     public class ImportErrorDto
     {
         public int RowNumber { get; set; }
+        public string ColumnLetter { get; set; } = string.Empty;
         public string Column { get; set; } = string.Empty;
         public string Value { get; set; } = string.Empty;
         public string Message { get; set; } = string.Empty;
@@ -25,6 +26,7 @@ namespace ExamInvigilationManagement.Application.DTOs.Import
         public int InsertedRows { get; set; }
         public bool Success => Errors.Count == 0;
         public List<ImportErrorDto> Errors { get; set; } = new();
+        public Dictionary<string, string> ColumnReferences { get; set; } = new(StringComparer.OrdinalIgnoreCase);
     }
 
     public class ImportFileDto

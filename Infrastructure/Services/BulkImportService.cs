@@ -201,17 +201,23 @@ namespace ExamInvigilationManagement.Infrastructure.Services
             if (result.Errors.Any() || rows.Count == 0)
             {
                 if (rows.Count == 0) result.Errors.Add(Error(0, "File", file.FileName, "File không có dòng dữ liệu. Không tìm thấy header hoặc dòng dữ liệu hợp lệ trong file."));
+                EnrichErrorColumns(result);
                 return result;
             }
 
             var entities = await ValidateAndMapAsync(module, rows, result, currentUserId, currentRole, cancellationToken);
-            if (result.Errors.Any()) return result;
+            if (result.Errors.Any())
+            {
+                EnrichErrorColumns(result);
+                return result;
+            }
 
             await using var tx = await _db.Database.BeginTransactionAsync(cancellationToken);
-            result.InsertedRows = await AddEntitiesAsync(module, entities, cancellationToken);
-            await _db.SaveChangesAsync(cancellationToken);
-            await tx.CommitAsync(cancellationToken);
+                result.InsertedRows = await AddEntitiesAsync(module, entities, cancellationToken);
+                await _db.SaveChangesAsync(cancellationToken);
+                await tx.CommitAsync(cancellationToken);
 
+            EnrichErrorColumns(result);
             return result;
         }
 
@@ -658,7 +664,13 @@ namespace ExamInvigilationManagement.Infrastructure.Services
         {
             var currentFacultyId = await _db.Users.Where(x => x.UserId == currentUserId).Select(x => x.FacultyId).FirstOrDefaultAsync(ct);
             var users = (await _db.Users.Include(x => x.Role).ToListAsync(ct)).ToDictionary(x => x.UserName, StringComparer.OrdinalIgnoreCase);
-            var schedules = await _db.ExamSchedules.Include(x => x.Offering).ToDictionaryAsync(x => x.ExamScheduleId, ct);
+            var scheduleList = await _db.ExamSchedules
+                .Include(x => x.Offering)
+                .Include(x => x.Room)
+                .Include(x => x.Session)
+                .Include(x => x.Slot)
+                .ToListAsync(ct);
+            var schedules = scheduleList.ToDictionary(x => x.ExamScheduleId);
             var supportAvailability = await _db.LecturerPeriodAvailabilities
                 .AsNoTracking()
                 .Select(x => new { x.UserId, x.PeriodId })
@@ -673,12 +685,41 @@ namespace ExamInvigilationManagement.Infrastructure.Services
             {
                 var r = RowNo(row);
                 E.ExamSchedule? schedule = null;
-                if (!TryInt(row, "Mã lịch thi", result, r, out var scheduleId) || !schedules.TryGetValue(scheduleId, out schedule)) result.Errors.Add(Error(r, "Mã lịch thi", Val(row, "Mã lịch thi"), "Không tồn tại."));
+                var isSupportAssignmentFile = Val(row, "__SupportAssignment") == "1";
+                var scheduleId = 0;
+                if (isSupportAssignmentFile)
+                {
+                    schedule = ResolveSupportAssignmentSchedule(scheduleList, row, result, r);
+                    scheduleId = schedule?.ExamScheduleId ?? 0;
+                }
+                else if (!TryInt(row, "Mã lịch thi", result, r, out scheduleId) || !schedules.TryGetValue(scheduleId, out schedule)) result.Errors.Add(Error(r, "Mã lịch thi", Val(row, "Mã lịch thi"), "Không tồn tại."));
                 else if (schedule.Offering.UserId == currentUserId) { }
                 var userName = Val(row, "Tên đăng nhập giám thị").Trim();
                 if (!users.TryGetValue(userName, out var user)) result.Errors.Add(Error(r, "Tên đăng nhập giám thị", userName, "Tài khoản không tồn tại."));
-                if (user != null && schedule != null && user.FacultyId != currentFacultyId && (!schedule.SupportRequestedAt.HasValue || !supportAvailabilitySet.Contains((user.UserId, schedule.PeriodId))))
-                    result.Errors.Add(Error(r, "Tên đăng nhập giám thị", userName, "Tài khoản khác khoa chỉ được phân công sau khi lịch đã gửi hỗ trợ CBCT và tài khoản có trong danh sách khả dụng đã import."));
+                if (user != null && schedule != null && user.FacultyId != currentFacultyId)
+                {
+                    if (!schedule.SupportRequestedAt.HasValue)
+                    {
+                        result.Errors.Add(Error(r, "Tên đăng nhập giám thị", userName, "Tài khoản khác khoa chỉ được phân công sau khi lịch đã gửi hỗ trợ CBCT."));
+                    }
+                    else if (!isSupportAssignmentFile && !supportAvailabilitySet.Contains((user.UserId, schedule.PeriodId)))
+                    {
+                        result.Errors.Add(Error(r, "Tên đăng nhập giám thị", userName, "Tài khoản khác khoa chỉ được phân công sau khi có trong danh sách giảng viên khả thi của đợt thi."));
+                    }
+                    else if (isSupportAssignmentFile && !supportAvailabilitySet.Contains((user.UserId, schedule.PeriodId)))
+                    {
+                        _db.LecturerPeriodAvailabilities.Add(new E.LecturerPeriodAvailability
+                        {
+                            UserId = user.UserId,
+                            PeriodId = schedule.PeriodId,
+                            Source = "SupportImport",
+                            CreatedById = currentUserId,
+                            CreatedAt = DateTime.Now,
+                            Note = "Tự thêm từ file phân công hỗ trợ CBCT"
+                        });
+                        supportAvailabilitySet.Add((user.UserId, schedule.PeriodId));
+                    }
+                }
                 if (!TryByte(row, "Vị trí", result, r, out var pos) || pos is < 1 or > 2) result.Errors.Add(Error(r, "Vị trí", Val(row, "Vị trí"), "Chỉ nhận 1 hoặc 2."));
                 if (!seenPos.Add((scheduleId, pos)) || occupiedPositions.Contains((scheduleId, pos))) result.Errors.Add(Error(r, "Vị trí", pos.ToString(), "Vị trí giám thị của lịch thi đã có người hoặc bị trùng trong file."));
                 if (user != null && assignedUsers.Contains((scheduleId, user.UserId))) result.Errors.Add(Error(r, "Tên đăng nhập giám thị", userName, "Tài khoản đã được phân công ở lịch này."));
@@ -688,6 +729,43 @@ namespace ExamInvigilationManagement.Infrastructure.Services
                 list.Add(new E.ExamInvigilator { ExamScheduleId = scheduleId, AssigneeId = user?.UserId ?? 0, AssignerId = currentUserId, PositionNo = pos, Status = status, CreateAt = DateTime.Now });
             }
             return list;
+        }
+
+        private static E.ExamSchedule? ResolveSupportAssignmentSchedule(List<E.ExamSchedule> schedules, Dictionary<string, string> row, ImportResultDto result, int rowNo)
+        {
+            if (!TryDateTime(row, "Ngày thi", result, rowNo, out var examDate)) return null;
+
+            var subjectId = Val(row, "Mã môn");
+            var className = Val(row, "Lớp học phần");
+            var groupNumber = Val(row, "Nhóm");
+            var roomName = NormalizeImportRoomName(Val(row, "Tên phòng"));
+            var sessionName = NormalizeLookup(Val(row, "Buổi thi"));
+            var slotName = NormalizeLookup(NormalizeSlotName(Val(row, "Ca thi")));
+
+            Required(result, rowNo, "Mã môn", subjectId);
+            Required(result, rowNo, "Lớp học phần", className);
+            Required(result, rowNo, "Nhóm", groupNumber);
+            Required(result, rowNo, "Tên phòng", roomName);
+            Required(result, rowNo, "Buổi thi", Val(row, "Buổi thi"));
+            Required(result, rowNo, "Ca thi", Val(row, "Ca thi"));
+
+            if (result.Errors.Any(x => x.RowNumber == rowNo)) return null;
+
+            var matches = schedules.Where(x =>
+                    string.Equals(x.Offering.SubjectId, subjectId, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(x.Offering.ClassName, className, StringComparison.OrdinalIgnoreCase) &&
+                    string.Equals(x.Offering.GroupNumber, groupNumber, StringComparison.OrdinalIgnoreCase) &&
+                    x.ExamDate.Date == examDate!.Value.Date &&
+                    NormalizeImportRoomName(x.Room.RoomName) == roomName &&
+                    NormalizeLookup(x.Session.SessionName) == sessionName &&
+                    NormalizeLookup(x.Slot.SlotName) == slotName)
+                .ToList();
+
+            if (matches.Count == 1) return matches[0];
+
+            var value = $"{subjectId} - {className} - nhóm {groupNumber} - {examDate:dd/MM/yyyy} - {Val(row, "Buổi thi")} - {Val(row, "Ca thi")} - phòng {Val(row, "Tên phòng")}";
+            result.Errors.Add(Error(rowNo, "Lịch thi", value, matches.Count == 0 ? "Không tìm thấy lịch thi khớp với dòng trong file hỗ trợ CBCT." : "Có nhiều lịch thi khớp, cần kiểm tra lại dữ liệu lịch thi/phòng/ca."));
+            return null;
         }
 
         private async Task<int> AddEntitiesAsync(string module, List<object> entities, CancellationToken ct)
@@ -726,7 +804,7 @@ namespace ExamInvigilationManagement.Infrastructure.Services
             var existingMap = existing.ToDictionary(x => (x.UserId, x.PeriodId));
             var changed = 0;
 
-            foreach (var stale in existing.Where(x => !incomingKeys.Contains((x.UserId, x.PeriodId))).ToList())
+            foreach (var stale in existing.Where(x => x.Source == "Import" && !incomingKeys.Contains((x.UserId, x.PeriodId))).ToList())
             {
                 _db.LecturerPeriodAvailabilities.Remove(stale);
                 changed++;
@@ -946,9 +1024,16 @@ namespace ExamInvigilationManagement.Infrastructure.Services
                 });
 
                 if (headerRow == null && module is "subject" or "course-offering" or "exam-schedule")
-                    return ReadSchoolExamScheduleRows(module, workbookPart, excelRows, file.FileName);
+                    return ReadSchoolExamScheduleRows(module, workbookPart, excelRows, file.FileName, result);
 
-                headerRow ??= excelRows[0];
+                if (headerRow == null && module == "exam-invigilator")
+                    return ReadSupportAssignmentRows(workbookPart, excelRows, result);
+
+                if (headerRow == null)
+                {
+                    result.Errors.Add(Error(0, "Header", file.FileName, $"Không tìm thấy dòng header đủ các cột bắt buộc: {string.Join(", ", requiredHeaders)}."));
+                    return rows;
+                }
 
                 var headerRowIndex = headerRow.RowIndex?.Value ?? 1;
                 var headersByColumn = headerRow.Elements<Cell>()
@@ -963,10 +1048,17 @@ namespace ExamInvigilationManagement.Infrastructure.Services
                     {
                         var column = GetColumnName(cell.CellReference?.Value);
                         if (column != null && headersByColumn.TryGetValue(column, out var header))
+                        {
                             dict[header] = GetCellValue(workbookPart, cell);
+                            result.ColumnReferences[ColumnRefKey((int)currentRowIndex, header)] = column;
+                        }
                     }
-                    foreach (var header in headersByColumn.Values)
+                    foreach (var mapping in headersByColumn)
+                    {
+                        var header = mapping.Value;
                         dict.TryAdd(header, string.Empty);
+                        result.ColumnReferences[ColumnRefKey((int)currentRowIndex, header)] = mapping.Key;
+                    }
                     if (IsTemplateHelperRow(dict, templateColumns)) continue;
                     if (dict.Where(x => x.Key != "__RowNumber").Any(x => !string.IsNullOrWhiteSpace(x.Value))) rows.Add(dict);
                 }
@@ -978,7 +1070,7 @@ namespace ExamInvigilationManagement.Infrastructure.Services
             return rows;
         }
 
-        private static List<Dictionary<string, string>> ReadSchoolExamScheduleRows(string module, WorkbookPart workbookPart, List<Row> excelRows, string fileName)
+        private static List<Dictionary<string, string>> ReadSchoolExamScheduleRows(string module, WorkbookPart workbookPart, List<Row> excelRows, string fileName, ImportResultDto result)
         {
             var rows = new List<Dictionary<string, string>>();
             var headerRow = excelRows.FirstOrDefault(row =>
@@ -1002,14 +1094,29 @@ namespace ExamInvigilationManagement.Infrastructure.Services
             foreach (var row in excelRows.Where(x => (x.RowIndex?.Value ?? 0) > headerIndex))
             {
                 var cells = ReadRowCells(workbookPart, row);
-                string Get(params string[] names)
+                string? FindColumn(params string[] names)
                 {
                     foreach (var name in names)
                     {
                         var column = headersByColumn.FirstOrDefault(x => HeaderMatches(x.Value, name)).Key;
-                        if (!string.IsNullOrWhiteSpace(column) && cells.TryGetValue(column, out var value)) return value.Trim();
+                        if (!string.IsNullOrWhiteSpace(column)) return column;
                     }
+                    return null;
+                }
+
+                string Get(params string[] names)
+                {
+                    var column = FindColumn(names);
+                    if (!string.IsNullOrWhiteSpace(column) && cells.TryGetValue(column, out var value)) return value.Trim();
                     return string.Empty;
+                }
+
+                void Put(Dictionary<string, string> target, string header, string value, params string[] sourceNames)
+                {
+                    target[header] = value;
+                    var sourceColumn = FindColumn(sourceNames.Length == 0 ? [header] : sourceNames);
+                    if (!string.IsNullOrWhiteSpace(sourceColumn))
+                        result.ColumnReferences[ColumnRefKey(RowNo(target), header)] = sourceColumn;
                 }
 
                 var subjectId = Get("Mã học phần", "Ma học phần", "Ma HP", "Mã HP");
@@ -1025,25 +1132,26 @@ namespace ExamInvigilationManagement.Infrastructure.Services
                 var dict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 {
                     ["__RowNumber"] = row.RowIndex?.Value.ToString() ?? "0",
-                    ["__SchoolSchedule"] = "1",
-                    ["Mã môn"] = subjectId,
-                    ["Tên môn"] = Get("Tên học phần"),
-                    ["Số tín chỉ"] = credit,
-                    ["Tên khoa"] = subjectFaculty,
-                    ["Tên đăng nhập giảng viên"] = ParseLecturerCode(lecturer),
-                    ["Lớp học phần"] = Get("Lớp HP"),
-                    ["Nhóm"] = FirstNonEmpty(Get("Nhóm HP"), Get("Nhóm thi"), "01"),
-                    ["Năm học"] = InferAcademyYear(title, Get("Ngày thi")),
-                    ["Học kỳ"] = "Học kỳ 2",
-                    ["Đợt thi"] = InferPeriod(periodSource),
-                    ["Buổi thi"] = Get("Buổi thi"),
-                    ["Ca thi"] = NormalizeSlotName(Get("Ca thi")),
-                    ["Mã giảng đường"] = building,
-                    ["Tên phòng"] = ParseRoomName(roomRaw, building),
-                    ["Ngày thi"] = Get("Ngày thi"),
-                    ["Hình thức thi"] = NormalizeExamFormat(Get("Tên hình thức thi")),
-                    ["Trạng thái"] = "Chờ phân công"
+                    ["__SchoolSchedule"] = "1"
                 };
+
+                Put(dict, "Mã môn", subjectId, "Mã học phần", "Ma học phần", "Ma HP", "Mã HP");
+                Put(dict, "Tên môn", Get("Tên học phần"), "Tên học phần");
+                Put(dict, "Số tín chỉ", credit, "Tên chữ", "Số tín chỉ", "Tin chỉ", "Tín chỉ");
+                Put(dict, "Tên khoa", subjectFaculty, "Đơn vị quản lý học phần", "Don vị quản lý học phần", "Don vi quản lý học phần", "Đơn vị quản lí học phần");
+                Put(dict, "Tên đăng nhập giảng viên", ParseLecturerCode(lecturer), "Cán bộ giảng dạy");
+                Put(dict, "Lớp học phần", Get("Lớp HP"), "Lớp HP");
+                Put(dict, "Nhóm", FirstNonEmpty(Get("Nhóm HP"), Get("Nhóm thi"), "01"), "Nhóm HP", "Nhóm thi");
+                Put(dict, "Năm học", InferAcademyYear(title, Get("Ngày thi")), "Ngày thi");
+                Put(dict, "Học kỳ", InferSemester(FirstNonEmpty(title, fileName)));
+                Put(dict, "Đợt thi", InferPeriod(periodSource));
+                Put(dict, "Buổi thi", Get("Buổi thi"), "Buổi thi");
+                Put(dict, "Ca thi", NormalizeSlotName(Get("Ca thi")), "Ca thi");
+                Put(dict, "Mã giảng đường", building, "Dãy phòng", "Day phòng", "Tên phòng thi", "Tên phòng", "phòng thi");
+                Put(dict, "Tên phòng", ParseRoomName(roomRaw, building), "Tên phòng thi", "Tên phòng", "phòng thi");
+                Put(dict, "Ngày thi", Get("Ngày thi"), "Ngày thi");
+                Put(dict, "Hình thức thi", NormalizeExamFormat(Get("Tên hình thức thi")), "Tên hình thức thi");
+                Put(dict, "Trạng thái", "Chờ phân công");
 
                 rows.Add(dict);
             }
@@ -1060,6 +1168,98 @@ namespace ExamInvigilationManagement.Infrastructure.Services
                     .ToList(),
                 _ => rows
             };
+        }
+
+        private static List<Dictionary<string, string>> ReadSupportAssignmentRows(WorkbookPart workbookPart, List<Row> excelRows, ImportResultDto result)
+        {
+            var rows = new List<Dictionary<string, string>>();
+            var headerRow = excelRows.FirstOrDefault(row =>
+            {
+                var values = ReadRowCells(workbookPart, row).Values.Select(NormalizeLookup).ToHashSet();
+                return values.Any(x => x.Contains("ma hoc phan") || x.Contains("ma hp")) &&
+                       values.Any(x => x.Contains("cbct") || x.Contains("can bo coi thi") || x.Contains("giam thi"));
+            });
+
+            if (headerRow == null) return rows;
+
+            var headerIndex = headerRow.RowIndex?.Value ?? 1;
+            var headersByColumn = ReadRowCells(workbookPart, headerRow);
+
+            foreach (var row in excelRows.Where(x => (x.RowIndex?.Value ?? 0) > headerIndex))
+            {
+                var rowNo = row.RowIndex?.Value ?? 0;
+                var cells = ReadRowCells(workbookPart, row);
+
+                string? FindColumn(params string[] names)
+                {
+                    foreach (var name in names)
+                    {
+                        var column = headersByColumn.FirstOrDefault(x => HeaderMatches(x.Value, name)).Key;
+                        if (!string.IsNullOrWhiteSpace(column)) return column;
+                    }
+                    return null;
+                }
+
+                string GetByColumn(string column) => cells.TryGetValue(column, out var value) ? value.Trim() : string.Empty;
+                string Get(params string[] names)
+                {
+                    var column = FindColumn(names);
+                    return string.IsNullOrWhiteSpace(column) ? string.Empty : GetByColumn(column);
+                }
+
+                var subjectId = FirstNonEmpty(Get("Mã học phần", "Mã HP", "Mã môn"), GetByColumn("B"));
+                if (string.IsNullOrWhiteSpace(subjectId)) continue;
+
+                var baseValues = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+                {
+                    ["__SupportAssignment"] = "1",
+                    ["Mã môn"] = subjectId,
+                    ["Lớp học phần"] = FirstNonEmpty(Get("Lớp HP", "Lớp học phần"), GetByColumn("H")),
+                    ["Nhóm"] = FirstNonEmpty(Get("Nhóm thi", "Nhóm HP", "Nhóm"), GetByColumn("G"), GetByColumn("F"), "01"),
+                    ["Ngày thi"] = FirstNonEmpty(Get("Ngày thi"), GetByColumn("I")),
+                    ["Buổi thi"] = FirstNonEmpty(Get("Buổi thi"), GetByColumn("J")),
+                    ["Ca thi"] = NormalizeSlotName(FirstNonEmpty(Get("Ca thi", "Ca"), GetByColumn("K"))),
+                    ["Tên phòng"] = FirstNonEmpty(Get("Phòng thi", "Tên phòng", "Tên phòng thi"), GetByColumn("M")),
+                    ["Trạng thái"] = ExamInvigilatorStatuses.PendingConfirmation
+                };
+
+                void PutRefs(Dictionary<string, string> target)
+                {
+                    var rowNumber = RowNo(target);
+                    void Ref(string header, string column)
+                    {
+                        if (!string.IsNullOrWhiteSpace(column)) result.ColumnReferences[ColumnRefKey(rowNumber, header)] = column;
+                    }
+
+                    Ref("Mã môn", FirstNonEmpty(FindColumn("Mã học phần", "Mã HP", "Mã môn") ?? string.Empty, "B"));
+                    Ref("Lớp học phần", FirstNonEmpty(FindColumn("Lớp HP", "Lớp học phần") ?? string.Empty, "H"));
+                    Ref("Nhóm", FirstNonEmpty(FindColumn("Nhóm thi", "Nhóm HP", "Nhóm") ?? string.Empty, "G"));
+                    Ref("Ngày thi", FirstNonEmpty(FindColumn("Ngày thi") ?? string.Empty, "I"));
+                    Ref("Buổi thi", FirstNonEmpty(FindColumn("Buổi thi") ?? string.Empty, "J"));
+                    Ref("Ca thi", FirstNonEmpty(FindColumn("Ca thi", "Ca") ?? string.Empty, "K"));
+                    Ref("Tên phòng", FirstNonEmpty(FindColumn("Phòng thi", "Tên phòng", "Tên phòng thi") ?? string.Empty, "M"));
+                }
+
+                void AddInvigilator(string userName, byte positionNo, string userColumn)
+                {
+                    if (string.IsNullOrWhiteSpace(userName)) return;
+                    var dict = new Dictionary<string, string>(baseValues, StringComparer.OrdinalIgnoreCase)
+                    {
+                        ["__RowNumber"] = rowNo.ToString(),
+                        ["Tên đăng nhập giám thị"] = ParseLecturerCode(userName),
+                        ["Vị trí"] = positionNo.ToString()
+                    };
+                    PutRefs(dict);
+                    result.ColumnReferences[ColumnRefKey(RowNo(dict), "Tên đăng nhập giám thị")] = userColumn;
+                    result.ColumnReferences[ColumnRefKey(RowNo(dict), "Vị trí")] = userColumn;
+                    rows.Add(dict);
+                }
+
+                AddInvigilator(FirstNonEmpty(Get("Mã CBCT 1", "CBCT 1", "Giám thị 1"), GetByColumn("R")), 1, FirstNonEmpty(FindColumn("Mã CBCT 1", "CBCT 1", "Giám thị 1") ?? string.Empty, "R"));
+                AddInvigilator(FirstNonEmpty(Get("Mã CBCT 2", "CBCT 2", "Giám thị 2"), GetByColumn("U")), 2, FirstNonEmpty(FindColumn("Mã CBCT 2", "CBCT 2", "Giám thị 2") ?? string.Empty, "U"));
+            }
+
+            return rows;
         }
 
         private static Dictionary<string, string> ReadRowCells(WorkbookPart workbookPart, Row row)
@@ -1253,6 +1453,19 @@ namespace ExamInvigilationManagement.Infrastructure.Services
             if (DateTime.TryParse(date, out var dt)) return $"{dt.Year - 1}-{dt.Year}";
             return "2025-2026";
         }
+
+        private static string InferSemester(string source)
+        {
+            var normalized = NormalizeLookup(source);
+            if (normalized.Contains(" he") || normalized.Contains("ky he") || normalized.Contains("ki he") || normalized.Contains("hoc ky he") || normalized.Contains("hoc ki he"))
+                return "Học kỳ hè";
+
+            var match = System.Text.RegularExpressions.Regex.Match(normalized, @"(?:hoc\s*)?(?:ky|ki)\s*(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            if (match.Success) return $"Học kỳ {match.Groups[1].Value}";
+
+            return "Học kỳ 2";
+        }
+
         private static string InferPeriod(string title)
         {
             var normalized = NormalizeLookup(title);
@@ -1428,11 +1641,53 @@ namespace ExamInvigilationManagement.Infrastructure.Services
         private static string GetExcelColumnName(int number) { var name = string.Empty; while (number > 0) { var mod = (number - 1) % 26; name = (char)('A' + mod) + name; number = (number - mod) / 26; } return name; }
         private static ImportColumnDto Col(string key, string header, bool required, string description, string example) => new() { Key = key, Header = header, Required = required, Description = description, Example = example };
         private static ImportErrorDto Error(int row, string column, string value, string message) => new() { RowNumber = row, Column = column, Value = value, Message = message };
+        private static string ColumnRefKey(int row, string column) => $"{row}|{NormalizeColumnRefName(column)}";
+        private static string NormalizeColumnRefName(string? value) => (value ?? string.Empty).Trim().ToLowerInvariant();
+        private static void EnrichErrorColumns(ImportResultDto result)
+        {
+            foreach (var error in result.Errors)
+            {
+                if (error.RowNumber <= 0 || !string.IsNullOrWhiteSpace(error.ColumnLetter)) continue;
+                if (TryGetColumnReference(result, error.RowNumber, error.Column, out var column))
+                    error.ColumnLetter = column;
+            }
+        }
+
+        private static bool TryGetColumnReference(ImportResultDto result, int rowNumber, string column, out string columnLetter)
+        {
+            if (result.ColumnReferences.TryGetValue(ColumnRefKey(rowNumber, column), out columnLetter!)) return true;
+
+            var aliases = column switch
+            {
+                "Tên đăng nhập" => new[] { "Tên đăng nhập giảng viên", "Tên đăng nhập giám thị" },
+                "Học phần mở" => new[] { "Mã môn", "Tên đăng nhập giảng viên", "Lớp học phần", "Nhóm", "Học kỳ" },
+                "Lịch thi" => new[] { "Mã môn", "Lớp học phần", "Nhóm", "Ngày thi", "Buổi thi", "Ca thi", "Tên phòng" },
+                "Dòng" => new[] { "Mã môn", "Tên đăng nhập giảng viên", "Tên đăng nhập giám thị", "Đợt thi" },
+                _ => Array.Empty<string>()
+            };
+
+            foreach (var alias in aliases)
+            {
+                if (result.ColumnReferences.TryGetValue(ColumnRefKey(rowNumber, alias), out columnLetter!)) return true;
+            }
+
+            columnLetter = string.Empty;
+            return false;
+        }
         private static string NormalizeModule(string module) => (module ?? string.Empty).Trim().ToLowerInvariant();
         private static int RowNo(Dictionary<string, string> row) => int.TryParse(row.GetValueOrDefault("__RowNumber"), out var n) ? n : 0;
         private static string Val(Dictionary<string, string> row, string key) => row.TryGetValue(key, out var value) ? value?.Trim() ?? string.Empty : string.Empty;
         private static string? EmptyToNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-        private static bool Required(ImportResultDto result, int row, string column, string value) { if (!string.IsNullOrWhiteSpace(value)) return true; result.Errors.Add(Error(row, column, value, "Bắt buộc nhập.")); return false; }
+        private static bool Required(ImportResultDto result, int row, string column, string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value)) return true;
+
+            var message = row > 0 && !TryGetColumnReference(result, row, column, out _)
+                ? "Không tìm thấy cột trong file import. Vui lòng kiểm tra lại header Excel."
+                : "Bắt buộc nhập.";
+            result.Errors.Add(Error(row, column, value, message));
+            return false;
+        }
         private static bool TryInt(Dictionary<string, string> row, string column, ImportResultDto result, int rowNo, out int value) { var raw = Val(row, column); if (int.TryParse(raw, out value)) return true; result.Errors.Add(Error(rowNo, column, raw, "Phải là số nguyên.")); return false; }
         private static bool TryByte(Dictionary<string, string> row, string column, ImportResultDto result, int rowNo, out byte value) { var raw = Val(row, column); if (byte.TryParse(raw, out value)) return true; result.Errors.Add(Error(rowNo, column, raw, "Phải là số nguyên nhỏ.")); return false; }
         private static bool TryDateOnly(Dictionary<string, string> row, string column, ImportResultDto result, int rowNo, out DateOnly value) { if (TryDateTime(row, column, result, rowNo, out var dt)) { value = DateOnly.FromDateTime(dt!.Value); return true; } value = default; return false; }
@@ -1556,7 +1811,7 @@ namespace ExamInvigilationManagement.Infrastructure.Services
             {
                 "1" or "hk1" or "hki" => "hk1",
                 "2" or "hk2" or "hkii" => "hk2",
-                "3" or "hk3" or "he" or "hè" => "hk3",
+                "3" or "hk3" or "he" or "hè" or "hkhe" or "hkhè" => "hk3",
                 _ => normalized
             };
         }

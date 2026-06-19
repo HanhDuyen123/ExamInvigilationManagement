@@ -197,6 +197,15 @@ namespace ExamInvigilationManagement.Application.Services
         public Task<PagedResult<LecturerPeriodAvailabilityDto>> GetAvailabilityPagedAsync(LecturerPeriodAvailabilitySearchDto filter, int page, int pageSize)
             => _repo.GetAvailabilityPagedAsync(filter, page, pageSize);
 
+        public Task SetPeriodAvailabilityAsync(int userId, int periodId, bool isAvailable, int currentUserId, int? facultyScopeId = null)
+        {
+            if (userId <= 0) throw new InvalidOperationException("Thiếu giảng viên.");
+            if (periodId <= 0) throw new InvalidOperationException("Vui lòng chọn đợt thi trước khi cập nhật.");
+            if (currentUserId <= 0) throw new InvalidOperationException("Không xác định được người thao tác.");
+
+            return _repo.SetPeriodAvailabilityAsync(userId, periodId, isAvailable, currentUserId, facultyScopeId);
+        }
+
         private static void Validate(LecturerBusySlotDto dto)
         {
             if (dto == null) throw new ArgumentNullException(nameof(dto));

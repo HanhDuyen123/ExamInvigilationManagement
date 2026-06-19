@@ -72,7 +72,7 @@ namespace ExamInvigilationManagement.Controllers
         [HttpGet]
         public async Task<IActionResult> GetAvailabilityList(string? keyword, int? facultyId, int? academyYearId, int? semesterId, int? periodId, int page = 1, int pageSize = 10)
         {
-            var scopeFacultyId = await GetFacultyScopeAsync();
+            var scopeFacultyId = await GetAvailabilityFacultyScopeAsync();
             if (!academyYearId.HasValue && !semesterId.HasValue && !periodId.HasValue)
             {
                 var currentUserId = GetCurrentUserId();
@@ -86,6 +86,8 @@ namespace ExamInvigilationManagement.Controllers
                 }
             }
 
+            ViewBag.HasPeriodFilter = periodId.HasValue;
+
             var result = await _busySlotService.GetAvailabilityPagedAsync(new Application.DTOs.LecturerBusySlot.LecturerPeriodAvailabilitySearchDto
             {
                 Keyword = keyword,
@@ -96,6 +98,37 @@ namespace ExamInvigilationManagement.Controllers
             }, page, pageSize);
 
             return PartialView("_LecturerAvailabilityTable", result);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ToggleAvailability(int userId, int periodId, bool isSelected)
+        {
+            var currentUserId = GetCurrentUserId();
+            if (!currentUserId.HasValue)
+                return Unauthorized(new { success = false, message = "Phiên đăng nhập không hợp lệ." });
+
+            try
+            {
+                await _busySlotService.SetPeriodAvailabilityAsync(
+                    userId,
+                    periodId,
+                    isSelected,
+                    currentUserId.Value,
+                    await GetAvailabilityFacultyScopeAsync());
+
+                return Json(new
+                {
+                    success = true,
+                    message = isSelected ? "Đã đánh dấu giảng viên có thể coi thi." : "Đã bỏ giảng viên khỏi danh sách khả thi.",
+                    source = isSelected ? "UI" : string.Empty
+                });
+            }
+            catch (Exception ex)
+            {
+                Response.StatusCode = StatusCodes.Status400BadRequest;
+                return Json(new { success = false, message = ex.Message });
+            }
         }
 
         [HttpGet]
@@ -230,13 +263,20 @@ namespace ExamInvigilationManagement.Controllers
             return await GetCurrentFacultyIdAsync();
         }
 
+        private async Task<int?> GetAvailabilityFacultyScopeAsync()
+        {
+            if (User.IsInRole("Admin")) return null;
+            if (!IsFacultyManager()) return null;
+            return await GetCurrentFacultyIdAsync();
+        }
+
         private async Task SetInitialAcademicContextAsync()
         {
             var currentUserId = GetCurrentUserId();
             if (!currentUserId.HasValue)
                 return;
 
-            var scopeFacultyId = await GetFacultyScopeAsync();
+            var scopeFacultyId = await GetAvailabilityFacultyScopeAsync();
             var role = User.IsInRole("Admin") ? "Admin" : User.IsInRole("Trưởng khoa") ? "Trưởng khoa" : User.IsInRole("Thư ký khoa") ? "Thư ký khoa" : string.Empty;
             var context = await _currentAcademicContextService.GetCurrentContextAsync(currentUserId.Value, role, scopeFacultyId);
             ViewBag.InitialAcademyYearId = context?.AcademyYearId;

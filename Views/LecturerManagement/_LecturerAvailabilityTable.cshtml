@@ -10,13 +10,14 @@
     <thead>
         <tr>
             <th>STT</th>
+            <th>Có thể coi thi</th>
             <th>Mã GV</th>
             <th>Giảng viên</th>
             <th>Khoa</th>
             <th>Năm học</th>
             <th>Học kỳ</th>
             <th>Đợt thi</th>
-            <th>Nguồn</th>
+            <th>Trạng thái</th>
             <th>Ghi chú</th>
         </tr>
     </thead>
@@ -25,14 +26,29 @@
         {
             <tr>
                 <td>@stt</td>
+                <td class="cell-nowrap">
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input availability-toggle" type="checkbox" role="switch" data-user-id="@item.UserId" @(item.IsSelected ? "checked" : "") />
+                    </div>
+                </td>
                 <td class="cell-nowrap">@item.UserName</td>
                 <td class="cell-wrap ui-col-person">@item.FullName</td>
                 <td class="cell-wrap">@(item.FacultyName ?? "-")</td>
-                <td class="cell-nowrap">@item.AcademyYearName</td>
-                <td class="cell-nowrap">@item.SemesterName</td>
-                <td class="cell-nowrap">@item.PeriodName</td>
-                <td class="cell-nowrap"><span class="badge rounded-pill bg-primary">@item.Source</span></td>
-                <td class="cell-wrap">@(string.IsNullOrWhiteSpace(item.Note) ? "-" : item.Note)</td>
+                <td class="cell-nowrap">@(string.IsNullOrWhiteSpace(item.AcademyYearName) ? "-" : item.AcademyYearName)</td>
+                <td class="cell-nowrap">@(string.IsNullOrWhiteSpace(item.SemesterName) ? "-" : item.SemesterName)</td>
+                <td class="cell-nowrap">@(string.IsNullOrWhiteSpace(item.PeriodName) ? "-" : item.PeriodName)</td>
+                <td class="cell-nowrap" data-availability-source>
+                    @if (item.IsSelected)
+                    {
+                        var badgeClass = string.Equals(item.Source, "Import", StringComparison.OrdinalIgnoreCase) ? "bg-primary" : "bg-info text-dark";
+                        <span class="badge rounded-pill @badgeClass">@item.Source</span>
+                    }
+                    else
+                    {
+                        <span class="badge rounded-pill bg-light text-muted border">Chưa chọn</span>
+                    }
+                </td>
+                <td class="cell-wrap" data-availability-note>@(string.IsNullOrWhiteSpace(item.Note) ? "-" : item.Note)</td>
             </tr>
             stt++;
         }
@@ -41,7 +57,7 @@
 
 @if (!Model.Items.Any())
 {
-    <div class="text-center text-muted py-4">Chưa có giảng viên khả thi phù hợp.</div>
+    <div class="text-center text-muted py-4">Không có giảng viên phù hợp.</div>
 }
 
 @await Html.PartialAsync("_Pagination", Model)

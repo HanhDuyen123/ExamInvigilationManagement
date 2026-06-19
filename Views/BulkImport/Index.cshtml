@@ -31,11 +31,11 @@
                 <div class="alert alert-danger mb-3"><i class="bi bi-exclamation-triangle"></i> File có @Model.Result.Errors.Count lỗi. Chưa có dữ liệu nào được lưu.</div>
                 <div class="import-error-panel">
                     <table class="table import-error-table mb-0">
-                        <thead><tr><th>Dòng Excel</th><th>Cột</th><th>Giá trị</th><th>Lỗi</th></tr></thead>
+                        <thead><tr><th>Dòng Excel</th><th>Cột Excel</th><th>Thông tin</th><th>Giá trị</th><th>Lỗi</th></tr></thead>
                         <tbody>
                         @foreach (var err in Model.Result.Errors)
                         {
-                            <tr><td>@err.RowNumber</td><td>@err.Column</td><td><code>@err.Value</code></td><td>@err.Message</td></tr>
+                            <tr><td>@err.RowNumber</td><td>@(string.IsNullOrWhiteSpace(err.ColumnLetter) ? "-" : err.ColumnLetter)</td><td>@err.Column</td><td><code>@err.Value</code></td><td>@err.Message</td></tr>
                         }
                         </tbody>
                     </table>

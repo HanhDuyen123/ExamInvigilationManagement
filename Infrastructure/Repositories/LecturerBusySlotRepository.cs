@@ -6,6 +6,7 @@ using ExamInvigilationManagement.Domain.Entities;
 using ExamInvigilationManagement.Infrastructure.Data;
 using ExamInvigilationManagement.Infrastructure.Mapping;
 using Microsoft.EntityFrameworkCore;
+using DataEntities = ExamInvigilationManagement.Infrastructure.Data.Entities;
 
 namespace ExamInvigilationManagement.Infrastructure.Repositories
 {
@@ -438,57 +439,130 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
 
         public async Task<PagedResult<LecturerPeriodAvailabilityDto>> GetAvailabilityPagedAsync(LecturerPeriodAvailabilitySearchDto filter, int page, int pageSize)
         {
-            var query = _context.LecturerPeriodAvailabilities
+            var period = filter.PeriodId.HasValue
+                ? await _context.ExamPeriods
+                    .AsNoTracking()
+                    .Where(x => x.PeriodId == filter.PeriodId.Value)
+                    .Select(x => new
+                    {
+                        x.PeriodId,
+                        x.PeriodName,
+                        x.Semester.SemesterName,
+                        x.Semester.AcademyYear.AcademyYearName
+                    })
+                    .FirstOrDefaultAsync()
+                : null;
+
+            var query = _context.Users
                 .AsNoTracking()
-                .Include(x => x.User).ThenInclude(x => x.Information)
-                .Include(x => x.User).ThenInclude(x => x.Faculty)
-                .Include(x => x.Period).ThenInclude(x => x.Semester).ThenInclude(x => x.AcademyYear)
+                .Include(x => x.Information)
+                .Include(x => x.Faculty)
+                .Where(x => x.IsActive && x.Role.RoleName == "Giảng viên")
                 .AsQueryable();
 
-            if (filter.FacultyId.HasValue) query = query.Where(x => x.User.FacultyId == filter.FacultyId.Value);
-            if (filter.AcademyYearId.HasValue) query = query.Where(x => x.Period.Semester.AcademyYearId == filter.AcademyYearId.Value);
-            if (filter.SemesterId.HasValue) query = query.Where(x => x.Period.SemesterId == filter.SemesterId.Value);
-            if (filter.PeriodId.HasValue) query = query.Where(x => x.PeriodId == filter.PeriodId.Value);
+            if (filter.FacultyId.HasValue) query = query.Where(x => x.FacultyId == filter.FacultyId.Value);
             if (!string.IsNullOrWhiteSpace(filter.Keyword))
             {
                 var kw = filter.Keyword.Trim().ToLower();
                 query = query.Where(x =>
-                    x.User.UserName.ToLower().Contains(kw) ||
-                    (x.User.Information.LastName + " " + x.User.Information.FirstName).ToLower().Contains(kw) ||
-                    (x.Note ?? "").ToLower().Contains(kw));
+                    x.UserName.ToLower().Contains(kw) ||
+                    ((x.Information != null ? x.Information.LastName + " " + x.Information.FirstName : "").ToLower().Contains(kw)) ||
+                    ((x.Faculty != null ? x.Faculty.FacultyName : "").ToLower().Contains(kw)));
             }
 
+            var periodId = period?.PeriodId ?? 0;
+            var periodName = period?.PeriodName ?? string.Empty;
+            var semesterName = period?.SemesterName ?? string.Empty;
+            var academyYearName = period?.AcademyYearName ?? string.Empty;
             var total = await query.CountAsync();
-            var items = await query
-                .OrderBy(x => x.User.Information.LastName)
-                .ThenBy(x => x.User.Information.FirstName)
+            var lecturers = await query
+                .OrderBy(x => x.Information != null ? x.Information.LastName : string.Empty)
+                .ThenBy(x => x.Information != null ? x.Information.FirstName : string.Empty)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(x => new LecturerPeriodAvailabilityDto
                 {
-                    Id = x.AvailabilityId,
                     UserId = x.UserId,
-                    UserName = x.User.UserName,
-                    FullName = x.User.Information.LastName + " " + x.User.Information.FirstName,
-                    FacultyId = x.User.FacultyId,
-                    FacultyName = x.User.Faculty != null ? x.User.Faculty.FacultyName : null,
-                    PeriodId = x.PeriodId,
-                    PeriodName = x.Period.PeriodName,
-                    SemesterName = x.Period.Semester.SemesterName,
-                    AcademyYearName = x.Period.Semester.AcademyYear.AcademyYearName,
-                    Note = x.Note,
-                    Source = x.Source,
-                    CreatedAt = x.CreatedAt
+                    UserName = x.UserName,
+                    FullName = x.Information != null ? x.Information.LastName + " " + x.Information.FirstName : x.UserName,
+                    FacultyId = x.FacultyId,
+                    FacultyName = x.Faculty != null ? x.Faculty.FacultyName : null,
+                    PeriodId = periodId,
+                    PeriodName = periodName,
+                    SemesterName = semesterName,
+                    AcademyYearName = academyYearName
                 })
                 .ToListAsync();
 
+            if (period != null)
+            {
+                var lecturerIds = lecturers.Select(x => x.UserId).ToList();
+                var availabilityMap = await _context.LecturerPeriodAvailabilities
+                    .AsNoTracking()
+                    .Where(x => x.PeriodId == period.PeriodId && lecturerIds.Contains(x.UserId))
+                    .Select(x => new { x.AvailabilityId, x.UserId, x.Note, x.Source, x.CreatedAt })
+                    .ToDictionaryAsync(x => x.UserId);
+
+                foreach (var lecturer in lecturers)
+                {
+                    if (!availabilityMap.TryGetValue(lecturer.UserId, out var availability)) continue;
+
+                    lecturer.Id = availability.AvailabilityId;
+                    lecturer.IsSelected = true;
+                    lecturer.Note = availability.Note;
+                    lecturer.Source = availability.Source;
+                    lecturer.CreatedAt = availability.CreatedAt;
+                }
+            }
+
             return new PagedResult<LecturerPeriodAvailabilityDto>
             {
-                Items = items,
+                Items = lecturers,
                 TotalCount = total,
                 Page = page,
                 PageSize = pageSize
             };
+        }
+
+        public async Task SetPeriodAvailabilityAsync(int userId, int periodId, bool isAvailable, int currentUserId, int? facultyScopeId = null)
+        {
+            var lecturer = await _context.Users
+                .Include(x => x.Role)
+                .FirstOrDefaultAsync(x => x.UserId == userId);
+
+            if (lecturer == null || !lecturer.IsActive || !string.Equals(lecturer.Role.RoleName, "Giảng viên", StringComparison.OrdinalIgnoreCase))
+                throw new InvalidOperationException("Không tìm thấy giảng viên hợp lệ.");
+
+            if (facultyScopeId.HasValue && lecturer.FacultyId != facultyScopeId.Value)
+                throw new InvalidOperationException("Bạn không có quyền cập nhật giảng viên ngoài khoa.");
+
+            var periodExists = await _context.ExamPeriods.AnyAsync(x => x.PeriodId == periodId);
+            if (!periodExists)
+                throw new InvalidOperationException("Đợt thi không tồn tại.");
+
+            var existing = await _context.LecturerPeriodAvailabilities
+                .FirstOrDefaultAsync(x => x.UserId == userId && x.PeriodId == periodId);
+
+            if (isAvailable)
+            {
+                if (existing == null)
+                {
+                    _context.LecturerPeriodAvailabilities.Add(new DataEntities.LecturerPeriodAvailability
+                    {
+                        UserId = userId,
+                        PeriodId = periodId,
+                        Source = "UI",
+                        CreatedById = currentUserId,
+                        CreatedAt = DateTime.Now
+                    });
+                }
+            }
+            else if (existing != null)
+            {
+                _context.LecturerPeriodAvailabilities.Remove(existing);
+            }
+
+            await _context.SaveChangesAsync();
         }
 
         public async Task<List<int>> GetDeanIdsForLecturerAsync(int lecturerUserId, CancellationToken cancellationToken = default)

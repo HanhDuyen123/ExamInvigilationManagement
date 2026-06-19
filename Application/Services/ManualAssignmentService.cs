@@ -223,8 +223,8 @@ namespace ExamInvigilationManagement.Application.Services
         }
 
         public async Task<ManualAssignmentResultDto> AssignAsync(
-    ManualAssignmentRequestDto request,
-    CancellationToken cancellationToken = default)
+        ManualAssignmentRequestDto request,
+        CancellationToken cancellationToken = default)
         {
             var errors = new List<string>();
 
@@ -245,7 +245,6 @@ namespace ExamInvigilationManagement.Application.Services
                 };
             }
 
-            // Dùng chung nguồn dữ liệu với màn hình GET
             var page = await GetPageAsync(request.ExamScheduleId, request.AssignerId, cancellationToken);
             var schedule = page.Schedule;
 

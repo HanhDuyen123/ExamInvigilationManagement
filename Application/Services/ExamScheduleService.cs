@@ -54,6 +54,8 @@ namespace ExamInvigilationManagement.Application.Services
             if (offeringCtx.SemesterId != slotCtx.SemesterId)
                 throw new InvalidOperationException("Học phần mở và ca thi không thuộc cùng học kỳ.");
 
+            ValidateExamDateInOfferingSemester(dto.ExamDate!.Value, offeringCtx);
+
             foreach (var roomId in roomIds)
             {
                 if (!await _repo.RoomExistsAsync(roomId))
@@ -122,6 +124,8 @@ namespace ExamInvigilationManagement.Application.Services
             if (offeringCtx.SemesterId != slotCtx.SemesterId)
                 throw new InvalidOperationException("Học phần mở và ca thi không thuộc cùng học kỳ.");
 
+            ValidateExamDateInOfferingSemester(dto.ExamDate!.Value, offeringCtx);
+
             var ignoreIds = await _repo.GetScheduleIdsInRoomGroupAsync(dto.Id);
             foreach (var roomId in roomIds)
             {
@@ -178,6 +182,16 @@ namespace ExamInvigilationManagement.Application.Services
 
             if (!ExamScheduleStatusHelper.IsValid(dto.Status))
                 throw new InvalidOperationException("Trạng thái lịch thi không hợp lệ.");
+        }
+
+        private static void ValidateExamDateInOfferingSemester(DateTime examDate, ExamScheduleValidationContextDto offeringCtx)
+        {
+            var date = examDate.Date;
+            if (offeringCtx.SemesterStartDate.HasValue && date < offeringCtx.SemesterStartDate.Value.Date)
+                throw new InvalidOperationException("Ngày thi phải nằm trong thời gian học kỳ của học phần mở.");
+
+            if (offeringCtx.SemesterEndDate.HasValue && date > offeringCtx.SemesterEndDate.Value.Date)
+                throw new InvalidOperationException("Ngày thi phải nằm trong thời gian học kỳ của học phần mở.");
         }
     }
 }

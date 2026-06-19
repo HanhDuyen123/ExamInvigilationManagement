@@ -701,6 +701,8 @@ namespace ExamInvigilationManagement.Infrastructure.Repositories
             {
                 AcademyYearId = x.Semester?.AcademyYearId ?? 0,
                 SemesterId = x.SemesterId,
+                SemesterStartDate = x.Semester?.StartDate,
+                SemesterEndDate = x.Semester?.EndDate,
                 SubjectId = x.SubjectId,
                 FacultyId = x.Subject?.FacultyId,
                 UserId = x.UserId,

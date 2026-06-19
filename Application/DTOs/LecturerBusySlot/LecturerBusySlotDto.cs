@@ -84,6 +84,7 @@
         public string? Note { get; set; }
         public string Source { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
+        public bool IsSelected { get; set; }
     }
 
     public class LecturerPeriodAvailabilitySearchDto

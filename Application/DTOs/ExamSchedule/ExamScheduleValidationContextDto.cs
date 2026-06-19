@@ -6,6 +6,8 @@
         public int SemesterId { get; set; }
         public int PeriodId { get; set; }
         public int SessionId { get; set; }
+        public DateTime? SemesterStartDate { get; set; }
+        public DateTime? SemesterEndDate { get; set; }
 
         public string? SubjectId { get; set; }
         public int? FacultyId { get; set; }

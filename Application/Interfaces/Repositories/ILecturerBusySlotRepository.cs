@@ -18,6 +18,7 @@ namespace ExamInvigilationManagement.Application.Interfaces.Repositories
         Task ApproveAsync(int id, int approverId);
         Task RejectAsync(int id, int approverId, string reason);
         Task<PagedResult<LecturerPeriodAvailabilityDto>> GetAvailabilityPagedAsync(LecturerPeriodAvailabilitySearchDto filter, int page, int pageSize);
+        Task SetPeriodAvailabilityAsync(int userId, int periodId, bool isAvailable, int currentUserId, int? facultyScopeId = null);
         Task<List<int>> GetDeanIdsForLecturerAsync(int lecturerUserId, CancellationToken cancellationToken = default);
         Task<string> GetLecturerDisplayNameAsync(int lecturerUserId, CancellationToken cancellationToken = default);
         Task<bool> IsPeriodInExpiredSemesterAsync(int periodId, DateTime today);

@@ -13,7 +13,7 @@
     <div class="role-header">
         <div>
             <h3 class="title-gradient">Giảng viên khả thi theo đợt</h3>
-            <p class="subtitle">Danh sách whitelist giảng viên có thể tham gia coi thi trong từng đợt thi.</p>
+            <p class="subtitle">Tick chọn giảng viên có thể coi thi theo từng đợt. Danh sách import và chọn từ UI dùng chung nguồn dữ liệu.</p>
         </div>
         <div class="d-flex gap-2 flex-wrap">
             <a class="btn btn-create" href="@Url.Action("Index", "BulkImport", new { module = "lecturer-period-availability" })">
@@ -25,12 +25,14 @@
         </div>
     </div>
 
+    @Html.AntiForgeryToken()
+
     <div class="filter-glass mb-3">
         <div class="role-filter-compact">
             <div class="role-filter-main">
                 <div class="search-field search-field-wide">
                     <label class="form-label mb-1">Tìm kiếm</label>
-                    <input id="keyword" class="input-modern" placeholder="Mã, tên giảng viên..." />
+                    <input id="keyword" class="input-modern crud-filter" placeholder="Mã, tên giảng viên..." />
                 </div>
                 @if (showFacultyFilter)
                 {
@@ -97,6 +99,50 @@
             AdminLookup.create({ key: 'availability-year', input: '#yearInput', hidden: '#yearId', menu: '#yearDropdown', url: '@Url.Action("AcademyYears", "Lookup")', valueField: 'id', textField: 'name', onSelect: function () { AdminLookup.get('availability-semester')?.clear(); AdminLookup.get('availability-period')?.clear(); CrudPage.loadData(1); }, onClear: function () { CrudPage.loadData(1); } });
             AdminLookup.create({ key: 'availability-semester', input: '#semesterInput', hidden: '#semesterId', menu: '#semesterDropdown', url: '@Url.Action("Semesters", "Lookup")', queryParam: 'keyword', extraParams: function () { return { academyYearId: $('#yearId').val() }; }, valueField: 'id', textField: 'name', beforeSearch: function () { return $('#yearId').val() ? true : 'Vui lòng chọn năm học'; }, onSelect: function () { AdminLookup.get('availability-period')?.clear(); CrudPage.loadData(1); }, onClear: function () { CrudPage.loadData(1); } });
             AdminLookup.create({ key: 'availability-period', input: '#periodInput', hidden: '#periodId', menu: '#periodDropdown', url: '@Url.Action("Periods", "Lookup")', queryParam: 'keyword', extraParams: function () { return { semesterId: $('#semesterId').val() }; }, valueField: 'id', textField: 'name', beforeSearch: function () { return $('#semesterId').val() ? true : 'Vui lòng chọn học kỳ'; }, onSelect: function () { CrudPage.loadData(1); }, onClear: function () { CrudPage.loadData(1); } });
+
+            $(document).on('change', '.availability-toggle', function () {
+                const $checkbox = $(this);
+                const wasChecked = !$checkbox.is(':checked');
+                const isSelected = $checkbox.is(':checked');
+                const academyYearId = $('#yearId').val();
+                const semesterId = $('#semesterId').val();
+                const periodId = $('#periodId').val();
+                const userId = $checkbox.data('user-id');
+
+                if (!academyYearId || !semesterId || !periodId) {
+                    $checkbox.prop('checked', wasChecked);
+                    window.AppNotify?.show('error', 'Vui lòng chọn đủ năm học, học kỳ và đợt thi trước khi cập nhật giảng viên khả thi.');
+                    return;
+                }
+
+                $checkbox.prop('disabled', true);
+
+                $.ajax({
+                    url: '@Url.Action("ToggleAvailability", "LecturerManagement")',
+                    type: 'POST',
+                    headers: { 'RequestVerificationToken': $('meta[name="request-verification-token"]').attr('content') || $('input[name="__RequestVerificationToken"]').first().val() || '' },
+                    data: { userId: userId, periodId: periodId, isSelected: isSelected }
+                }).done(function (res) {
+                    const $row = $checkbox.closest('tr');
+                    const $source = $row.find('[data-availability-source]');
+                    const $note = $row.find('[data-availability-note]');
+
+                    if (isSelected) {
+                        $source.html('<span class="badge rounded-pill bg-info text-dark">' + (res.source || 'UI') + '</span>');
+                    } else {
+                        $source.html('<span class="badge rounded-pill bg-light text-muted border">Chưa chọn</span>');
+                        $note.text('-');
+                    }
+
+                    window.AppNotify?.show('success', res.message || 'Đã lưu thay đổi.');
+                }).fail(function (xhr) {
+                    const message = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON.message : 'Không thể lưu thay đổi.';
+                    $checkbox.prop('checked', wasChecked);
+                    window.AppNotify?.show('error', message);
+                }).always(function () {
+                    $checkbox.prop('disabled', false);
+                });
+            });
         });
     </script>
 }
